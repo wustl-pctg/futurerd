@@ -34,6 +34,7 @@ public:
   }
   T get()
   {
+    assert(status == DONE);
     {
       strand_t next = new_set();
       add_edge(C, next);
