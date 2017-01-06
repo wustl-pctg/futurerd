@@ -12,6 +12,13 @@ algorithm.
 
 ### Compiling the tool
 
+1. First we need to build the compiler. If using link-time
+   optimization, set `BINUTILS_PLUGIN_DIR` in `build-llvm-linux.sh` to
+   the directory where `plugin-api.h` is located. After this (or if
+   you're not using LTO), run `build-llvm-linux.sh`.
+   
+2.
+
 ### Compiling programs
 
 ## TODO
