@@ -1,9 +1,12 @@
 include ../common.mk
 
-SRC := tsan.cpp shadow_stack.cpp tool.cpp
+SRC := tsan.cpp tool.cpp debug.cpp
 OBJ := $(SRC:.cpp=.o)
 LIB_DIR = $(BUILD_DIR)/lib
 TARGET = $(LIB_DIR)/libfuturerd.a
+
+# Mostly for cilk/internal includes
+INC += -I$(PROJECT_HOME)/cilkrts/include
 
 $(TARGET): $(OBJ) $(LIB_DIR)
 
