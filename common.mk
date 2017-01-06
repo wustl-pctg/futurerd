@@ -11,11 +11,11 @@ OPT_FLAGS ?= -O3
 TOOL_DEBUG ?= 0
 LTO ?= 1
 
-INC = -I$(PROJECT_HOME)/include
+INC = -I$(PROJECT_HOME)/include 
 FLAGS = -Wall -Wfatal-errors -g $(INC)
 CFLAGS += $(FLAGS) -std=c99
 CXXFLAGS += $(FLAGS) -std=c++11
-ARFLAGS += rcs
+ARFLAGS = rcs
 
 ifeq ($(LTO),1)
   OPT_FLAGS += -flto
@@ -32,7 +32,9 @@ $(OBJ_DIR)/%.o: %.cpp
 	$(CXX) $(CXXFLAGS) -o $@ -c $<
 
 $(LIB_DIR)/lib%.a: $(OBJ)
+	@mkdir -p $(LIB_DIR)
 	ar $(ARFLAGS) $@ $(OBJ)
 
 $(LIB_DIR)/lib%.so: $(OBJ)
+	@mkdir -p $(LIB_DIR)
 	$(CC) $(OBJ) -shared -o $@
