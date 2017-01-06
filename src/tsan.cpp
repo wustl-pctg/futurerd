@@ -1,24 +1,41 @@
-void __tsan_destroy() { g_instr_enabled = false; print_stats(); }
+#include <cstdlib> // atexit
+#include <cassert>
+
+#include "tsan.hpp"
+#include "debug.hpp"
+
+extern "C" {
+
+static bool g_instr_enabled = false;
+__thread int t_checking_disabled = 1;
+
+void __tsan_destroy() { g_instr_enabled = false; }
 void __tsan_init() {
 
-  // For some reason __tsan_init gets called twice...
-  static int init = 0;
+  // @TODO{For some reason __tsan_init gets called twice...}
+  static bool init = false;
   if (init) return;
-  init = 1;
+  init = true;
 
   atexit(__tsan_destroy);
   g_instr_enabled = true; 
   enable_checking();
 }
 
-static inline void
-tsan_read(void *addr, size_t mem_size, void *rip) { 
-  if (should_check()) INCR(num_reads);
+[[gnu::always_inline]] static
+bool should_check() { return(g_instr_enabled && t_checking_disabled == 0); }
+
+
+static inline
+void tsan_read(void *addr, size_t mem_size, void *rip) {
+  if (should_check()) DBG_TRACE("checking enabled\n");
+  else DBG_TRACE("checking disabled\n");
 }
 
-static inline void
-tsan_write(void *addr, size_t mem_size, void *rip) {
-  if (should_check()) INCR(num_writes);
+static inline
+void tsan_write(void *addr, size_t mem_size, void *rip) {
+  if (should_check()) DBG_TRACE("checking enabled\n");
+  else DBG_TRACE("checking disabled\n");
 }
 
 void __tsan_read1(void *addr) { tsan_read(addr, 1, __builtin_return_address(0)); }
@@ -35,3 +52,5 @@ void __tsan_func_entry(void *pc){ }
 void __tsan_func_exit() { }
 void __tsan_vptr_read(void **vptr_p) {}
 void __tsan_vptr_update(void **vptr_p, void *new_val) {}
+
+} // extern "C"
