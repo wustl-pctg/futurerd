@@ -1,5 +1,12 @@
 #include <assert.h>
 
+// Public API
+extern "C" {
+void __futurerd_disable_checking();
+void __futurerd_enable_checking();
+} // extern "C"
+// End public API
+
 typedef unsigned int strand_t;
 __thread strand_t t_strand;
 __thread strand_t C;
