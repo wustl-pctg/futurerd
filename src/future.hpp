@@ -1,15 +1,10 @@
 namespace cilk {
 
-// Do we need the separate pg_status with INVALID
-typedef enum { INVALID, STARTED, DONE } pg_status;
-typedef enum { STARTED, DONE } async_status;
-
-  // For now, put/get futures only
-  typedef pg_future future;
-
-template<type T>
+template<typename T>
 class pg_future { // put/get future
 private:
+  // Do we need the separate pg_status with INVALID
+  enum pg_status { INVALID, STARTED, DONE };
   pg_status status;
   T value;
   //strand_t put_strand;
@@ -53,5 +48,13 @@ public:
     return value;
   }
 };
+
+// async futures
+//enum class async_status { STARTED, DONE };
+
+// For now, put/get futures only
+//typedef pg_future future;
+template<typename T> using future = pg_future<T>;
+
 
 } // namespace cilk
