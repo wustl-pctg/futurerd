@@ -1,3 +1,5 @@
+#include <cassert>
+
 namespace cilk {
 
 template<typename T>
