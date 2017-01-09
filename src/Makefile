@@ -8,10 +8,11 @@ TARGET = $(LIB_DIR)/libfuturerd.a
 # Mostly for cilk/internal includes
 INC += -I$(PROJECT_HOME)/cilkrts/include
 
-$(TARGET): $(OBJ) $(LIB_DIR)
+$(TARGET): $(OBJ) $(LIB_DIR) $(SRC)
 
 $(LIB_DIR):
 	if [ ! -e $(LIB_DIR) ]; then mkdir -p $(LIB_DIR); fi
 
 clean:
 	rm -rf $(addprefix $(OBJ_DIR)/,$(OBJ)) $(TARGET)
+	rm *.o
