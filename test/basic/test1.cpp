@@ -1,11 +1,11 @@
 #include <iostream>
 #include <cstdlib>
-#include <cassert>
 
 #include <cilk/cilk.h>
 #define spawn cilk_spawn
 #define sync cilk_sync
 #include <future.hpp>
+#include <futurerd.hpp>
 
 int fib(int n)
 {
@@ -28,16 +28,14 @@ void wrapper(cilk::future<int>& f, int n)
 
 int main(int argc, char* argv[])
 {
-  if (argc != 2) {
-    std::cerr << "Usage: "
-              << argv[0] << " <n> " << std::endl;
-    std::exit(1);
-  }
-  int n = atoi(argv[1]);
+  futurerd::set_policy(futurerd::CONTINUE);
+  int n = (argc != 2) ? 10 : atoi(argv[1]);
   
   cilk::future<int> f;
   wrapper(f, n);
 
   std::cout << "fib(" << n << ") = " << f.get() << std::endl;
+  assert(futurerd::num_races() == 0);
+
   return 0;
 }
