@@ -1,5 +1,6 @@
 #include "tsan.hpp"
 #include "debug.hpp"
+#include "unionfind.hpp"
 
 #include <internal/abi.h>
 
