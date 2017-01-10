@@ -1,14 +1,14 @@
 // Union-find data structure
 // Pointer-based, for now. Does it matter if I use array-based
 // instead?
+#include "ChunkedList.hpp"
+#include "unionfind.hpp"
 
-#include <ChunkedList.hpp>
+namespace uf {
 
-//namespace uf {
-
-struct ufnode {
-  static std::size_t global_index = 0;
-  static ChunkedList<ufnode> allocator;
+struct node {
+  static std::size_t global_index;
+  static ChunkedList<node> allocator;
   static void* operator new(std::size_t sz)
   {
     return (void*) allocator.getNext();
@@ -17,28 +17,28 @@ struct ufnode {
 
   std::size_t id;
   std::size_t size;
-  ufnode* parent = nullptr;
-  ufnode() : m_id(global_index++) {}
-}; // struct ufnode
+  node* parent = nullptr;
+  node() : id(global_index++) {}
+}; // struct node
 
-ufnode& union(ufnode& x, ufnode& y)
+std::size_t node::global_index = 0;
+
+node* find(node* x)
 {
-  if (y.size > x.size) return union(y,x);
+  if (x->parent != x) 
+    return x->parent = find(x->parent);
+  return x->parent;
+}
 
-  ufnode& root = find(x);
-  ufnode& child = find(y);
-  child.parent = root;
-  root.size += child.size;
+node* merge(node* x, node* y)
+{
+  if (y->size > x->size) return merge(y,x);
+
+  node* root = find(x);
+  node* child = find(y);
+  child->parent = root;
+  root->size += child->size;
   return root;
 }
 
-ufnode& find(ufnode& x)
-{
-  if (x.parent != x) 
-    return x.parent = find(x.parent);
-  return x.parent;
-}
-  
-
-
-  //} // namespace uf
+} // namespace uf
