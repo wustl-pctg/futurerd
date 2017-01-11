@@ -12,11 +12,6 @@
 
 extern "C" {
 
-// XXX: namespace?
-void print_stats(FILE *output = stdout) {
-  fprintf(output, "----- Cilk Tool Stats -----\n");
-}
-
 void cilk_tool_init(void) { }
 void cilk_tool_destroy(void) { }
 
