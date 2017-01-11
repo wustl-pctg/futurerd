@@ -1,3 +1,6 @@
+#include <cstddef>
+#include <cstdlib>
+
 template <typename T>
 class ChunkedList {
 
@@ -8,12 +11,12 @@ class ChunkedList {
 
     chunk() = delete;
     chunk(std::size_t sz, chunk* prev = nullptr)
-      : size(sz), previous(prev)
-    { data = new T[sz]; }
+      : previous(prev), size(sz)
+    { data = (T*) malloc(sz * sizeof(T)); }
     ~chunk() { delete[] data; }
   }; // struct chunk
   
-  static constexpr DEFAULT_SIZE = 128;
+  static constexpr std::size_t DEFAULT_SIZE = 128;
   
   chunk* m_current = nullptr;
   std::size_t m_index = 0;
@@ -23,7 +26,7 @@ public:
   ~ChunkedList()
   {
     while (m_current) {
-      chunk* prev = m_current->prev;
+      chunk* prev = m_current->previous;
       delete m_current;
       m_current = prev;
     }
@@ -33,5 +36,6 @@ public:
     T* slot = &m_current->data[m_index++];
     if (m_index == m_current->size)
       m_current = new chunk(m_current->size * 2, m_current);
+    return slot;
   }
 }; // class ChunkedList
