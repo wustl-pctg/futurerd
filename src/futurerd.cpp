@@ -1,5 +1,8 @@
 #include "futurerd.hpp"
+#include "unionfind.hpp"
 #include "debug.hpp"
+
+#include <cstdio>
 
 namespace futurerd {
 
@@ -13,7 +16,25 @@ void set_policy(DetectPolicy p) {
 
 size_t num_races() { return g_num_races; }
 
+void reset() {}
+void init() {}
+void destroy() {}
+void print_stats(FILE *output = stdout) { }
+
+strand_t nt_out() {
+  auto reserved_node = new uf::node();
+  auto reserved_id = reserved_node->id;
+
+  // Other maintenance
+
+  return reserved_id;
 }
 
-// futurerd::detect_policy(futurerd::CONTINUE);
-  //assert(futurerd::num_races() == 0);
+void nt_in(strand_t s) {
+
+}
+
+
+
+
+} // namespace futurerd
