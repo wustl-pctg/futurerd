@@ -9,25 +9,21 @@ private:
   enum pg_status { INVALID, STARTED, DONE };
   pg_status status;
   T value;
-  //strand_t put_strand;
+
+#ifdef RACEDETECT
+  futurerd::strand_t put_strand;
+#endif
+  
 public:
 
   pg_future() : status(INVALID) {}
   void start() { status = STARTED; } // Do we need this?
   void put(T val)
   {
-    // {
-    //   merge(t_strand, S);
-    //   merge(t_strand, C);
-
-    //   strand_t next = new_set();
-    //   S = new_set();
-    //   add_edge(C, next);
-    //   C = next;
-    // }
-    
+#ifdef RACE_DETECT
+    put_strand = futurerd::nontree_outgoing();
+#endif
     value = val;
-    //put_strand = t_strand;
     
     // @TODO{Parallel: Mem fence in future::put}
     status = DONE;
@@ -35,14 +31,13 @@ public:
   
   T get()
   {
+#ifdef RACE_DETECT
+    futurerd::nontree_incoming(put_strand);
+#endif
+    // For sequential version
     assert(status == DONE);
-    // {
-    //   strand_t next = new_set();
-    //   add_edge(C, next);
-    //   add_edge(find(put_strand), next);
-    //   C = next;
-    // }
-    
+
+    // For parallel version
     //if (status != DONE) cilk_suspend();
     // while (status != DONE)
     //   ;
