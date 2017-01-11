@@ -1,25 +1,17 @@
 // Union-find data structure
 // Pointer-based, for now. Does it matter if I use array-based
 // instead?
-#include "ChunkedList.hpp"
 #include "unionfind.hpp"
+#include "ChunkedList.hpp"
+
+#include <cstdio>
+
+static void* uf::node::operator new(std::size_t sz) {
+  static ChunkedList<node> allocator;
+  return (void*) allocator.getNext();
+}
 
 namespace uf {
-
-struct node {
-  static std::size_t global_index;
-  static ChunkedList<node> allocator;
-  static void* operator new(std::size_t sz)
-  {
-    return (void*) allocator.getNext();
-  }
-  static void* operator new[](std::size_t sz) = delete;
-
-  std::size_t id;
-  std::size_t size;
-  node* parent = nullptr;
-  node() : id(global_index++) {}
-}; // struct node
 
 std::size_t node::global_index = 0;
 
