@@ -6,7 +6,7 @@
 
 #include <cstdio>
 
-static void* uf::node::operator new(std::size_t sz) {
+void* uf::node::operator new(std::size_t sz) {
   static ChunkedList<node> allocator;
   return (void*) allocator.getNext();
 }
