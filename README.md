@@ -22,12 +22,3 @@ algorithm.
 ### Compiling programs
 
 ## TODO
-test
-test
-test
-test
-test
-test
-test
-test
-test
