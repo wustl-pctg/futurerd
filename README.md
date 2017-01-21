@@ -22,3 +22,4 @@ algorithm.
 ### Compiling programs
 
 ## TODO
+test
