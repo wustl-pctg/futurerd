@@ -9,6 +9,7 @@ enum DetectPolicy {
   CONTINUE = 1,
 };
 
+
 void set_policy(futurerd::DetectPolicy p);
 size_t num_races();
 void reset();
@@ -20,5 +21,9 @@ void destroy();
 
 strand_t nt_out();
 void nt_in(strand_t s);
+
+void at_sync();
+void at_spawn();
+void at_continuation();
 
 }
