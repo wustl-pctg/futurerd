@@ -14,7 +14,7 @@ LTO ?= 1
 INC = -I$(PROJECT_HOME)/include 
 FLAGS = -Wall -Wfatal-errors -g $(INC)
 CFLAGS += $(FLAGS) -std=c99
-CXXFLAGS += $(FLAGS) -std=c++11
+CXXFLAGS += $(FLAGS) -std=c++11 -fno-exceptions -fno-rtti
 ARFLAGS = rcs
 
 ifeq ($(LTO),1)
