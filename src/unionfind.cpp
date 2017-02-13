@@ -2,12 +2,12 @@
 // Pointer-based, for now. Does it matter if I use array-based
 // instead?
 #include "unionfind.hpp"
-#include "ChunkedList.hpp"
+#include "chunked_list.hpp"
 
 #include <cstdio>
 
 void* uf::node::operator new(std::size_t sz) {
-  static ChunkedList<node> allocator;
+  static chunked_list<node> allocator;
   return (void*) allocator.getNext();
 }
 
