@@ -2,7 +2,7 @@
 #include <cstdlib>
 
 template <typename T>
-class ChunkedList {
+class chunked_list {
 
   struct chunk {
     T* data;
@@ -22,8 +22,8 @@ class ChunkedList {
   std::size_t m_index = 0;
 
 public:
-  ChunkedList() { m_current = new chunk(DEFAULT_SIZE); }
-  ~ChunkedList()
+  chunked_list() { m_current = new chunk(DEFAULT_SIZE); }
+  ~chunked_list()
   {
     while (m_current) {
       chunk* prev = m_current->previous;
@@ -38,4 +38,4 @@ public:
       m_current = new chunk(m_current->size * 2, m_current);
     return slot;
   }
-}; // class ChunkedList
+}; // class chunked_list
