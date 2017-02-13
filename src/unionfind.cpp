@@ -8,7 +8,7 @@
 
 void* uf::node::operator new(std::size_t sz) {
   static chunked_list<node> allocator;
-  return (void*) allocator.getNext();
+  return (void*) allocator.get_next();
 }
 
 namespace uf {

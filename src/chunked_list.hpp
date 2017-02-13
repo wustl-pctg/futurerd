@@ -31,7 +31,7 @@ public:
       m_current = prev;
     }
   }
-  T* getNext()
+  T* get_next()
   {
     T* slot = &m_current->data[m_index++];
     if (m_index == m_current->size)
