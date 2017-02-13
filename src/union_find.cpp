@@ -1,7 +1,7 @@
 // Union-find data structure
 // Pointer-based, for now. Does it matter if I use array-based
 // instead?
-#include "unionfind.hpp"
+#include "union_find.hpp"
 #include "chunked_list.hpp"
 
 #include <cstdio>
