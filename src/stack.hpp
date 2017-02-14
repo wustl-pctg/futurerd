@@ -8,7 +8,7 @@
 #include <cstdint> // int types like uint32_t, uint64_t, etc.
 
 template <typename T>
-class Stack {
+class stack {
   typedef uint32_t index_t;
 protected:
 
@@ -23,7 +23,7 @@ protected:
   void resize(index_t new_cap)
   {
     T* old_stack = m_stack;
-    m_stack = malloc(sizeof(T) * new_cap);
+    m_stack = (T*) malloc(sizeof(T) * new_cap);
     
     index_t copy_end = m_cap > new_cap ? new_cap : m_cap;
     for (int i = 0; i < copy_end; ++i)
@@ -37,13 +37,13 @@ protected:
   void halve_cap() { resize(m_cap / 2); }
 
 public:
-  Stack() : m_cap(DEFAULT_CAPACITY)
+  stack() : m_cap(DEFAULT_CAPACITY)
   {
     reset();
     m_stack = new T[m_cap];
   }
 
-  ~Stack() { delete[] m_stack; }
+  ~stack() { delete[] m_stack; }
 
   void reset()
   {
@@ -83,5 +83,5 @@ public:
   T* head() const { return ancestor(0); }
   index_t size() const { return m_head + 1; }
   bool empty() const { return size() == 0; }
-}; // class Stack
+}; // class stack
 
