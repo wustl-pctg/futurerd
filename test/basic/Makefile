@@ -15,10 +15,11 @@ $(TARGETS) : % : %_test
 .PHONY: all clean check %_test $(TARGETS)
 
 check: $(TARGETS)
-	for test in $(TARGETS); do \
+	@echo "---------- Begin basic tests ----------"
+	@for test in $(TARGETS); do \
 		./$$test ; \
 	done
-	@echo "Basic tests passed."
+	@echo "---------- Passed basic tests ----------"
 
 clean:
 	rm -rf $(TARGETS) *.o
