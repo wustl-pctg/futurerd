@@ -14,9 +14,22 @@ struct FrameData {
   int placeholder;
 }; // struct FrameData
 
-// This won't work for parallel detection, since we need to access
-// other workers' shadow stacks
-__thread Stack<FrameData> t_sstack;
+class shadow_stack : public stack<FrameData> {
+public:
+  void push_helper()
+  {
+    assert(this->m_head != (uint32_t)-1);
+    //assert(!(stack_t<T>::head()->flags & FRAME_HELPER_MASK));
+    push();
+    //head()->flags = FRAME_HELPER_MASK;
+  }
+
+}; // class shadow_stack
+
+// For parallel detection we will need this to be thread
+// local. Actually, it will need to be a P-sized array since we need
+// to access other workers' shadow stacks.
+shadow_stack t_sstack;
 
 extern "C" {
 
