@@ -5,6 +5,7 @@
 
 //#include "util.hpp"
 #include <cassert>
+#include <cstdint> // int types like uint32_t, uint64_t, etc.
 
 template <typename T>
 class Stack {
