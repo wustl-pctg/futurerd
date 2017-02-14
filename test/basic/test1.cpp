@@ -1,6 +1,3 @@
-#include <iostream>
-#include <cstdlib>
-
 #include "common.h"
 #include <future.hpp>
 #include <futurerd.hpp>
@@ -27,12 +24,11 @@ void wrapper(cilk::future<int>& f, int n)
 int main(int argc, char* argv[])
 {
   futurerd::set_policy(futurerd::CONTINUE);
-  int n = (argc != 2) ? 10 : atoi(argv[1]);
   
   cilk::future<int> f;
-  wrapper(f, n);
+  wrapper(f, 10);
 
-  std::cout << "fib(" << n << ") = " << f.get() << std::endl;
+  assert(f.get() == 55);
   assert(futurerd::num_races() == 0);
 
   return 0;
