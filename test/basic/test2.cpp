@@ -2,9 +2,7 @@
 #include <iostream>
 #include <cassert>
 
-#include <cilk/cilk.h>
-#define spawn cilk_spawn
-#define sync cilk_sync
+#include "common.h"
 #include <future.hpp>
 #include <futurerd.hpp>
 
