@@ -14,12 +14,15 @@ $(TARGETS) : % : %_test
 
 .PHONY: all clean check %_test $(TARGETS)
 
+ccyellow=$(shell echo -e "\033[0;33m")
+ccend=$(shell echo -e "\033[0m")
+
 check: $(TARGETS)
-	@echo "---------- Begin basic tests ----------"
+	$(ccyellow); @echo "---------- Begin basic tests ----------"; $(ccend)
 	@for test in $(TARGETS); do \
 		./$$test ; \
 	done
-	@echo "---------- Passed basic tests ----------"
+	$(ccyellow); @echo "---------- Passed basic tests ----------"; $(ccend)
 
 clean:
 	rm -rf $(TARGETS) *.o
