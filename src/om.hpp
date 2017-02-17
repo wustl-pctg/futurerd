@@ -1,0 +1,95 @@
+/** An efficient Order Maintenance data structure. See the SP-Order
+    paper and related. This is only meant to work sequentially.
+*/
+#pragma once
+
+#include <cstdio> // FILE
+#include <climits>
+
+namespace om {
+
+typedef unsigned long label_t;
+
+// Can these be moved inside om_ds??
+static constexpr label_t MAX_LABEL = ULONG_MAX;
+static constexpr label_t NODE_INTERVAL = (((label_t)1) << 58); // N / log_2
+                                                          // = 2^58
+static constexpr label_t SUBLIST_SIZE = ((label_t)64); // log_2 N = 64
+
+/// @todo{What is MAX_LEVEL for?}
+static constexpr label_t MAX_LEVEL = (sizeof(label_t) * 8);
+
+class bl_list {
+// Not yet visible...
+  typedef struct tl_node tl_node;
+  static constexpr label_t DEFAULT_INITIAL_LABEL = 0;
+public:
+struct node {
+    label_t label;
+    node *next, *prev;
+    bl_list* list;
+  };
+  bl_list(tl_node* above, label_t initial_label = DEFAULT_INITIAL_LABEL);
+  ~bl_list();
+  node* insert(node* base); // insert_initial?
+  bool precedes(const node* x, const node* y) const;
+  inline size_t size() const { return m_size; }
+  void fprint(FILE* out) const;
+  inline void print() const { return fprint(stdout); }
+  
+private:
+  size_t m_size = 0;
+  node* m_head = nullptr;
+  node* m_tail = nullptr;
+  tl_node* m_above = nullptr;
+  //node m_initial_node;
+
+  bool bl_verify() const;
+
+}; // class bl_list
+
+class om_ds {
+  typedef bl_list::node node;
+public:
+  om_ds();
+  ~om_ds();
+  node* insert(node* base);
+  bool precedes(const node* x, const node* y) const;
+  void fprint(FILE* out) const;
+  inline void print() const { fprint(stdout); }
+  
+private:
+  struct tl_node {
+    label_t label;
+    size_t level;
+    size_t num_leaves;
+
+    tl_node* parent;
+
+    /// Leaves don't need left/right pointers
+    /// Internal nodes don't need prev/next pointers
+    union {
+      tl_node* left; // internal node
+      tl_node* prev; // leaf
+    };
+
+    union {
+      tl_node* right; // internal node
+      tl_node* next; // leaf
+    };
+
+    bl_list* below;
+  }; // struct tl_node
+
+  tl_node* m_root;
+  // tl_node* m_head;
+  // tl_node* m_tail;
+  size_t m_height;
+  
+  void relabel();
+  void verify(); // Make sure struct is valid
+  tl_node* get_tl(const node* n) const;
+
+}; // class om_ds
+
+}
