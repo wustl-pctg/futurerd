@@ -60,9 +60,33 @@ void om_ds::fprint(FILE* out) const
 
 }
 
+
+// returns the number of leaves
+label_t om_ds::verify_subtree(tl_node* n)
+{
+  if (!n) return 0;
+  assert(n->level <= MAX_LEVEL);
+
+  assert(!n->left || n->left->parent == n);
+  label_t left_leaves = verify_subtree(n->left);
+
+  assert(!n->right || n->right->parent == n);
+  label_t right_leaves = verify_subtree(n->right);
+
+  if (n->level == MAX_LEVEL) { // leaf
+    assert(n->num_leaves == 1);
+    assert(n->left == nullptr && n->right == nullptr);
+    n->below->verify();
+  } else { // internal node
+    assert(n->num_leaves == left_leaves + right_leaves);
+  }
+  return n->num_leaves;
+}
+
 void om_ds::verify()
 {
-
+  assert(m_root->parent == nullptr);
+  verify_subtree(m_root);
 }
 
 } // namespace om

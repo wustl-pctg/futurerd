@@ -59,8 +59,6 @@ private:
   tl_node* m_above = nullptr;
   //node m_initial_node;
 
-  bool bl_verify() const;
-
 public:
   bl_list(tl_node* above, label_t initial_label = DEFAULT_INITIAL_LABEL);
   ~bl_list();
@@ -70,6 +68,7 @@ public:
   void fprint(FILE* out) const;
   inline void print() const { return fprint(stdout); }
   inline tl_node* above() const { return m_above; }
+  bool verify() const;
 
 }; // class bl_list
 
@@ -83,7 +82,7 @@ private:
   size_t m_height;
   
   void relabel();
-  void verify(); // Make sure struct is valid
+  label_t verify_subtree(tl_node* n);
   tl_node* get_tl(const node* n) const;
 
 public:
@@ -93,6 +92,7 @@ public:
   bool precedes(const node* x, const node* y) const;
   void fprint(FILE* out) const;
   inline void print() const { fprint(stdout); }
+  void verify(); // Make sure struct is valid
   
 }; // class om_ds
 
