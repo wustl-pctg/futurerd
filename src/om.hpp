@@ -82,7 +82,7 @@ private:
   size_t m_height;
   
   void relabel();
-  label_t verify_subtree(tl_node* n);
+  label_t verify_subtree(tl_node* n) const;
   tl_node* get_tl(const node* n) const;
 
 public:
@@ -92,7 +92,7 @@ public:
   bool precedes(const node* x, const node* y) const;
   void fprint(FILE* out) const;
   inline void print() const { fprint(stdout); }
-  void verify(); // Make sure struct is valid
+  void verify() const; // Make sure struct is valid
   
 }; // class om_ds
 
