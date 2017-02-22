@@ -4,6 +4,7 @@
 #include "stack.hpp"
 
 #include <internal/abi.h>
+#include <cilk/cilk_api.h>
 
 #include <cstdio>
 #include <cassert>
@@ -36,7 +37,11 @@ extern "C" {
 // First cilk frame or steal
 void init_strand() {}
 
-void cilk_tool_init(void) { }
+/// @TODO{Call cilk_tool_init/destroy automatically instead of from tsan}
+void cilk_tool_init(void) {
+  // For now, force to run sequentially
+  __cilkrts_set_param("nworkers", "1");
+}
 void cilk_tool_destroy(void) { }
 
 void cilk_enter_begin() {

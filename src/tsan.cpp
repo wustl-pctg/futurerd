@@ -9,15 +9,28 @@ extern "C" {
 static bool g_instr_enabled = false;
 __thread int t_checking_disabled = 1;
 
-void __tsan_destroy() { g_instr_enabled = false; }
+extern void cilk_tool_init(void);
+extern void cilk_tool_destroy(void);
+
+void __tsan_destroy() {
+  cilk_tool_destroy();
+  g_instr_enabled = false;
+  assert(t_checking_disabled == 0);
+  disable_checking();
+}
+
 void __tsan_init() {
 
-  // @TODO{For some reason __tsan_init gets called twice...}
   static bool init = false;
-  if (init) return;
+
+  /// @TODO{For some reason __tsan_init gets called twice...?}
+  // if (init) return;
+  assert(init == false);
   init = true;
 
   atexit(__tsan_destroy);
+
+  cilk_tool_init();
   g_instr_enabled = true; 
   enable_checking();
 }
