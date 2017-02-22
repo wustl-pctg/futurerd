@@ -27,8 +27,13 @@ bl_node* om_ds::insert(node* base)
 {
   bl_node* n = nullptr;
 
-  while (!(n = base->list->insert(base)))
-    relabel();
+  // while (!(n = base->list->insert(base)))
+  //   relabel();
+  n = base->list->insert(base);
+
+  // just for now
+  assert(n);
+  
   return n;
 }
 
