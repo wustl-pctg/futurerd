@@ -57,12 +57,14 @@ bool om_ds::precedes(const node* x, const node* y) const
 
 void om_ds::fprint(FILE* out) const
 {
+  verify();
 
+  fprintf(out, "fprint not yet implemented for OM ds.\n");
 }
 
 
 // returns the number of leaves
-label_t om_ds::verify_subtree(tl_node* n)
+label_t om_ds::verify_subtree(tl_node* n) const
 {
   if (!n) return 0;
   assert(n->level <= MAX_LEVEL);
@@ -83,7 +85,7 @@ label_t om_ds::verify_subtree(tl_node* n)
   return n->num_leaves;
 }
 
-void om_ds::verify()
+void om_ds::verify() const
 {
   assert(m_root->parent == nullptr);
   verify_subtree(m_root);
