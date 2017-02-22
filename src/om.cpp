@@ -25,7 +25,11 @@ om_ds::~om_ds()
 
 bl_node* om_ds::insert(node* base)
 {
-  return nullptr;
+  bl_node* n = nullptr;
+
+  while (!(n = base->list->insert(base)))
+    relabel();
+  return n;
 }
 
 bool om_ds::precedes(const node* x, const node* y) const
