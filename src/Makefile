@@ -1,7 +1,7 @@
 include ../common.mk
 
 SRC := tsan.cpp tool.cpp debug.cpp futurerd.cpp union_find.cpp om.cpp
-OBJ := $(SRC:.cpp=.o)
+OBJ := $(addprefix $(OBJ_DIR)/, $(SRC:.cpp=.o))
 LIB_DIR = $(BUILD_DIR)/lib
 TARGET = $(LIB_DIR)/libfuturerd.a
 
@@ -14,5 +14,4 @@ $(LIB_DIR):
 	if [ ! -e $(LIB_DIR) ]; then mkdir -p $(LIB_DIR); fi
 
 clean:
-	rm -rf $(addprefix $(OBJ_DIR)/,$(OBJ)) $(TARGET)
-	rm *.o
+	rm -rf $(OBJ) $(TARGET)
