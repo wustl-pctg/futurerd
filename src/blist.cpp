@@ -95,7 +95,7 @@ bool bl_list::precedes(const node* x, const node* y) const
   return x->label < y->label;
 }
 
-bool bl_list::bl_verify() const
+bool bl_list::verify() const
 {
   if (m_head == nullptr) {
     assert(m_tail == nullptr);
