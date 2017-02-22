@@ -19,25 +19,40 @@ static constexpr label_t SUBLIST_SIZE = ((label_t)64); // log_2 N = 64
 /// @todo{What is MAX_LEVEL for?}
 static constexpr label_t MAX_LEVEL = (sizeof(label_t) * 8);
 
-class bl_list {
-// Not yet visible...
-  typedef struct tl_node tl_node;
-  static constexpr label_t DEFAULT_INITIAL_LABEL = 0;
-public:
-struct node {
-    label_t label;
-    node *next, *prev;
-    bl_list* list;
+class bl_list;
+struct bl_node {
+  label_t label;
+  struct bl_node *next, *prev;
+  bl_list* list;
+};
+
+struct tl_node {
+  label_t label;
+  size_t level;
+  size_t num_leaves;
+
+  struct tl_node* parent;
+
+  /// Leaves don't need left/right pointers
+  /// Internal nodes don't need prev/next pointers
+  union {
+    tl_node* left; // internal node
+    tl_node* prev; // leaf
   };
-  bl_list(tl_node* above, label_t initial_label = DEFAULT_INITIAL_LABEL);
-  ~bl_list();
-  node* insert(node* base); // insert_initial?
-  bool precedes(const node* x, const node* y) const;
-  inline size_t size() const { return m_size; }
-  void fprint(FILE* out) const;
-  inline void print() const { return fprint(stdout); }
-  
+
+  union {
+    tl_node* right; // internal node
+    tl_node* next; // leaf
+  };
+
+  bl_list* below;
+}; // struct tl_node
+
+class bl_list {
 private:
+  static constexpr label_t DEFAULT_INITIAL_LABEL = 0;
+  typedef bl_node node;
+
   size_t m_size = 0;
   node* m_head = nullptr;
   node* m_tail = nullptr;
@@ -46,41 +61,22 @@ private:
 
   bool bl_verify() const;
 
+public:
+  bl_list(tl_node* above, label_t initial_label = DEFAULT_INITIAL_LABEL);
+  ~bl_list();
+  node* insert(node* base); // insert_initial?
+  bool precedes(const node* x, const node* y) const;
+  inline size_t size() const { return m_size; }
+  void fprint(FILE* out) const;
+  inline void print() const { return fprint(stdout); }
+  inline tl_node* above() const { return m_above; }
+
 }; // class bl_list
 
 class om_ds {
-  typedef bl_list::node node;
-public:
-  om_ds();
-  ~om_ds();
-  node* insert(node* base);
-  bool precedes(const node* x, const node* y) const;
-  void fprint(FILE* out) const;
-  inline void print() const { fprint(stdout); }
-  
 private:
-  struct tl_node {
-    label_t label;
-    size_t level;
-    size_t num_leaves;
-
-    tl_node* parent;
-
-    /// Leaves don't need left/right pointers
-    /// Internal nodes don't need prev/next pointers
-    union {
-      tl_node* left; // internal node
-      tl_node* prev; // leaf
-    };
-
-    union {
-      tl_node* right; // internal node
-      tl_node* next; // leaf
-    };
-
-    bl_list* below;
-  }; // struct tl_node
-
+  typedef bl_node node;
+  
   tl_node* m_root;
   // tl_node* m_head;
   // tl_node* m_tail;
@@ -90,6 +86,14 @@ private:
   void verify(); // Make sure struct is valid
   tl_node* get_tl(const node* n) const;
 
+public:
+  om_ds();
+  ~om_ds();
+  node* insert(node* base);
+  bool precedes(const node* x, const node* y) const;
+  void fprint(FILE* out) const;
+  inline void print() const { fprint(stdout); }
+  
 }; // class om_ds
 
-}
+} // namespace om

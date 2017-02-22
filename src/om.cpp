@@ -1,3 +1,9 @@
+#include <cassert>
+
+#include "om.hpp"
+
+namespace om {
+
 om_ds::om_ds() : m_root(new tl_node()), m_height(0)
 {
   m_root->below = new bl_list(m_root);
@@ -9,6 +15,7 @@ om_ds::om_ds() : m_root(new tl_node()), m_height(0)
   // m_head = m_tail = m_root;
 
   // Initial insert
+  
 }
 
 om_ds::~om_ds()
@@ -16,14 +23,14 @@ om_ds::~om_ds()
   // I don't think we actually need this...
 }
 
-node* om_ds::insert(node* base)
+bl_node* om_ds::insert(node* base)
 {
-
+  return nullptr;
 }
 
 bool om_ds::precedes(const node* x, const node* y) const
 {
-
+  return true;
 }
 
 void om_ds::fprint(FILE* out) const
@@ -31,13 +38,16 @@ void om_ds::fprint(FILE* out) const
 
 }
 
-void om_ds::verify();
+void om_ds::verify()
 {
 
 }
 
 tl_node* om_ds::get_tl(const node* n) const
 {
-  assert(n->list->above->level == om::MAX_LEVEL);
-  return n->list->above;
+  tl_node* tl = n->list->above();
+  assert(tl && tl->level == om::MAX_LEVEL);
+  return tl;
 }
+
+} // namespace om
