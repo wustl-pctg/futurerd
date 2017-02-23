@@ -1,57 +1,51 @@
 #include <cassert>
 
+// A hack since I don't want to change the compiler.
+// Asynchronously start foo(x, y) with
+// f = create_future(foo, x, y)
+// expanding to
+// f = future(); f.finish(foo(x,y));
+// If we ever do this in parallel we'll need to do something like a
+// detach.
+#define create_future(func, args...) future(); f.finish(func(args))
+
 namespace cilk {
 
 template<typename T>
-class pg_future { // put/get future
+class future {
 private:
-  // Do we need the separate pg_status with INVALID
-  enum pg_status { INVALID, STARTED, DONE };
-  pg_status status;
-  T value;
+  enum class status { STARTED, DONE };
 
-#ifdef RACEDETECT
-  futurerd::strand_t put_strand;
-#endif
-  
+  status m_stat;
+  T m_value;
+
 public:
 
-  pg_future() : status(INVALID) {}
-  void start() { status = STARTED; } // Do we need this?
-  void put(T val)
-  {
-#ifdef RACE_DETECT
-    put_strand = futurerd::nontree_outgoing();
-#endif
-    value = val;
-    
-    // @TODO{Parallel: Mem fence in future::put}
-    status = DONE;
-  }
-  
-  T get()
-  {
-#ifdef RACE_DETECT
-    futurerd::nontree_incoming(put_strand);
-#endif
-    // For sequential version
-    assert(status == DONE);
+  future() : status(STARTED) {}
+  void finish(T val) { m_value = val; m_stat = DONE; }
+  T get() { assert(m_stat == DONE); return m_value; }
+}; // class future
 
-    // For parallel version
-    //if (status != DONE) cilk_suspend();
-    // while (status != DONE)
-    //   ;
+template<typename T>
+class structured_futurue {
+private:
+  enum class status { STARTED, DONE, TOUCHED };
 
-    return value;
-  }
-};
+  status m_stat;
+  T m_value;
 
-// async futures
-//enum class async_status { STARTED, DONE };
+  // If we want to verify that this is structured at runtime, we can
+  // keep an SP node here (english & hebrew) telling us where we
+  // created this future. Then make sure that always precedes the
+  // touch point.
+  // sp_node m_create_point;
 
-// For now, put/get futures only
-//typedef pg_future future;
-template<typename T> using future = pg_future<T>;
+public:
+  structured_future() : m_stat(STARTED) {}
+  void finish(T val) { m_value = val; m_stat = DONE; }
+  T get() { assert(m_stat == DONE); m_stat = TOUCHED; return m_value; }
+
+}; // class structured_future
 
 
 } // namespace cilk
