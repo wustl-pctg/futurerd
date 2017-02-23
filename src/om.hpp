@@ -25,6 +25,7 @@ struct bl_node {
   struct bl_node *next, *prev;
   bl_list* list;
 };
+typedef bl_node om_node;
 
 struct tl_node {
   label_t label;
@@ -90,6 +91,8 @@ public:
   ~om_ds();
   node* insert(node* base);
   bool precedes(const node* x, const node* y) const;
+  node* base() const
+  
   void fprint(FILE* out) const;
   inline void print() const { fprint(stdout); }
   void verify() const; // Make sure struct is valid

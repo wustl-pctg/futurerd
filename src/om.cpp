@@ -11,6 +11,11 @@ tl_node* om_ds::get_tl(const node* n) const
   return tl;
 }
 
+bl_node* om_ds::base() const
+{
+
+}
+
 // Not yet implemented
 void om_ds::relabel() { }
 
