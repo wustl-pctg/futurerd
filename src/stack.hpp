@@ -54,6 +54,7 @@ public:
   void push()
   {
     ++m_head;
+    memset(&m_stack[m_head], 0, sizeof(T));
     if (m_head == m_cap)
       double_cap();
   }
