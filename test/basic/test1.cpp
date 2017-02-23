@@ -15,18 +15,11 @@ int fib(int n)
   return x + y;
 }
 
-void wrapper(cilk::future<int>& f, int n)
-{
-  f.start();
-  f.put(fib(n));
-}
-
 int main(int argc, char* argv[])
 {
   futurerd::set_policy(futurerd::CONTINUE);
   
-  cilk::future<int> f;
-  wrapper(f, 10);
+  cilk::future<int> f = create_future(fib, 10);
 
   assert(f.get() == 55);
   assert(futurerd::num_races() == 0);
