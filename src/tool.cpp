@@ -11,18 +11,28 @@
 
 #define TOOL_ASSERT(x) assert(x) /// @TODO{refactor asserts}
 
-struct FrameData {
-  int placeholder;
-}; // struct FrameData
+struct sp_node {
+  om_node *english;
+  om_node *hebrew;
+};
 
-class shadow_stack : public stack<FrameData> {
+struct frame_data {
+  sp_node curr;
+  sp_node cont;
+  sp_node sync;
+  unsigned char flags;
+}; // struct frame_data
+
+class shadow_stack : public stack<frame_data> {
+private:
+  static constexpr unsigned char HELPER_MASK = 0x1;
 public:
   void push_helper()
   {
     assert(this->m_head != (uint32_t)-1);
-    //assert(!(stack_t<T>::head()->flags & FRAME_HELPER_MASK));
+    assert(!(head()->flags & FRAME_HELPER_MASK));
     push();
-    //head()->flags = FRAME_HELPER_MASK;
+    head()->flags = FRAME_HELPER_MASK;
   }
 
 }; // class shadow_stack
@@ -35,7 +45,11 @@ shadow_stack t_sstack;
 extern "C" {
 
 // First cilk frame or steal
-void init_strand() {}
+void init_strand(frame_data *init) {
+  assert(t_sstack.empty());
+  t_sstack.push();
+  
+}
 
 /// @TODO{Call cilk_tool_init/destroy automatically instead of from tsan}
 void cilk_tool_init(void) {
