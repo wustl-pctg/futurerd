@@ -1,5 +1,6 @@
 // Reachability data structure for series-parallel graphs
 
+// For now we're just going to use the two_list version
 #include "om/om.hpp"
 
 namespace sp {
