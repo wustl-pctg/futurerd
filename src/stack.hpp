@@ -24,7 +24,8 @@ protected:
   void resize(index_t new_cap)
   {
     T* old_stack = m_stack;
-    m_stack = (T*) malloc(sizeof(T) * new_cap);
+    m_stack = new T[new_cap];
+    // m_stack = (T*) malloc(sizeof(T) * new_cap);
     
     index_t copy_end = m_cap > new_cap ? new_cap : m_cap;
     for (int i = 0; i < copy_end; ++i)
@@ -32,6 +33,7 @@ protected:
     m_cap = new_cap;
 
     delete[] old_stack;
+    // free(old_stack);
   }
 
   void double_cap() { resize(m_cap * 2); }
@@ -41,10 +43,12 @@ public:
   stack() : m_cap(DEFAULT_CAPACITY)
   {
     reset();
+    //m_stack = (T*) malloc(sizeof(T) * m_cap);
     m_stack = new T[m_cap];
   }
 
   ~stack() { delete[] m_stack; }
+  // ~stack() { free(m_stack); }
 
   void reset()
   {
@@ -55,9 +59,9 @@ public:
   void push()
   {
     ++m_head;
-    memset(&m_stack[m_head], 0, sizeof(T));
     if (m_head == m_cap)
       double_cap();
+    memset(&m_stack[m_head], 0, sizeof(T));
   }
 
   void pop()
