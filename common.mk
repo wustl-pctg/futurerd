@@ -38,14 +38,15 @@ ifeq ($(LTO),1)
 endif
 
 $(OBJ_DIR)/%.o: %.c
-	@mkdir -p $(OBJ_DIR)
+	@mkdir -p $(dir $@)
 	$(CC) $(FLAGS) $(CFLAGS) $(EXTRA_FLAGS) -o $(OBJ_DIR)/$@ -c $<
 
 $(OBJ_DIR)/%.o: %.cpp
-	@mkdir -p $(OBJ_DIR)
+	@mkdir -p $(dir $@)
 	$(CXX) $(FLAGS) $(CXXFLAGS) $(EXTRA_FLAGS) -o $@ -c $<
 
 %.o: %.cpp
+	@mkdir -p $(dir $@)
 	$(CXX) $(FLAGS) $(CXXFLAGS) $(EXTRA_FLAGS) -o $@ -c $<
 
 $(LIB_DIR)/lib%.a: $(OBJ)
