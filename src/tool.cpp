@@ -3,6 +3,7 @@
 #include "union_find.hpp"
 #include "stack.hpp"
 
+#define USE_CILK_API
 #include <internal/abi.h>
 #include <cilk/cilk_api.h>
 
