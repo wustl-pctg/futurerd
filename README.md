@@ -22,3 +22,8 @@ algorithm.
 ### Compiling programs
 
 ## TODO
+
+* Futures should really be a part of the runtime, like in
+  <cilk/future.hpp>, with added cilktool calls. Then this source tree
+  just implements the cilktool calls.
+* Find a way to make this (and CRacer) work with PIN.
