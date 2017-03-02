@@ -5,17 +5,17 @@
 namespace sp {
 
 struct node {
-  om::node* english;
-  om::node* hebrew;
+  om::ds::node* english;
+  om::ds::node* hebrew;
 };
 
 class reachability {
 private:
-  om::ds m_english;
-  om::ds m_hebrew;
+  static om::ds m_english;
+  static om::ds m_hebrew;
   
 public:
-  sp::node* insert(sp::node* base);
+  static void insert(const sp::node* base, sp::node* inserted);
   static bool precedes(sp::node* x, sp::node* y);
   static bool logically_parallel(sp::node* x, sp::node* y);
   static bool sequential(sp::node* x, sp::node* y);

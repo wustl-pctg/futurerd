@@ -6,6 +6,7 @@
 //#include "util.hpp"
 #include <cassert>
 #include <cstdint> // int types like uint32_t, uint64_t, etc.
+#include <cstring> // memset
 
 template <typename T>
 class stack {

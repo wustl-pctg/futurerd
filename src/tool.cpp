@@ -2,6 +2,7 @@
 #include "debug.hpp"
 #include "union_find.hpp"
 #include "stack.hpp"
+#include "sp_reach.hpp"
 
 #define USE_CILK_API
 #include <internal/abi.h>
@@ -9,18 +10,14 @@
 
 #include <cstdio>
 #include <cassert>
+#include <cstring> // memset
 
 #define TOOL_ASSERT(x) assert(x) /// @TODO{refactor asserts}
 
-struct sp_node {
-  om_node *english;
-  om_node *hebrew;
-};
-
 struct frame_data {
-  sp_node curr;
-  sp_node cont;
-  sp_node sync;
+  sp::node curr;
+  sp::node cont;
+  sp::node sync;
   unsigned char flags;
 }; // struct frame_data
 
@@ -31,9 +28,9 @@ public:
   void push_helper()
   {
     assert(this->m_head != (uint32_t)-1);
-    assert(!(head()->flags & FRAME_HELPER_MASK));
+    assert(!(head()->flags & HELPER_MASK));
     push();
-    head()->flags = FRAME_HELPER_MASK;
+    head()->flags = HELPER_MASK;
   }
 
 }; // class shadow_stack
@@ -46,10 +43,9 @@ shadow_stack t_sstack;
 extern "C" {
 
 // First cilk frame or steal
-void init_strand(frame_data *init) {
+void init_strand() {
   assert(t_sstack.empty());
   t_sstack.push();
-  
 }
 
 /// @TODO{Call cilk_tool_init/destroy automatically instead of from tsan}

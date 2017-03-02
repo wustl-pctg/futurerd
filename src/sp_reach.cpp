@@ -1,28 +1,26 @@
 #include "sp_reach.hpp"
+#include <cassert>
 
 namespace sp {
 
-sp::node* reachability::insert(sp::node* base)
+void reachability::insert(const sp::node* base, sp::node* inserted)
 {
-  sp::node* n = new sp::node();
-  assert(n);
+  assert(inserted);
   
-  n->english = m_english.insert(base->english);
-  assert(n->english);
+  inserted->english = m_english.insert(base->english);
+  assert(inserted->english);
   
-  n->hebrew = m_hebrew.insert(base->hebrew);
-  assert(n->hebrew);
-  
-  return n;
+  inserted->hebrew = m_hebrew.insert(base->hebrew);
+  assert(inserted->hebrew);
 }
 
-static bool reachability::precedes(sp::node* x, sp::node* y)
+bool reachability::precedes(sp::node* x, sp::node* y)
 {
   return m_english.precedes(x->english, y->english)
     && m_hebrew.precedes(x->hebrew, y->hebrew);
 }
 
-static bool reachability::logically_parallel(sp::node* x, sp::node* y)
+bool reachability::logically_parallel(sp::node* x, sp::node* y)
 {
   // slightly faster than calling precedes twice
   bool prec_in_english = m_english.precedes(x->english, y->english);
@@ -31,7 +29,7 @@ static bool reachability::logically_parallel(sp::node* x, sp::node* y)
   return prec_in_english != prec_in_hebrew;
 }
 
-static bool reachability::sequential(sp::node* x, sp::node* y)
+bool reachability::sequential(sp::node* x, sp::node* y)
 {
   return !logically_parallel(x,y);
 }
