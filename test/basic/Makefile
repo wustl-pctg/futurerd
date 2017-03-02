@@ -1,5 +1,5 @@
 include ../test.mk
-TARGETS := test1 test2 test3 test4 test5 test6
+TARGETS := test1 test2 test3 test4 test5 test6 test7
 
 LIB = $(LIB_DIR)/libfuturerd.a
 

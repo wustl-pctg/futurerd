@@ -8,7 +8,13 @@
 // If we ever do this in parallel we'll need to do something like a
 // detach.
 #define create_future(T,f,func,args...) \
-  cilk::future<T> f; f.finish(func(args))
+  cilk::future<T> f; spawn f.finish(func(args))
+
+// A future that doesn't automatically finish
+// Requires the programmer to use f.finish(...) in the function
+#define create_future2(T,f,func,args...) \
+  cilk::future<T> f; spawn func(args)
+
 
 namespace cilk {
 
