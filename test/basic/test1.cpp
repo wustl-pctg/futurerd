@@ -18,8 +18,8 @@ int fib(int n)
 int main(int argc, char* argv[])
 {
   futurerd::set_policy(futurerd::CONTINUE);
-  
-  cilk::future<int> f = create_future(fib, 10);
+
+  create_future(int, f, fib, 10);
 
   assert(f.get() == 55);
   assert(futurerd::num_races() == 0);
