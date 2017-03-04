@@ -1,9 +1,11 @@
-#include <cstddef>
-#include <cstdlib>
+//#include <cstddef>
+//#include <cstdlib>
+
+namespace utils {
 
 template <typename T>
 class chunked_list {
-
+private:
   struct chunk {
     T* data;
     struct chunk* previous;
@@ -13,7 +15,7 @@ class chunked_list {
     chunk(std::size_t sz, chunk* prev = nullptr)
       : previous(prev), size(sz)
     { data = (T*) malloc(sz * sizeof(T)); }
-    ~chunk() { delete[] data; }
+    ~chunk() { free(data); }
   }; // struct chunk
   
   static constexpr std::size_t DEFAULT_SIZE = 128;
@@ -22,6 +24,8 @@ class chunked_list {
   std::size_t m_index = 0;
 
 public:
+  /// @todo{It is a waste to allocate chunked linked list nodes
+  /// separately from their data...they should be allocated together.}
   chunked_list() { m_current = new chunk(DEFAULT_SIZE); }
   ~chunked_list()
   {
@@ -39,3 +43,5 @@ public:
     return slot;
   }
 }; // class chunked_list
+
+} // namspace utils

@@ -8,6 +8,8 @@
 #include <cstdint> // int types like uint32_t, uint64_t, etc.
 #include <cstring> // memset
 
+namespace utils {
+
 template <typename T>
 class stack {
   typedef uint32_t index_t;
@@ -91,3 +93,4 @@ public:
   bool empty() const { return size() == 0; }
 }; // class stack
 
+} // namespace utils
