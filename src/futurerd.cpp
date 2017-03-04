@@ -6,7 +6,7 @@
 
 namespace futurerd {
 
-typedef uf::node set_t;
+typedef utils::uf::node set_t;
 
 /// XXX: Should be detector state object
 static DetectPolicy g_policy = futurerd::DetectPolicy::ABORT;
