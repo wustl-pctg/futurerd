@@ -1,7 +1,7 @@
 #include "tsan.hpp"
 #include "debug.hpp"
-#include "union_find.hpp"
-#include "stack.hpp"
+#include "utils/union_find.hpp"
+#include "utils/stack.hpp"
 #include "sp_reach.hpp"
 
 #define USE_CILK_API
@@ -21,7 +21,7 @@ struct frame_data {
   unsigned char flags;
 }; // struct frame_data
 
-class shadow_stack : public stack<frame_data> {
+class shadow_stack : public utils::stack<frame_data> {
 private:
   static constexpr unsigned char HELPER_MASK = 0x1;
 public:

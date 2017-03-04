@@ -1,5 +1,5 @@
 #include "futurerd.hpp"
-#include "union_find.hpp"
+#include "utils/union_find.hpp"
 #include "debug.hpp"
 
 #include <cstdio>

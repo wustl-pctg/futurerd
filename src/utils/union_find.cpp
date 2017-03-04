@@ -4,10 +4,12 @@
 #include "union_find.hpp"
 #include "chunked_list.hpp"
 
-#include <cstdio>
+//#include <cstdio>
+
+namespace utils {
 
 void* uf::node::operator new(std::size_t sz) {
-  static chunked_list<node> allocator;
+  static utils::chunked_list<node> allocator;
   return (void*) allocator.get_next();
 }
 
@@ -34,3 +36,5 @@ node* merge(node* x, node* y)
 }
 
 } // namespace uf
+
+} // namespace utils

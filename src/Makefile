@@ -1,6 +1,6 @@
 include ../common.mk
 
-SRC := tsan.cpp tool.cpp debug.cpp futurerd.cpp union_find.cpp sp_reach.cpp
+SRC := tsan.cpp tool.cpp debug.cpp futurerd.cpp sp_reach.cpp utils/union_find.cpp
 SRC += om/two_list.cpp
 OBJ := $(addprefix $(OBJ_DIR)/, $(SRC:.cpp=.o))
 LIB_DIR = $(BUILD_DIR)/lib

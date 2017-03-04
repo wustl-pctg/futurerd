@@ -1,4 +1,4 @@
-#include <cstdlib>
+namespace utils {
 
 namespace uf {
 struct node {
@@ -18,3 +18,5 @@ struct node {
 node* merge(node* x,  node* y);
 node* find(node* x);
 } // namespace uf
+
+} // namespace utils
