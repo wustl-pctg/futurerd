@@ -1,9 +1,7 @@
 #include "sp_reach.hpp"
 #include <cassert>
 
-namespace sp {
-
-void reachability::insert(const sp::node* base, sp::node* inserted)
+void sp_reachability::insert(const sp_node* base, sp_node* inserted)
 {
   assert(inserted);
   
@@ -14,13 +12,13 @@ void reachability::insert(const sp::node* base, sp::node* inserted)
   assert(inserted->hebrew);
 }
 
-bool reachability::precedes(sp::node* x, sp::node* y)
+bool sp_reachability::precedes(sp_node* x, sp_node* y) const
 {
   return m_english.precedes(x->english, y->english)
     && m_hebrew.precedes(x->hebrew, y->hebrew);
 }
 
-bool reachability::logically_parallel(sp::node* x, sp::node* y)
+bool sp_reachability::logically_parallel(sp_node* x, sp_node* y) const
 {
   // slightly faster than calling precedes twice
   bool prec_in_english = m_english.precedes(x->english, y->english);
@@ -29,12 +27,7 @@ bool reachability::logically_parallel(sp::node* x, sp::node* y)
   return prec_in_english != prec_in_hebrew;
 }
 
-bool reachability::sequential(sp::node* x, sp::node* y)
+bool sp_reachability::sequential(sp_node* x, sp_node* y) const
 {
   return !logically_parallel(x,y);
 }
-
-
-
-
-} // namespace sp

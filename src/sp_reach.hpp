@@ -3,23 +3,19 @@
 // For now we're just going to use the two_list version
 #include "om/om.hpp"
 
-namespace sp {
-
-struct node {
+struct sp_node {
   om::ds::node* english;
   om::ds::node* hebrew;
 };
 
-class reachability {
+class sp_reachability {
 private:
-  static om::ds m_english;
-  static om::ds m_hebrew;
+  om::ds m_english;
+  om::ds m_hebrew;
   
 public:
-  static void insert(const sp::node* base, sp::node* inserted);
-  static bool precedes(sp::node* x, sp::node* y);
-  static bool logically_parallel(sp::node* x, sp::node* y);
-  static bool sequential(sp::node* x, sp::node* y);
-}; // class reachability
-
-} // namespace sp
+  void insert(const sp_node* base, sp_node* inserted);
+  bool precedes(sp_node* x, sp_node* y) const;
+  bool logically_parallel(sp_node* x, sp_node* y) const;
+  bool sequential(sp_node* x, sp_node* y) const;
+}; // class sp_reachability

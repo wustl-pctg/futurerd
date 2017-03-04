@@ -15,9 +15,9 @@
 #define TOOL_ASSERT(x) assert(x) /// @TODO{refactor asserts}
 
 struct frame_data {
-  sp::node curr;
-  sp::node cont;
-  sp::node sync;
+  sp_node curr;
+  sp_node cont;
+  sp_node sync;
   unsigned char flags;
 }; // struct frame_data
 
