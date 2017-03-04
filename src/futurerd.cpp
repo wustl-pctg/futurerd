@@ -26,7 +26,7 @@ void destroy() {}
 void print_stats(FILE *output = stdout) { }
 
 strand_t nt_out() {
-  auto reserved_node = new uf::node();
+  auto reserved_node = new set_t();
   auto reserved_id = reserved_node->id;
 
   // Other maintenance
