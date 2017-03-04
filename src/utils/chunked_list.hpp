@@ -1,5 +1,5 @@
-//#include <cstddef>
-//#include <cstdlib>
+#include <cstddef> // std::size_t
+#include <cstdlib> // malloc/free
 
 namespace utils {
 
