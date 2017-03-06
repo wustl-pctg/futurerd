@@ -12,8 +12,6 @@
 #include <cassert>
 #include <cstring> // memset
 
-#define TOOL_ASSERT(x) assert(x) /// @TODO{refactor asserts}
-
 struct frame_data {
   sp_node curr;
   sp_node cont;
@@ -25,22 +23,24 @@ class shadow_stack : public utils::stack<frame_data> {
 private:
   static constexpr unsigned char HELPER_MASK = 0x1;
 public:
-  void push_helper()
+  enum class frame_type : unsigned char { SPAWNER = 0, HELPER = 1};
+  void push(frame_type type = frame_type::SPAWNER)
   {
     assert(this->m_head != (uint32_t)-1);
-    assert(!(head()->flags & HELPER_MASK));
-    push();
-    head()->flags = HELPER_MASK;
+    utils::stack<frame_data>::push();
+    if (type == frame_type::SPAWNER) {
+      assert(!(ancestor(1)->flags & HELPER_MASK));
+      head()->flags = HELPER_MASK;
+    }
   }
-
+  void push_helper() { push(frame_type::HELPER); }
 }; // class shadow_stack
+
 
 // For parallel detection we will need this to be thread
 // local. Actually, it will need to be a P-sized array since we need
 // to access other workers' shadow stacks.
 shadow_stack t_sstack;
-
-extern "C" {
 
 // First cilk frame or steal
 void init_strand() {
@@ -64,6 +64,8 @@ void cilk_enter_helper_begin(__cilkrts_stack_frame* sf,
                              void* this_fn, void* rip) {
   DBG_TRACE();
   disable_checking();
+
+  t_sstack.push_helper();
 }
 
 void cilk_enter_end(__cilkrts_stack_frame *sf, void *rsp) {
@@ -127,9 +129,7 @@ void cilk_leave_end() {
 
 void cilk_steal_success(__cilkrts_worker *w, __cilkrts_worker *victim,
 			__cilkrts_stack_frame *sf) {
-  TOOL_ASSERT(t_checking_disabled > 0);
+  assert(t_checking_disabled > 0);
   // We don't need to enable checking here b/c this worker will
   // immediately execute cilk_spawn_or_continue
 }
-
-} // extern "C"
