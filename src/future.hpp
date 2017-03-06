@@ -3,9 +3,13 @@
 /// @todo{Ideally the race detection functions in the future class
 /// will be split out like the other cilk tool functions.}
 #ifdef RACE_DETECT
-#define RD(func) rd_ ## func
+#include "futurerd.hpp"
 #else
-#define RD(func)
+class rd_info {
+  at_create() {}
+  at_finish() {}
+  at_get() {}
+};
 #endif
 
 // A hack since I don't want to change the compiler.
@@ -32,20 +36,13 @@ private:
 
   status m_stat;
   T m_value;
-
-  // Race detection stuff
-#ifdef RACE_DETECT
-
-  void rd_create_future() {}
-  void rd_finish_future() {}
-  void rd_get_future() {}
-#endif
+  rd_info m_rd_info;
 
 public:
 
-  future() : m_stat(status::STARTED) { RD(create_future(this)); }
-  void finish(T val) { m_value = val; m_stat = status::DONE; RD(finish_future(this)); }
-  T get() { assert(m_stat == status::DONE); return m_value; }
+  future() : m_stat(status::STARTED) {}
+  void finish(T val) { m_value = val; m_stat = status::DONE; m_rd_info.at_finish(); }
+  T get() { assert(m_stat == status::DONE); m_rd_info.at_get(); return m_value; }
 }; // class future
 
 template<typename T>

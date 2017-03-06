@@ -38,6 +38,20 @@ void nt_in(strand_t s) {
 
 }
 
+void rd_info::rd_info() { at_create(); }
+
+void rd_info::at_create() {
+
+}
+
+void rd_info::at_finish() {
+
+}
+
+void rd_info::at_get() {
+
+}
+
 
 
 

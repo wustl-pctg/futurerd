@@ -16,12 +16,21 @@ void reset();
 void init();
 void destroy();
 
+// information that must be contained in a future to do race detection.
+class rd_info {
+public:
+  rd_info(); // called on create_future
+  void at_create();
+  void at_finish();
+  void at_get();
+
+}; // class rd_info;
+
 // extern inline void disable_checking() { __futurerd_disable_checking(); }
 // extern inline void enable_checking() { __futurerd_enable_checking(); }
 
-strand_t nt_out();
-void nt_in(strand_t s);
-
+//strand_t nt_out();
+//void nt_in(strand_t s);
 void at_sync();
 void at_spawn();
 void at_continuation();
