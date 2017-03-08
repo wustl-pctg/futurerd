@@ -12,6 +12,7 @@ namespace utils {
 
 template <typename T>
 class stack {
+public:
   typedef uint32_t index_t;
 protected:
 
@@ -42,6 +43,7 @@ protected:
   void halve_cap() { resize(m_cap / 2); }
 
 public:
+
   stack() : m_cap(DEFAULT_CAPACITY)
   {
     reset();

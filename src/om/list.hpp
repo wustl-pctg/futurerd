@@ -13,9 +13,11 @@ protected:
   
 public:
   list(label_t initial_label = MIN_LABEL);
+  list(node *n, label_t initial_label = MIN_LABEL);
   ~list() {} // not necessary
   node* insert(node* base);
 
+  inline node* first() const { return m_head; }
   static inline bool precedes(const node* x, const node* y)
   { return x->label < y->label; }
   

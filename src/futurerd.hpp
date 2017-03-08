@@ -2,37 +2,36 @@
 
 namespace futurerd {
 
-typedef int strand_t; // XXX: temporary
-
 enum DetectPolicy {
   ABORT = 0,
   CONTINUE = 1,
 };
 
+struct future_rd_info {
 
+}; // struct future_rd_info
+
+// Public API
 void set_policy(futurerd::DetectPolicy p);
 size_t num_races();
+
+// Tool API (for cilktool and tsan)
 void reset();
 void init();
 void destroy();
 
-// information that must be contained in a future to do race detection.
-class rd_info {
-public:
-  rd_info(); // called on create_future
-  void at_create();
-  void at_finish();
-  void at_get();
+void at_create(future_rd_info*);
+void at_finish(future_rd_info*);
+void at_get(future_rd_info*);
 
-}; // class rd_info;
+void at_cilk_function();
+void at_leave_begin();
 
-// extern inline void disable_checking() { __futurerd_disable_checking(); }
-// extern inline void enable_checking() { __futurerd_enable_checking(); }
+// Returns whether or not we're leaving the last frame
+bool at_leave_end();
 
-//strand_t nt_out();
-//void nt_in(strand_t s);
 void at_sync();
 void at_spawn();
 void at_continuation();
 
-}
+} // namespace futurerd

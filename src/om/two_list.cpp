@@ -5,6 +5,11 @@ namespace om {
 
 using node = two_list::node;
 
+two_list::two_list() {
+  m_tl = new top_level();
+  m_first_bl = new bot_level(m_tl->first());
+}
+
 node* two_list::insert(node* base)
 {
   node* n = nullptr;

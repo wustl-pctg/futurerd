@@ -1,13 +1,40 @@
 #include "sp_reach.hpp"
 #include <cassert>
 
-void sp_reachability::insert(const sp_node* base, sp_node* inserted)
+sp_node sp_reachability::first() const {
+  sp_node f;
+  f.english = m_english.first();
+  f.hebrew = m_hebrew.first();
+  return f;
+}
+
+void sp_reachability::insert_sequential(const sp_node* base, sp_node* inserted)
+{
+  insert_english(base, inserted);
+  insert_hebrew(base, inserted);
+}
+
+void sp_reachability::fork(const sp_node* base, sp_node* left, sp_node* right)
+{
+  insert_english(base, left);
+  insert_english(base, right);
+
+  insert_hebrew(base, right);
+  insert_hebrew(base, left);
+}
+
+
+void sp_reachability::insert_english(const sp_node* base, sp_node* inserted)
 {
   assert(inserted);
-  
   inserted->english = m_english.insert(base->english);
   assert(inserted->english);
   
+}
+
+void sp_reachability::insert_hebrew(const sp_node* base, sp_node* inserted)
+{
+  assert(inserted);
   inserted->hebrew = m_hebrew.insert(base->hebrew);
   assert(inserted->hebrew);
 }

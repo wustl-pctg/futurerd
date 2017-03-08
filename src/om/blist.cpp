@@ -11,7 +11,6 @@ static constexpr label_t SUBLIST_SIZE = ((label_t)64); // log_2 N = 64
 blist<TLT>::blist(tl_node* above, label_t initial_label)
   : m_above(above), parent_list<TLT>(initial_label) {}
 
-// template <class TLT> using typename TLT::node = node (?)
 template <class TLT>
 typename TLT::node* blist<TLT>::insert(node* base)
 {

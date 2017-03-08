@@ -27,6 +27,10 @@ static label_t list<node>::next_label(node* base)
 
 list<node>::list(label_t initial_label = MIN_LABEL)
   : m_head(new node(initial_label))
+{ 
+
+list<node>::list(node *n, label_t initial_label = MIN_LABEL)
+  : m_head(new(n) node(initial_label))
 { assert(m_head); }
 
 node* list<node>::insert(node* base)
