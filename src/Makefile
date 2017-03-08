@@ -1,7 +1,7 @@
 include ../common.mk
 
 # Basic tool functionality
-SRC := shadow_stack.cpp driver.cpp futurerd.cpp sp_tsan.cpp
+SRC := driver.cpp futurerd.cpp #tsan.cpp
 
 # Reachability
 SRC += sp_reach.cpp reach.cpp
