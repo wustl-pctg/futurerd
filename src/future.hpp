@@ -2,14 +2,16 @@
 
 /// @todo{Ideally the race detection functions in the future class
 /// will be split out like the other cilk tool functions.}
+#define RACE_DETECT
 #ifdef RACE_DETECT
 #include "futurerd.hpp"
 #else
-class rd_info {
-  at_create() {}
-  at_finish() {}
-  at_get() {}
-};
+namespace futurerd {
+struct futurerd_info {};
+void at_create() {}
+void at_finish() {}
+void at_get() {}
+} // namespace futurerd
 #endif
 
 // A hack since I don't want to change the compiler.
@@ -36,35 +38,21 @@ private:
 
   status m_stat;
   T m_value;
-  rd_info m_rd_info;
+  futurerd::future_rd_info m_rd_info;
 
 public:
 
-  future() : m_stat(status::STARTED) {}
-  void finish(T val) { m_value = val; m_stat = status::DONE; m_rd_info.at_finish(); }
-  T get() { assert(m_stat == status::DONE); m_rd_info.at_get(); return m_value; }
+  future() : m_stat(status::STARTED) { futurerd::at_create(&m_rd_info); }
+  void finish(T val) {
+    m_value = val;
+    m_stat = status::DONE;
+    futurerd::at_finish(&m_rd_info);
+  }
+  T get() {
+    assert(m_stat == status::DONE);
+    futurerd::at_get(&m_rd_info);
+    return m_value;
+  }
 }; // class future
-
-template<typename T>
-class structured_future {
-private:
-  enum class status { STARTED, DONE, TOUCHED };
-
-  status m_stat;
-  T m_value;
-
-  // If we want to verify that this is structured at runtime, we can
-  // keep an SP node here (english & hebrew) telling us where we
-  // created this future. Then make sure that always precedes the
-  // touch point.
-  // sp_node m_create_point;
-
-public:
-  structured_future() : m_stat(status::STARTED) {}
-  void finish(T val) { m_value = val; m_stat = status::DONE; }
-  T get() { assert(m_stat == status::DONE); m_stat = status::TOUCHED; return m_value; }
-
-}; // class structured_future
-
 
 } // namespace cilk
