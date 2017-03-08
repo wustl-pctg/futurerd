@@ -4,7 +4,6 @@
 
 #include "common.h"
 #include <future.hpp>
-#include <futurerd.hpp>
 
 int g_shared = 0;
 

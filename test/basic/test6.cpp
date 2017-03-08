@@ -4,7 +4,6 @@
 
 #include "common.h"
 #include <future.hpp>
-#include <futurerd.hpp>
 
 int foo(cilk::future<int>& f, int& shared) {
   f.finish(42);

@@ -4,7 +4,6 @@
 
 #include "common.h"
 #include <future.hpp>
-#include <futurerd.hpp>
 
 int foo(cilk::future<int>& f) { return 42; }
 int bar(cilk::future<int>& f) { return f.get(); }
