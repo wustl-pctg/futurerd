@@ -25,5 +25,27 @@ algorithm.
 
 * Futures should really be a part of the runtime, like in
   <cilk/future.hpp>, with added cilktool calls. Then this source tree
-  just implements the cilktool calls.
+  just implements the cilktool calls. The problem is that I think we
+  need to store extra information with each future. Either we need to
+  embed this info in the future class, which means either 
+  
+  (1) the tool can only be turned on statically, while compiling the
+  user's program, or
+  
+  (2) We need to hash each future to a separate location for the extra
+  information, which adds overhead.
+  
 * Find a way to make this (and CRacer) work with PIN.
+
+* Setup Doxygen to collect various tags:
+  * Bug
+  * Refactor (enhancement?)
+  * Features (enhancement?)
+  * Question (as in, why is this code and what is it doing?)
+  
+* Get some benchmarks!
+  
+* Setup automatic generation of a performance report
+  * For now, just run some benchmarks and generate a few plots
+  * Later, turn on profiling and generate a bunch of data
+  * Try to display this is an R notebook or something similar
