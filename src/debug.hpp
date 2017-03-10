@@ -6,7 +6,7 @@
 #ifndef DNDEBUG
 #define DBG_TRACE(fmt, args...)                                      \
   futurerd::debug::printf(futurerd::debug::TRACE,                    \
-                          "[%s]: " fmt, __func__, ## args)
+                          "[%s]: " fmt "\n", __func__, ## args)
 #else
 #define DBG_TRACE
 #endif

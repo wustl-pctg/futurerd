@@ -27,14 +27,14 @@ void at_get() {}
 // A future that doesn't automatically finish
 // Requires the programmer to use f.finish(...) in the function
 #define create_future2(T,f,func,args...) \
-  cilk::future<T> f; func(args)
+  cilk::future<T> f; func(args); f.finish();
 
 namespace cilk {
 
 template<typename T>
 class future {
 private:
-  enum class status { STARTED, DONE };
+  enum class status { STARTED, PUT, DONE };
 
   status m_stat;
   T m_value;
@@ -43,11 +43,32 @@ private:
 public:
 
   future() : m_stat(status::STARTED) { futurerd::at_create(&m_rd_info); }
+  
+  // value has finished computing, but function will continue to do
+  // some more work
+  void put(T val) {
+    m_value = val;
+    m_stat = status::PUT;
+    futurerd::at_put(&m_rd_info);
+  }
+
+  // should only be called after a put
+  void finish() {
+    assert(m_stat == status::PUT);
+    m_stat = status::DONE;
+    futurerd::at_finish(&m_rd_info);
+  }
+  
   void finish(T val) {
+
+    // it would be a waste to call put(val) here, since it would call
+    // futurerd::at_put(...). That would make a new strand, but we
+    // don't need to since we're going to finish right away
     m_value = val;
     m_stat = status::DONE;
     futurerd::at_finish(&m_rd_info);
   }
+  
   T get() {
     assert(m_stat == status::DONE);
     futurerd::at_get(&m_rd_info);
