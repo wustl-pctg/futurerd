@@ -4,11 +4,11 @@
 
 template <typename T>
 struct shadow_frame {
-  enum frame_type : unsigned char { SPAWNER = 0x0, HELPER = 0x1};
+  enum frame_type : unsigned char { SPAWNER = 0, HELPER, FUTURE};
 
   T data;
-  unsigned char flags;
-  bool is_helper() const { return flags & frame_type::HELPER; }
+  frame_type type;
+  bool is_helper() const { return type == HELPER; }
 }; // struct shadow_frame
 
 template <typename T>
@@ -29,10 +29,13 @@ public:
   void push_spawner() {
     base_type::push();
     assert(!(base_type::ancestor(1)->is_helper()));
-    base_type::head()->flags &= frame::frame_type::HELPER;
+    base_type::head()->type = frame::frame_type::HELPER;
   }
   void push_helper() {
     base_type::push();
-    base_type::head()->flags &= frame::frame_type::SPAWNER;
+    base_type::head()->type = frame::frame_type::SPAWNER;
+  }
+  void push_future() {
+
   }
 }; // class shadow_stack
