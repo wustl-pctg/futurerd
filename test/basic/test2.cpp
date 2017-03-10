@@ -10,7 +10,7 @@ int bar(cilk::future<int>& f) { return f.get(); }
 
 int main(int argc, char* argv[])
 {
-  futurerd::set_policy(futurerd::CONTINUE);
+  futurerd::set_policy(futurerd::DetectPolicy::SILENT);
 
   // cilk::future<int> f = foo(f);
   // int x = bar(f);

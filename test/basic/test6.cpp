@@ -5,10 +5,10 @@
 #include "common.h"
 #include <future.hpp>
 
-int foo(cilk::future<int>& f, int& shared) {
-  f.finish(42);
+void foo(cilk::future<int>& f, int& shared) {
+  f.put(42);
   shared = 57;
-  return 0;
+  return;
 }
 
 int bar(cilk::future<int>& f, int& shared) {
@@ -18,10 +18,11 @@ int bar(cilk::future<int>& f, int& shared) {
 
 int main(int argc, char* argv[])
 {
-  futurerd::set_policy(futurerd::CONTINUE);
+  futurerd::set_policy(futurerd::DetectPolicy::SILENT);
   
   int shared = 0;
-  create_future(int, f, foo, f, shared);
+  futurerd::set_loc((void*)&shared);
+  create_future2(int, f, foo, f, shared);
   int x = bar(f, shared);
 
   assert(x == 15 || x == -42);

@@ -19,7 +19,8 @@ int bar(cilk::future<int>& f) {
 
 int main(int argc, char* argv[])
 {
-  futurerd::set_policy(futurerd::CONTINUE);
+  futurerd::set_policy(futurerd::DetectPolicy::SILENT);
+  futurerd::set_loc((void*)&g_shared);
 
   create_future(int, f, foo, f);
   int x = bar(f);
