@@ -15,7 +15,6 @@ public:
   void insert_many(tl_node* start);
 }; // class tlist
 
-
-
-
 } // namespace om
+
+#include "tlist.tpp"
