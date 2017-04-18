@@ -49,3 +49,18 @@ races when using futures in a structured way.
   * For now, just run some benchmarks and generate a few plots
   * Later, turn on profiling and generate a bunch of data
   * Try to display this is an R notebook or something similar
+
+# Implmentation Issues
+
+* The problem with implementing the algorithm from the (submitted)
+  paper is the forward/backward searches. We don't want to keep an
+  explicit graph around -- the overheads will be too high.
+* We could simulate this with some kind of union-find, probably, but
+  then we break the theoretical bounds.
+* We had a different algorithm without splits, that used set
+  unions. It had some limitations (some things are not part of any set
+  yet), but these turned out not to matter. What were the details and
+  what was wrong with it? Maybe we just didn't like it because it
+  seemed hard to parallelize.
+	* I think it would require suspending and resuming unless some specific property holds.
+	* I didn't understand the discussion about that property...
