@@ -21,8 +21,8 @@ int bar(cilk::future<int>& f) {
 
 int main(int argc, char* argv[])
 {
-  futurerd::set_policy(futurerd::DetectPolicy::SILENT);
-  futurerd::set_loc((void*)&g_shared);
+  FUTURE_PROLOG();
+  TEST_SETUP();
 
   create_future(int, f, foo, f);
   int x = bar(f);
@@ -30,5 +30,8 @@ int main(int argc, char* argv[])
   assert(x == 15 || x == -42);
   assert(futurerd::num_races() == 1);
 
+  TEST_TEARDOWN();
+  FUTURE_EPILOG();
+  
   return 0;
 }

@@ -17,15 +17,18 @@ int bar(cilk::future<int>& f, int& shared) {
 
 int main(int argc, char* argv[])
 {
-  futurerd::set_policy(futurerd::DetectPolicy::SILENT);
+  FUTURE_PROLOG();
+  TEST_SETUP();
   
   int shared = 0;
-  futurerd::set_loc((void*)&shared);
   create_future(int, f, foo, f, shared);
   int x = bar(f, shared);
 
   assert(x == 15);
   assert(futurerd::num_races() == 0);
-  
+
+  TEST_TEARDOWN();
+  FUTURE_EPILOG();
+
   return 0;
 }

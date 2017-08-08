@@ -10,7 +10,8 @@ int bar(cilk::future<int>& f) { return f.get(); }
 
 int main(int argc, char* argv[])
 {
-  futurerd::set_policy(futurerd::DetectPolicy::SILENT);
+  FUTURE_PROLOG();
+  TEST_SETUP();
 
   // cilk::future<int> f = foo(f);
   // int x = bar(f);
@@ -21,5 +22,8 @@ int main(int argc, char* argv[])
   assert(x == 42);
   assert(futurerd::num_races() == 0);
 
+  TEST_TEARDOWN();
+  FUTURE_EPILOG();
+  
   return 0;
 }

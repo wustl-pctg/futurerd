@@ -16,12 +16,16 @@ int fib(int n)
 
 int main(int argc, char* argv[])
 {
-  futurerd::set_policy(futurerd::SILENT);
-
+  FUTURE_PROLOG();
+  TEST_SETUP();
+  
   create_future(int, f, fib, 10);
 
   assert(f.get() == 55);
   assert(futurerd::num_races() == 0);
 
+  TEST_TEARDOWN();
+  FUTURE_EPILOG();
   return 0;
 }
+

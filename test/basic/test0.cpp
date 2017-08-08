@@ -1,8 +1,7 @@
-// Simple race in a fork-join program
+// Regression test: hopefully we didn't mess anything up.
 #include "common.h"
+#include <cassert>
 #include <future.hpp>
-
-int g_shared = 0;
 
 int fib(int n)
 {
@@ -14,22 +13,15 @@ int fib(int n)
   int y = fib(n - 2);
   sync;
 
-  g_shared++;
-
   return x + y;
 }
 
 int main(int argc, char* argv[])
 {
-  FUTURE_PROLOG();
   TEST_SETUP();
-
-  create_future(int, f, fib, 10);
-
-  assert(f.get() == 55);
-  assert(futurerd::num_races() > 0);
-
+  int result = fib(10);
+  assert(result == 55);
+  assert(futurerd::num_races() == 0);
   TEST_TEARDOWN();
-  FUTURE_EPILOG();
   return 0;
 }
