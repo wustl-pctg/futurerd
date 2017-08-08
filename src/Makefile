@@ -1,13 +1,10 @@
 include ../common.mk
 
 # Basic tool functionality
-SRC := driver.cpp futurerd.cpp #tsan.cpp
-
-# Reachability
-SRC += sp_reach.cpp reach.cpp
+SRC := driver.cpp futurerd.cpp shadow_mem.cpp #mem_access.cpp
 
 # Other helpers
-SRC += om/two_list.cpp utils/union_find.cpp debug.cpp
+SRC += utils/union_find.cpp debug.cpp sbpag.cpp
 
 OBJ := $(addprefix $(OBJ_DIR)/, $(SRC:.cpp=.o))
 LIB_DIR = $(BUILD_DIR)/lib
