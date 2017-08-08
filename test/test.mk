@@ -6,7 +6,9 @@ include $(TEST_DIR)/../common.mk
 
 # Why doesn't clang pick this up automatically?
 INC += -I$(PROJECT_HOME)/llvm-cilk/include -I$(PROJECT_HOME)/src/
-APPFLAGS = -fcilkplus -fcilktool -fsanitize=thread
+INC += -I$(PROJECT_HOME)/cilkrts/include/
+
+APPFLAGS = -fcilkplus -fcilktool -fcilk-no-inline -fsanitize=thread
 
 CFLAGS += $(APPFLAGS)
 CXXFLAGS += $(APPFLAGS)
