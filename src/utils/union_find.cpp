@@ -8,32 +8,30 @@
 
 namespace utils {
 
-void* uf::node::operator new(std::size_t sz) {
-  static utils::chunked_list<node> allocator;
-  return (void*) allocator.get_next();
-}
-
 namespace uf {
 
 std::size_t node::global_index = 0;
 
+node* link(node* x, node* y) {
+  if (x == y) return x;
+  if (y->rank > x->rank) return link(y,x);
+
+  // guaranteed that x has >= rank than y
+  y->parent = x;
+  if (x->rank == y->rank) ++x->rank;
+  return x;
+}
+
 node* find(node* x)
 {
+  /// cilksan does this by using a list rather than recursion, which
+  /// may be faster.
   if (x->parent != x) 
     return x->parent = find(x->parent);
   return x->parent;
 }
 
-node* merge(node* x, node* y)
-{
-  if (y->size > x->size) return merge(y,x);
-
-  node* root = find(x);
-  node* child = find(y);
-  child->parent = root;
-  root->size += child->size;
-  return root;
-}
+node* merge(node* x,  node* y) { return link(find(x), find(y)); }
 
 } // namespace uf
 
