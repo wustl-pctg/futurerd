@@ -10,14 +10,13 @@
 //#define NOSANITIZE __attribute__((no_sanitizer("thread")))
 #define NOSANITIZE
 #else
+__attribute__((weak)) void cilk_future_create() {}
+__attribute__((weak)) void cilk_future_get(sfut_data *) {}
+__attribute__((weak)) void cilk_future_finish() {}
+__attribute__((weak)) void cilk_future_put() {}
 namespace futurerd {
 struct futurerd_info {};
-__attribute__((weak)) void at_create(struct futurerd_info*) {}
-__attribute__((weak)) void at_finish(struct futurerd_info*) {}
-__attribute__((weak)) void at_get(struct futurerd_info*) {}
 __attribute__((weak)) void at_put(struct futurerd_info*) {}
-__attribute__((weak)) void enable_checking() {}
-__attribute__((weak)) void disable_checking() {}
 } // namespace futurerd
 #define NOSANITIZE
 #endif
@@ -32,26 +31,18 @@ template<typename T>
 class future {
 private:
   enum class status { CREATED, // memory allocated, initialized
-                      //STARTED, // strand has started execution
                       PUT, // value is ready
                       DONE, // strand has finished execution
   };
 
   status m_stat;
   T m_val;
-  //size_t m_got_count; // # times get() has been called
   futurerd::futurerd_info m_rd_info;
 
 public:
 
   NOSANITIZE future() : m_stat(status::CREATED)
-  { futurerd::at_create(&m_rd_info); }
-
-  // We don't allow futures to be created and then started later
-  // NOSANITIZE void start() {
-  //   assert(m_stat == status::CREATED);
-  //   m_stat = status::STARTED;
-  // }
+  { cilk_future_create(); }
   
   NOSANITIZE void put(T val) {
     m_val = val;
@@ -62,21 +53,17 @@ public:
   NOSANITIZE void finish() {
     assert(m_stat == status::PUT);
     m_stat = status::DONE;
-    futurerd::at_finish(&m_rd_info);
+    cilk_future_finish(&m_rd_info);
+    // For sequential futures it's fine to call this here
   }
 
   NOSANITIZE void finish(T val) {
-    //futurerd::disable_checking(); // disable here or in at_finish()?
     put(val);
     finish();
-    //futurerd::enable_checking();
   }
-
-
 
   NOSANITIZE bool ready() { return m_stat >= status::PUT; }
   NOSANITIZE T get() {
-    //futurerd::disable_checking(); // disable here or in at_get()?
 
     // True for our sequential version
     assert(m_stat == status::DONE);
@@ -84,8 +71,8 @@ public:
     while (m_stat < status::PUT)
       /* cilk_yield() */ ;
     //m_got_count++;
-    futurerd::at_get(&m_rd_info);
-    //futurerd::enable_checking();
+    cilk_future_get(&m_rd_info);
+
     return m_val;
   }
 }; // class future
