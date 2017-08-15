@@ -1,37 +1,10 @@
-// Hacks to create futures since we don't want to change the compiler
-// (yet). Note that this doesn't actually create any parallelism yet,
-// so you can only run sequentially.
-#include "../cilkrts/include/internal/cilk_fake.h"
-
-extern "C" {
-void cilk_enter_begin();
-void cilk_enter_end(__cilk_fake_stack_frame *sf, void *rsp);
-}
-
-// Since the compiler doesn't recognize create_future calls, you'll
-// need to call FUTURE_PROLOG at the beginning of a function that
-// calls create_future, and FUTURE_EPILOG at the end. You don't need
-// to do this if the function also uses the 'spawn' keyword.
-#define FUTURE_PROLOG()                         \
-  CILK_FAKE_PROLOG();                           \
-  cilk_enter_begin();                           \
-  CILK_FAKE_DEFERRED_ENTER_FRAME(__cilk_sf);     \
-  cilk_enter_end(&__cilk_sf, NULL)
-
-#define FUTURE_EPILOG() CILK_FAKE_EPILOG()
-
 /********** Launching futures **********/
-// #define create_future(T,f,func,args...)      \
-//   futurerd::disable_checking();              \
-//   cilk::future<T> f;                         \
-//   futurerd::enable_checking();               \
-//   f.finish(func(args))
 
 // Convenience
-#define __DC futurerd::disable_checking()
-#define __EC futurerd::enable_checking()
-#define __FS cilk_future_start()
-#define __FC cilk_future_continuation();
+#define __DC disable_checking()
+#define __EC enable_checking()
+#define __FS //cilk_future_start()
+#define __FC //cilk_future_continuation();
 
 /** Asynchronously start foo(x,y) -> int with
  *  cilk_async(int, f, foo, x, y)

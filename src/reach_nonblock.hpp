@@ -109,14 +109,9 @@ public:
   void at_future_continuation(sframe_data *f);
 
   // Cilk/future task functions
-  void at_cilk_function_start(sframe_data *f, sframe_data *parent);
-  void at_cilk_function_end(sframe_data *f, sframe_data *p);
   void at_future_finish(sfut_data*);
 
-
 private:
-  // Helper function for parallelism creation (spawns + create_future)
-  void new_function(sframe_data *f);
   // Helper function for continuations
   void continuation(sframe_data *f);
 

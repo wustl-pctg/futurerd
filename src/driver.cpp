@@ -8,8 +8,8 @@
 // implements all the cilk_tool functions. It will enable/disable
 // checking and instrumentation as needed, keep a valid shadow stack,
 // and call tool::handle_<blah> functions
-//#include "futurerd.hpp"
 #include "rd.hpp"
+typedef race_detector rd; // convenience
 
 #include "shadow_mem.hpp"
 #include "debug.hpp"
@@ -25,142 +25,109 @@
 // Note: only works AFTER detach
 #define IS_HELPER(sf) (sf->flags & CILK_FRAME_DETACHED)
 
-// Choose your reachability data structure
-//using rd_t = rd::structure_rd;
-//structured_reach g_reach;
-extern race_detector g_rd;
-
 extern "C" {
 
 // Public C API
-void set_policy(rd::policy p) { g_rd.set_policy(p) }
-size_t num_races() { return g_rd.num_races(); }
+void set_policy(rd_policy p) { rd::set_policy(p) }
+size_t num_races() { return rd::num_races(); }
 
 // The user uses these to wrap any code with benign races. We use them
 // to protect accesses to the Cilk stack frame.
-void enable_checking() { g_rd.enable_checking(); }
-void disable_checking() { g_rd.disable_checking(); }
-void should_check() { g_rd.should_check(); }
-
-// XXX: Remove or use
-void cilk_spawn_prepare() {}
-void cilk_spawn_or_continue(int in_continuation) {}
+void enable_checking() { rd::enable_checking(); }
+void disable_checking() { rd::disable_checking(); }
+void should_check() { rd::should_check(); }
 
 void cilk_enter_begin() {
-  // XXX: Make sure we never pop off the initial frame
-  assert(!g_rd.t_sstack.empty());
-  //g_rd.t_sstack.push_spawner();
-
-  // rd::frame_data *parent = nullptr;
-
-  // if (g_rd.t_sstack.size() == 1) { // first frame
-  //   // We can't just do this in init since we may enter the "first"
-  //   // frame multiple times (go in and out of Cilk).
-  //   t_stack_low_watermark = (uint64_t)(-1);
-  // } else {
-  //   parent = g_rd.t_sstack.parent();
-  // }
-  
-  // rd::frame_data *child = g_rd.t_sstack.head();
-  // g_rd.at_cilk_function_start(child, parent);
-  g_rd.disable_checking();
-
+  assert(!rd::t_sstack.empty());
+  rd::disable_checking();
 }
 
+// We know we're spawning here, but we can't call the appropriate
+// functions yet because the arguments haven't been evaluated
+// yet. That's why we do things in detach instead.
 void cilk_enter_helper_begin(__cilkrts_stack_frame* sf,
-                             void* this_fn, void* rip) {
-  g_rd.disable_checking();
-  //g_rd.at_spawn(g_rd.t_sstack.push_helper());
-  g_rd.at_spawn(g_rd.t_sstack.push());
-}
+                             void* this_fn, void* rip)
+{ rd::disable_checking(); }
 
-// Someday we may need a helper function for futures?
-void cilk_future_create() {
-  // Since we're faking futures, cilk_enter_{begin,end} may not get called
-  // if (g_rd.t_sstack.size == 0
-  //     || g_rd.t_sstack.in_helper()) {
-  //   cilk_enter_begin();
-  //   cilk_enter_end();
-  // }
-  assert(!g_rd.t_sstack.empty());
-    
-  g_rd.at_future_create(g_rd.t_sstack.push());
-}
-
-void cilk_future_get(sfut_data *fut) {
-  g_rd.at_future_get(g_rd.t_sstack.head(), fut);
-}
-
-void cilk_enter_end(__cilkrts_stack_frame *sf, void *rsp) {
-  g_rd.enable_checking();
-}
+void cilk_enter_end(__cilkrts_stack_frame *sf, void *rsp)
+{ rd::enable_checking(); }
 
 void cilk_detach_begin(__cilkrts_stack_frame *parent_sf) {
-  g_rd.disable_checking();
+  rd::at_spawn(rd::t_sstack.push());
+  rd::disable_checking();
 }
 
-void cilk_detach_end() {
+void cilk_detach_end() { rd::enable_checking(); }
 
-  g_rd.enable_checking();
+// Real futures will need helper frames/functions.
+void cilk_future_create() {
+  assert(!rd::t_sstack.empty());
+  rd::at_future_create(rd::t_sstack.push());
 }
 
-void cilk_sync_begin() {
-  g_rd.disable_checking(); 
+void cilk_future_get_begin(sfut_data *fut) { rd::disable_checking(); }
+void cilk_future_get_end(sfut_data *fut) {
+  rd::at_future_get(rd::t_sstack.head(), fut);
+  rd::enable_checking();
 }
+
+void cilk_sync_begin() { rd::disable_checking(); }
 
 void cilk_sync_end(__cilkrts_stack_frame *sf) {
-  // XXX: Only call g_rd.at_sync() when we're really at a sync...
-  g_rd.at_sync(g_rd.t_sstack.head());
-  g_rd.enable_checking();
+  // XXX: Only call rd::at_sync() when we're really at a sync...
+  rd::at_sync(rd::t_sstack.head());
+  rd::enable_checking();
 }
 
 void continuation() {
   t_clear_stack = true;
-  g_rd.t_sstack.pop();
+  rd::t_sstack.pop();
 }
 
-// XXX: should be different if using put/get futures!
-void cilk_future_finish(sfut_data *fut) {
-  //assert(t_sstack.in_future_helper());
-  rd::frame_data *f = g_rd.t_sstack.head();
-  rd::frame_data *p = g_rd.t_sstack.parent();
-  g_rd.at_future_finish(f, p, fut);
+// We don't support separate "put" operations right now. We assume the
+// finish() call also put's the result.
+void cilk_future_put_begin(sfut_data *fut) { rd::disable_checking(); }
+void cilk_future_put_end(sfut_data *fut) { rd::enable_checking(); }
 
-  // when using fake futures, no cilk_leave_frame is called.
+// XXX: should be different if using put/get futures!
+void cilk_future_finish_begin(sfut_data *fut) { rd::disable_checking(); }
+void cilk_future_finish_end(sfut_data *fut) {
+  //assert(t_sstack.in_future_helper());
+  rd::frame_data *f = rd::t_sstack.head();
+  rd::frame_data *p = rd::t_sstack.parent();
+  rd::at_future_finish(f, p, fut);
+
+  // When using fake futures, no cilk_leave_frame is called. When
+  // using real futures we'll need to be fancier, since a worker may
+  // steal the continuation.
   continuation();
+  rd::enable_checking();
 }
 
 void cilk_leave_begin(__cilkrts_stack_frame* sf) {
-  rd::frame_data *f = g_rd.t_sstack.head();
-  rd::frame_data *p = g_rd.t_sstack.parent();
+  rd::frame_data *f = rd::t_sstack.head();
+  rd::frame_data *p = rd::t_sstack.parent();
 
   // returning from a spawn
-  //if (g_rd.t_sstack.in_spawn_helper()) {
   if (IS_HELPER(sf)) {
-    g_rd.at_spawn_continuation(f,p);
+    rd::at_spawn_continuation(f,p);
 
     // This is the point where we need to set flag to clear accesses to stack 
     // out of the shadow memory.  The spawn helper of this leave_begin
     // is about to return, and we want to clear stack accesses below 
     // (and including) spawn helper's stack frame.  Set the flag here
     // and the stack will be cleared in tsan_func_exit.
-    //t_clear_stack = true;
-    //g_rd.t_sstack.pop();
     continuation();
-    
-  } else { // ending cilk function
-    //at_cilk_function_end(f,p);
-  }
-  
-  //g_rd.t_sstack.pop();
-  g_rd.disable_checking();
+  } 
+
+  rd::disable_checking();
 }
 
 void cilk_leave_end() {
-  // If g_rd.t_sstack.size() == 1, we just popped (in cilk_leave_begin())
-  // the last frame. We're leaving a parallel section, so we don't
+  // If rd::t_sstack.size() == 1, we just popped (in cilk_leave_begin())
+  // the second-to-last frame. We're leaving a parallel section, so we don't
   // need to do any race detection.
-  if (g_rd.t_sstack.size() > 1) g_rd.enable_checking();
+  if (rd::t_sstack.size() > 1) rd::enable_checking();
 }
 
 // tsan functions
@@ -174,15 +141,15 @@ void __tsan_init() {
   //std::atexit(__tsan_destroy);
 
   // Originally this was called, but why?
-  //g_rd.enable_checking();
+  //rd::enable_checking();
 }
 
 static inline
 void tsan_access(bool is_read, void *addr, size_t mem_size, void *rip) {
-  if (!g_rd.should_check()) return;
+  if (!rd::should_check()) return;
   
   assert(mem_size <= 16);
-  g_rd.check_access(is_read, rip, addr, mem_size);
+  rd::check_access(is_read, rip, addr, mem_size);
 }
 
 void __tsan_read1(void *addr) { tsan_access(true, addr, 1, __builtin_return_address(0)); }
@@ -245,7 +212,7 @@ void* malloc(size_t s) {
     }
   }
   
-  if (! (TOOL_INITIALIZED && g_rd.should_check()))
+  if (! (TOOL_INITIALIZED && rd::should_check()))
     return real_malloc(s);
 
   // make it 8-byte aligned; easier to erase from shadow mem

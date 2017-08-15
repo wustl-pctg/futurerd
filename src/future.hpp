@@ -4,20 +4,23 @@
 /// will be split out like the other cilk tool functions.}
 //#define RACE_DETECT
 #ifdef RACE_DETECT
-#include "futurerd.hpp"
+/// @todo{Figure out a good way to include the right reachability
+/// header file automatically.}
+#include "reach_structured.hpp"
 
 // Not supported in our version of clang...
 //#define NOSANITIZE __attribute__((no_sanitizer("thread")))
 #define NOSANITIZE
 #else
+/// @todo{ Put weak symbols for cilktool functions for futures in the runtime }
 __attribute__((weak)) void cilk_future_create() {}
-__attribute__((weak)) void cilk_future_get(sfut_data *) {}
-__attribute__((weak)) void cilk_future_finish() {}
-__attribute__((weak)) void cilk_future_put() {}
-namespace futurerd {
-struct futurerd_info {};
-__attribute__((weak)) void at_put(struct futurerd_info*) {}
-} // namespace futurerd
+__attribute__((weak)) void cilk_future_get_begin(sfut_data *) {}
+__attribute__((weak)) void cilk_future_get_end(sfut_data *) {}
+__attribute__((weak)) void cilk_future_finish_begin(sfut_data *) {}
+__attribute__((weak)) void cilk_future_finish_end(sfut_data *) {}
+__attribute__((weak)) void cilk_future_put_begin(sfut_data *) {}
+__attribute__((weak)) void cilk_future_put_end(sfut_data *) {}
+struct sfut_data {};
 #define NOSANITIZE
 #endif
 
@@ -37,7 +40,7 @@ private:
 
   status m_stat;
   T m_val;
-  futurerd::futurerd_info m_rd_info;
+  sfut_data m_rd_data;
 
 public:
 
@@ -45,34 +48,25 @@ public:
   { cilk_future_create(); }
   
   NOSANITIZE void put(T val) {
+    cilk_future_put_begin(&m_rd_data);
     m_val = val;
     m_stat = status::PUT;
-    futurerd::at_put(&m_rd_info);
+    cilk_future_put_end(&m_rd_data);
   }
 
   NOSANITIZE void finish() {
+    cilk_future_finish_begin(&m_rd_data);
     assert(m_stat == status::PUT);
     m_stat = status::DONE;
-    cilk_future_finish(&m_rd_info);
-    // For sequential futures it's fine to call this here
+    cilk_future_finish_end(&m_rd_data);
   }
 
-  NOSANITIZE void finish(T val) {
-    put(val);
-    finish();
-  }
-
+  NOSANITIZE void finish(T val) { put(val); finish(); }
   NOSANITIZE bool ready() { return m_stat >= status::PUT; }
   NOSANITIZE T get() {
-
-    // True for our sequential version
-    assert(m_stat == status::DONE);
-
-    while (m_stat < status::PUT)
-      /* cilk_yield() */ ;
-    //m_got_count++;
-    cilk_future_get(&m_rd_info);
-
+    cilk_future_get_begin(&m_rd_data);
+    assert(m_stat == status::DONE); // for sequential futures
+    cilk_future_get_end(&m_rd_data);
     return m_val;
   }
 }; // class future

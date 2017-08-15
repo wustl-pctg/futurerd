@@ -8,7 +8,7 @@ namespace reach {
 
 /********** Parallelism Creation **********/
 // Outgoing non-SP edge
-void at_future_create(sframe_data *f) {
+void nonblock::at_future_create(sframe_data *f) {
   // Basically spawn without worrying about sync nodes
   structured::at_future_create(&f->sp);
 
@@ -27,7 +27,7 @@ void at_future_create(sframe_data *f) {
   t_current = w;
 }
 
-void at_spawn(sframe_data *f) {
+void nonblock::at_spawn(sframe_data *f) {
   structured::at_spawn(&f->sp);
 
   node *u = t_current;
@@ -48,7 +48,7 @@ void at_spawn(sframe_data *f) {
 
 /********** Parallelism Deletion **********/
 // This won't be called until the future has actually finished
-void at_future_get(sframe_data *f, sfut_data *fut) {
+void nonblock::at_future_get(sframe_data *f, sfut_data *fut) {
   assert(fut->put_strand);
 
   node *u = t_current;
@@ -64,7 +64,7 @@ void at_future_get(sframe_data *f, sfut_data *fut) {
 }
 
 // Returns the new node j
-node* binary_join(node *f, // fork node
+node* nonblock::binary_join(node *f, // fork node
                   node *lfc, node *rfc, // left, right fork children
                   node *ljp, node *rjp // left, right join children
                   ) {
@@ -107,7 +107,7 @@ node* binary_join(node *f, // fork node
   return j;
 }
 
-void at_sync(sframe_data *frame) {
+void nonblock::at_sync(sframe_data *frame) {
   
   node *f; // fork 
   node *s1; // left fork child (s_1)
@@ -127,31 +127,23 @@ void at_sync(sframe_data *frame) {
 /********** Continuations **********/
 // Returning from a spawned function or future function.
 // This is all the other non-join nodes, right?
-void continuation(sframe_data *f) {
+void nonblock::continuation(sframe_data *f) {
   t_current = f->cont;
   f->cont = nullptr;
 }
 
-void at_spawn_continuation(sframe_data *f, sframe_data *p) {
+void nonblock::at_spawn_continuation(sframe_data *f, sframe_data *p) {
     structured::at_continuation(&f->sp);
     continuation(f);
 }
 
-void at_future_continuation(sframe_data *f, sframe_data *p) {
+void nonblock::at_future_continuation(sframe_data *f, sframe_data *p) {
   continuation(f);
-}
-
-/********** Cilk/future task functions **********/
-void at_cilk_function_start(sframe_data *f, sframe_data *p) {
-  structured::at_cilk_function_start(&f->sp, &p->sp);
-}
-void at_cilk_function_end(sframe_data *f, sframe_data *p) {
-  structured::at_cilk_function_start(&f->sp, &p->sp);
 }
 
 // Called when a future task completes. We know we're going to have
 // non-SP edges out from here, we just don't know where to yet.
-void at_future_finish(sfut_data *fut) {
+void nonblock::at_future_finish(sfut_data *fut) {
   // Save for later, i.e. at_get
   fut->put_strand = t_current;
 
