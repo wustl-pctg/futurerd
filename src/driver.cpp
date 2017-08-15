@@ -1,164 +1,188 @@
-// see the cilksan/src/driver.cpp file for more
+// Conceptually, this is part of the race detector class. But these
+// need to be plain C functions as defined by cilktool and Thread
+// Sanitizer. Non-user entry points into the library, i.e. from the
+// runtime and inserted by the compiler.
 #include <dlfcn.h> // for dlsym
 
 // This is a general cilk_tool "driver" class, meaning that it
 // implements all the cilk_tool functions. It will enable/disable
 // checking and instrumentation as needed, keep a valid shadow stack,
 // and call tool::handle_<blah> functions
-#include "futurerd.hpp"
+//#include "futurerd.hpp"
+#include "rd.hpp"
+
 #include "shadow_mem.hpp"
 #include "debug.hpp"
 
 #define USE_CILK_API
-#include <internal/abi.h>
+#include <internal/abi.h> // for __cilkrts_stack_frame->flags (IS_HELPER)
 #include <cilk/cilk_api.h>
 
 #include <cassert>
 #include <cstdlib> // atexit
 
+// In lieu of having two types of shadow frames:
+// Note: only works AFTER detach
+#define IS_HELPER(sf) (sf->flags & CILK_FRAME_DETACHED)
+
+// Choose your reachability data structure
+//using rd_t = rd::structure_rd;
+//structured_reach g_reach;
+extern race_detector g_rd;
+
 extern "C" {
 
-static bool TOOL_INITIALIZED = false;
+// Public C API
+void set_policy(rd::policy p) { g_rd.set_policy(p) }
+size_t num_races() { return g_rd.num_races(); }
 
-//static bool check_enable_instrumentation;
-//static bool instrumentation;
+// The user uses these to wrap any code with benign races. We use them
+// to protect accesses to the Cilk stack frame.
+void enable_checking() { g_rd.enable_checking(); }
+void disable_checking() { g_rd.disable_checking(); }
+void should_check() { g_rd.should_check(); }
 
-//[[gnu::always_inline]]
-// __attribute__((always_inline))
-// static void enable_instrumentation() { instrumentation = true; }
+// XXX: Remove or use
+void cilk_spawn_prepare() {}
+void cilk_spawn_or_continue(int in_continuation) {}
 
-// __attribute__((always_inline))
-// static void disable_instrumentation() { instrumentation = false; }
-static __thread uint64_t t_stack_low_watermark = (uint64_t)-1;
+void cilk_enter_begin() {
+  // XXX: Make sure we never pop off the initial frame
+  assert(!g_rd.t_sstack.empty());
+  //g_rd.t_sstack.push_spawner();
 
-void cilk_spawn_prepare() { DBG_TRACE();
-  futurerd::disable_checking();
-}
+  // rd::frame_data *parent = nullptr;
 
-void cilk_spawn_or_continue(int in_continuation) { DBG_TRACE();
-  futurerd::enable_checking();
-}
-
-void cilk_enter_begin() { DBG_TRACE();
-  //static bool should_init = true;
-
-  /// @REFACTOR{No reason to init in cilk_enter_begin since we can use __tsan_init}
-  // if(__builtin_expect(should_init, false)) {
-  //   futurerd::init();
-  //   should_init = false;
-  //   TOOL_INITIALIZED = true;
+  // if (g_rd.t_sstack.size() == 1) { // first frame
+  //   // We can't just do this in init since we may enter the "first"
+  //   // frame multiple times (go in and out of Cilk).
+  //   t_stack_low_watermark = (uint64_t)(-1);
   // } else {
-  assert(TOOL_INITIALIZED);
-  futurerd::disable_checking();
-  bool first_frame = futurerd::at_cilk_function();
-
-  // We can't just do this in init since we may enter the "first"
-  // frame multiple times (go in and out of Cilk). OR we could do this
-  // when we notice we leave the last frame...
-  if (first_frame) {
-    t_stack_low_watermark = (uint64_t)(-1);
-  }
-  // }
-}
-
-void cilk_enter_end(__cilkrts_stack_frame *sf, void *rsp) { DBG_TRACE();
-
-  // What is this for?
-  // if(__builtin_expect(check_enable_instrumentation, 0)) {
-  //   check_enable_instrumentation = false;
-  //   enable_instrumentation();
+  //   parent = g_rd.t_sstack.parent();
   // }
   
-  // My code had this??
-  // if (t_sstack.size() <= 1) {
-  //   assert(t_sstack.size() == 1);
-  //   //init_strand();
-  //   stack_low_watermark = (uint64_t)(-1);
+  // rd::frame_data *child = g_rd.t_sstack.head();
+  // g_rd.at_cilk_function_start(child, parent);
+  g_rd.disable_checking();
+
+}
+
+void cilk_enter_helper_begin(__cilkrts_stack_frame* sf,
+                             void* this_fn, void* rip) {
+  g_rd.disable_checking();
+  //g_rd.at_spawn(g_rd.t_sstack.push_helper());
+  g_rd.at_spawn(g_rd.t_sstack.push());
+}
+
+// Someday we may need a helper function for futures?
+void cilk_future_create() {
+  // Since we're faking futures, cilk_enter_{begin,end} may not get called
+  // if (g_rd.t_sstack.size == 0
+  //     || g_rd.t_sstack.in_helper()) {
+  //   cilk_enter_begin();
+  //   cilk_enter_end();
   // }
-
-  futurerd::enable_checking();
+  assert(!g_rd.t_sstack.empty());
+    
+  g_rd.at_future_create(g_rd.t_sstack.push());
 }
 
-// This signature?
-// void cilk_enter_helper_begin(__cilkrts_stack_frame* sf,
-//                              void* this_fn, void* rip)
-void cilk_enter_helper_begin() { DBG_TRACE();
-  futurerd::disable_checking();
-  futurerd::at_spawn();
+void cilk_future_get(sfut_data *fut) {
+  g_rd.at_future_get(g_rd.t_sstack.head(), fut);
 }
 
-// void cilk_detach_begin(__cilkrts_stack_frame* sf,
-//                        void* this_fn, void* rip) {
-void cilk_detach_begin(__cilkrts_stack_frame *parent_sf) { DBG_TRACE(); futurerd::disable_checking(); }
-
-void cilk_detach_end() { DBG_TRACE(); futurerd::enable_checking(); }
-
-void cilk_sync_begin() { DBG_TRACE();
-  futurerd::disable_checking(); 
-  assert(TOOL_INITIALIZED);
+void cilk_enter_end(__cilkrts_stack_frame *sf, void *rsp) {
+  g_rd.enable_checking();
 }
 
-void cilk_sync_end(__cilkrts_stack_frame *sf) { DBG_TRACE();
-  // XXX: Only call futurerd::at_sync() when we're really at a sync...
-  futurerd::at_sync();
-  assert(TOOL_INITIALIZED);
-  futurerd::enable_checking();
+void cilk_detach_begin(__cilkrts_stack_frame *parent_sf) {
+  g_rd.disable_checking();
 }
 
-void cilk_leave_begin(__cilkrts_stack_frame* sf) { DBG_TRACE();
-  futurerd::disable_checking();
-  futurerd::at_leave_begin();
+void cilk_detach_end() {
+
+  g_rd.enable_checking();
 }
 
-void cilk_leave_end() { DBG_TRACE();
-  bool last_frame = futurerd::at_leave_end();
-  // futurerd::enable_checking();
-  // if(last_frame == true) { // last frame
-  //   disable_instrumentation();
-  //   check_enable_instrumentation = true;
-  // }
-  if (!last_frame)
-    futurerd::enable_checking();
+void cilk_sync_begin() {
+  g_rd.disable_checking(); 
+}
+
+void cilk_sync_end(__cilkrts_stack_frame *sf) {
+  // XXX: Only call g_rd.at_sync() when we're really at a sync...
+  g_rd.at_sync(g_rd.t_sstack.head());
+  g_rd.enable_checking();
+}
+
+void continuation() {
+  t_clear_stack = true;
+  g_rd.t_sstack.pop();
+}
+
+// XXX: should be different if using put/get futures!
+void cilk_future_finish(sfut_data *fut) {
+  //assert(t_sstack.in_future_helper());
+  rd::frame_data *f = g_rd.t_sstack.head();
+  rd::frame_data *p = g_rd.t_sstack.parent();
+  g_rd.at_future_finish(f, p, fut);
+
+  // when using fake futures, no cilk_leave_frame is called.
+  continuation();
+}
+
+void cilk_leave_begin(__cilkrts_stack_frame* sf) {
+  rd::frame_data *f = g_rd.t_sstack.head();
+  rd::frame_data *p = g_rd.t_sstack.parent();
+
+  // returning from a spawn
+  //if (g_rd.t_sstack.in_spawn_helper()) {
+  if (IS_HELPER(sf)) {
+    g_rd.at_spawn_continuation(f,p);
+
+    // This is the point where we need to set flag to clear accesses to stack 
+    // out of the shadow memory.  The spawn helper of this leave_begin
+    // is about to return, and we want to clear stack accesses below 
+    // (and including) spawn helper's stack frame.  Set the flag here
+    // and the stack will be cleared in tsan_func_exit.
+    //t_clear_stack = true;
+    //g_rd.t_sstack.pop();
+    continuation();
+    
+  } else { // ending cilk function
+    //at_cilk_function_end(f,p);
+  }
+  
+  //g_rd.t_sstack.pop();
+  g_rd.disable_checking();
+}
+
+void cilk_leave_end() {
+  // If g_rd.t_sstack.size() == 1, we just popped (in cilk_leave_begin())
+  // the last frame. We're leaving a parallel section, so we don't
+  // need to do any race detection.
+  if (g_rd.t_sstack.size() > 1) g_rd.enable_checking();
 }
 
 // tsan functions
 
-void __tsan_destroy() {
-  //g_instr_enabled = false;
-
-  // we're already assured to disable in cilk_leave_end
-  // assert(t_checking_disabled == true);
-  // futurerd::disable_checking();
-}
-
+//void __tsan_destroy() {}
 void __tsan_init() {
   static bool init = false;
-
-  /// @TODO{For some reason __tsan_init gets called twice...?}
-  // if (init) return;
   assert(init == false);
   init = true;
 
-  futurerd::init();
-  TOOL_INITIALIZED = true;
-
-  std::atexit(__tsan_destroy);
-
-  //g_instr_enabled = true;
+  //std::atexit(__tsan_destroy);
 
   // Originally this was called, but why?
-  //futurerd::enable_checking();
+  //g_rd.enable_checking();
 }
 
 static inline
 void tsan_access(bool is_read, void *addr, size_t mem_size, void *rip) {
-  assert(TOOL_INITIALIZED);
-  if (!futurerd::should_check()) return;
+  if (!g_rd.should_check()) return;
   
-  futurerd::disable_checking();
   assert(mem_size <= 16);
-  futurerd::check_access(is_read, rip, addr, mem_size);
-  futurerd::enable_checking();
+  g_rd.check_access(is_read, rip, addr, mem_size);
 }
 
 void __tsan_read1(void *addr) { tsan_access(true, addr, 1, __builtin_return_address(0)); }
@@ -186,17 +210,11 @@ void __tsan_vptr_update(void **vptr_p, void *new_val) {}
  * in __tsan_func_exit.
  */
 void __tsan_func_exit() {
-  // TODO: clear shadow stack at the right places
-  // TOOD: add high/low watermark member vars to shadow_stack class
-  // TODO: update high/low watermark at the correct places
-  //futurerd::g_shadow_mem.clear((uint64_t)r, (uint64_t)r + new_size);
-
-  //futurerd::disable_checking();
   uint64_t res = (uint64_t) __builtin_frame_address(0);
   if(t_stack_low_watermark > res)
     t_stack_low_watermark = res;
 
-  if (futurerd::t_clear_stack) {
+  if (t_clear_stack) {
     // the spawn helper that's exiting is calling tsan_func_exit, 
     // so the spawn helper's base pointer is the stack_high_watermark
     // to clear (stack grows downward)
@@ -204,12 +222,11 @@ void __tsan_func_exit() {
 
     assert( t_stack_low_watermark != ((uint64_t)-1) );
     assert( t_stack_low_watermark <= stack_high_watermark );
-    futurerd::g_shadow_mem.clear(t_stack_low_watermark, stack_high_watermark);
+    g_smem.clear(t_stack_low_watermark, stack_high_watermark);
     // now the high watermark becomes the low watermark
     t_stack_low_watermark = stack_high_watermark;
-    futurerd::t_clear_stack = false;
+    t_clear_stack = false;
   }
-  //futurerd::enable_checking();
 }
 
 // Let's hope we don't need to wrap both calloc and realloc...
@@ -228,13 +245,13 @@ void* malloc(size_t s) {
     }
   }
   
-  if (! (TOOL_INITIALIZED && futurerd::should_check()))
+  if (! (TOOL_INITIALIZED && g_rd.should_check()))
     return real_malloc(s);
 
   // make it 8-byte aligned; easier to erase from shadow mem
   uint64_t new_size = ALIGN_BY_NEXT_MAX_GRAIN_SIZE(s);
   void *r = real_malloc(new_size);
-  futurerd::g_shadow_mem.clear((uint64_t)r, (uint64_t)r + new_size);
+  g_shadow_mem.clear((uint64_t)r, (uint64_t)r + new_size);
   return r;
 }
 

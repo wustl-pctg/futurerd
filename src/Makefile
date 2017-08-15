@@ -1,14 +1,21 @@
 include ../common.mk
 
 # Basic tool functionality
-SRC := driver.cpp futurerd.cpp shadow_mem.cpp #mem_access.cpp
+SRC := driver.cpp rd.cpp shadow_stack.cpp
+
+# Shadow memory
+SRC += mem_access.cpp shadow_mem.cpp
+
+# Reachability
+# SRC += reach_gen.cpp reach_nonblock.cpp
+SRC += reach_structured.cpp
 
 # Other helpers
-SRC += utils/union_find.cpp debug.cpp sbpag.cpp
+SRC += utils/union_find.cpp debug.cpp spbag.cpp
 
 OBJ := $(addprefix $(OBJ_DIR)/, $(SRC:.cpp=.o))
 LIB_DIR = $(BUILD_DIR)/lib
-TARGET = $(LIB_DIR)/libfuturerd.a
+TARGET = $(LIB_DIR)/librd.a
 
 # Mostly for cilk/internal includes
 INC += -I$(PROJECT_HOME)/cilkrts/include
