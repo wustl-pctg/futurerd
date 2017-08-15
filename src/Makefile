@@ -1,7 +1,7 @@
 include ../common.mk
 
 # Basic tool functionality
-SRC := driver.cpp rd.cpp shadow_stack.cpp
+SRC := driver.cpp rd.cpp
 
 # Shadow memory
 SRC += mem_access.cpp shadow_mem.cpp
