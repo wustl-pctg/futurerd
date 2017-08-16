@@ -1,5 +1,5 @@
 // Should be a reachability data structure ONLY
-#include "sbpag.hpp"
+#include "spbag.hpp"
 
 namespace reach {
 class structured {
@@ -33,7 +33,7 @@ public:
 
   // Continuations
   void at_spawn_continuation(sframe_data *f, sframe_data *p);
-  void at_future_finish(sfut_data*);
+  void at_future_finish(sframe_data *f, sframe_data *p, sfut_data *fut);
 
 private:
   // Helper function for parallelism creation (spawns + create_future)

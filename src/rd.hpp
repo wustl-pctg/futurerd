@@ -1,31 +1,26 @@
 // Race detection class and public API
 #include "rd.h"
-
-// XXX: Not sure how to handle this yet
-inline spbag* active() {
-  spbag *f = t_sstack.head()->data.Sbag;
-  assert(f);
-  return f;
-}
+#include "shadow_stack.hpp"
+#include "reach_structured.hpp"
+#include "shadow_mem.hpp"
 
 // On the one hand, we only ever want one race detector anyway, so it
 // seems silly to use a class with all static data. On the other hand,
 // this makes initialization slightly easier when using a static
 // library.
+// XXX: template race_detector with reachability data structure?
 class race_detector {
-  static shadow_stack<reach::frame_data> t_sstack; // driver.cpp needs access
-  //static bool TOOL_INITIALIZED = false;
-  static uint64_t t_stack_low_watermark = (uint64_t)-1;
-  static bool t_clear_stack = false;
+public:
+  static shadow_stack<reach::structured::sframe_data> t_sstack;
+  static uint64_t t_stack_low_watermark;
+  static bool t_clear_stack;
   static shadow_mem g_smem;
-  static reach g_reach;
+  static reach::structured g_reach;
 
-  static enum rd_policy g_policy = RD_CONTINUE;
-  static size_t g_num_races = 0;
-  static bool g_checking_disabled = true;
-
-  // originally this was set to false, but why?
-  static bool t_checking_disabled = true;
+  static enum rd_policy g_policy;
+  static size_t g_num_races;
+  static bool g_checking_disabled;
+  static bool t_checking_disabled;
 
   race_detector();
   ~race_detector();
@@ -34,7 +29,7 @@ class race_detector {
   void print_states() = delete; // FILE *output = stdout
 
   static inline size_t num_races() { return g_num_races; }
-  static inline enable_checking() { g_checking_disabled = false; }
+  static inline void enable_checking() { g_checking_disabled = false; }
   static inline void disable_checking() { g_checking_disabled = true; }
   static inline bool should_check() { return !g_checking_disabled; }
 

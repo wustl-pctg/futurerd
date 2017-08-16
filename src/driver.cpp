@@ -21,6 +21,10 @@ typedef race_detector rd; // convenience
 #include <cassert>
 #include <cstdlib> // atexit
 
+// XXX: How to choose this elsewhere?
+using sfut_data = reach::structured::sfut_data;
+using sframe_data = reach::structured::sframe_data;
+
 // In lieu of having two types of shadow frames:
 // Note: only works AFTER detach
 #define IS_HELPER(sf) (sf->flags & CILK_FRAME_DETACHED)
@@ -28,7 +32,7 @@ typedef race_detector rd; // convenience
 extern "C" {
 
 // Public C API
-void set_policy(rd_policy p) { rd::set_policy(p) }
+void set_policy(rd_policy p) { rd::set_policy(p); }
 size_t num_races() { return rd::num_races(); }
 
 // The user uses these to wrap any code with benign races. We use them
@@ -53,7 +57,7 @@ void cilk_enter_end(__cilkrts_stack_frame *sf, void *rsp)
 { rd::enable_checking(); }
 
 void cilk_detach_begin(__cilkrts_stack_frame *parent_sf) {
-  rd::at_spawn(rd::t_sstack.push());
+  rd::g_reach.at_spawn(rd::t_sstack.push());
   rd::disable_checking();
 }
 
@@ -62,25 +66,25 @@ void cilk_detach_end() { rd::enable_checking(); }
 // Real futures will need helper frames/functions.
 void cilk_future_create() {
   assert(!rd::t_sstack.empty());
-  rd::at_future_create(rd::t_sstack.push());
+  rd::g_reach.at_future_create(rd::t_sstack.push());
 }
 
 void cilk_future_get_begin(sfut_data *fut) { rd::disable_checking(); }
 void cilk_future_get_end(sfut_data *fut) {
-  rd::at_future_get(rd::t_sstack.head(), fut);
+  rd::g_reach.at_future_get(rd::t_sstack.head(), fut);
   rd::enable_checking();
 }
 
 void cilk_sync_begin() { rd::disable_checking(); }
 
 void cilk_sync_end(__cilkrts_stack_frame *sf) {
-  // XXX: Only call rd::at_sync() when we're really at a sync...
-  rd::at_sync(rd::t_sstack.head());
+  // XXX: Only call rd::g_reach.at_sync() when we're really at a sync...
+  rd::g_reach.at_sync(rd::t_sstack.head());
   rd::enable_checking();
 }
 
 void continuation() {
-  t_clear_stack = true;
+  rd::t_clear_stack = true;
   rd::t_sstack.pop();
 }
 
@@ -93,9 +97,9 @@ void cilk_future_put_end(sfut_data *fut) { rd::enable_checking(); }
 void cilk_future_finish_begin(sfut_data *fut) { rd::disable_checking(); }
 void cilk_future_finish_end(sfut_data *fut) {
   //assert(t_sstack.in_future_helper());
-  rd::frame_data *f = rd::t_sstack.head();
-  rd::frame_data *p = rd::t_sstack.parent();
-  rd::at_future_finish(f, p, fut);
+  sframe_data *f = rd::t_sstack.head();
+  sframe_data *p = rd::t_sstack.parent();
+  rd::g_reach.at_future_finish(f, p, fut);
 
   // When using fake futures, no cilk_leave_frame is called. When
   // using real futures we'll need to be fancier, since a worker may
@@ -105,12 +109,12 @@ void cilk_future_finish_end(sfut_data *fut) {
 }
 
 void cilk_leave_begin(__cilkrts_stack_frame* sf) {
-  rd::frame_data *f = rd::t_sstack.head();
-  rd::frame_data *p = rd::t_sstack.parent();
+  sframe_data *f = rd::t_sstack.head();
+  sframe_data *p = rd::t_sstack.parent();
 
   // returning from a spawn
   if (IS_HELPER(sf)) {
-    rd::at_spawn_continuation(f,p);
+    rd::g_reach.at_spawn_continuation(f,p);
 
     // This is the point where we need to set flag to clear accesses to stack 
     // out of the shadow memory.  The spawn helper of this leave_begin
@@ -178,21 +182,21 @@ void __tsan_vptr_update(void **vptr_p, void *new_val) {}
  */
 void __tsan_func_exit() {
   uint64_t res = (uint64_t) __builtin_frame_address(0);
-  if(t_stack_low_watermark > res)
-    t_stack_low_watermark = res;
+  if(rd::t_stack_low_watermark > res)
+    rd::t_stack_low_watermark = res;
 
-  if (t_clear_stack) {
+  if (rd::t_clear_stack) {
     // the spawn helper that's exiting is calling tsan_func_exit, 
     // so the spawn helper's base pointer is the stack_high_watermark
     // to clear (stack grows downward)
     uint64_t stack_high_watermark = (uint64_t)__builtin_frame_address(1);
 
-    assert( t_stack_low_watermark != ((uint64_t)-1) );
-    assert( t_stack_low_watermark <= stack_high_watermark );
-    g_smem.clear(t_stack_low_watermark, stack_high_watermark);
+    assert( rd::t_stack_low_watermark != ((uint64_t)-1) );
+    assert( rd::t_stack_low_watermark <= stack_high_watermark );
+    rd::g_smem.clear(rd::t_stack_low_watermark, stack_high_watermark);
     // now the high watermark becomes the low watermark
-    t_stack_low_watermark = stack_high_watermark;
-    t_clear_stack = false;
+    rd::t_stack_low_watermark = stack_high_watermark;
+    rd::t_clear_stack = false;
   }
 }
 
@@ -212,13 +216,13 @@ void* malloc(size_t s) {
     }
   }
   
-  if (! (TOOL_INITIALIZED && rd::should_check()))
+  if (!rd::should_check())
     return real_malloc(s);
 
   // make it 8-byte aligned; easier to erase from shadow mem
   uint64_t new_size = ALIGN_BY_NEXT_MAX_GRAIN_SIZE(s);
   void *r = real_malloc(new_size);
-  g_shadow_mem.clear((uint64_t)r, (uint64_t)r + new_size);
+  rd::g_smem.clear((uint64_t)r, (uint64_t)r + new_size);
   return r;
 }
 

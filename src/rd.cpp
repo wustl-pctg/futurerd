@@ -1,12 +1,14 @@
 #include "rd.hpp"
 #include "debug.hpp"
 
-// #define USE_CILK_API
+// XXX: Compiler doesn't define __cilk?
+#define USE_CILK_API
+#include <cilk/cilk_api.h>
 // #include <internal/abi.h>
-// #include <cilk/cilk_api.h>
 
 
-void race_detector::race_detector() {
+
+race_detector::race_detector() {
   // Ensure only one race detector
   static bool init = false;
   assert(init == false);
@@ -14,12 +16,16 @@ void race_detector::race_detector() {
 
   // Obviously this will need to change when we do this in parallel.
   t_stack_low_watermark = (uint64_t)(-1);
+  t_clear_stack = false;
+  g_policy = RD_CONTINUE;
+  g_num_races = 0;
+  disable_checking();
   t_sstack.push();
 
   __cilkrts_set_param("nworkers", "1");
 }
 
-void race_detector::~race_detector() {}
+race_detector::~race_detector() {}
 
 void race_detector::set_policy(enum rd_policy p) {
   if (p >= RD_LAST_POLICY)
@@ -42,7 +48,8 @@ void race_detector::check_access(bool is_read, void* rip,
 
   // no previous accesses
   if (slot == nullptr) {
-    g_smem.insert(is_read, (uint64_t)addr, active(), (uint64_t)rip);
+    // XXX: Fix Null: should be active()
+    g_smem.insert(is_read, (uint64_t)addr, nullptr, (uint64_t)rip);
     return;
   }
   
@@ -59,5 +66,6 @@ void race_detector::check_access(bool is_read, void* rip,
   }
   
   // update shadow mem
-  g_smem.update(slot, is_read, (uint64_t)addr, active(), (uint64_t)rip);
+  // XXX: again, fix nullptr
+  g_smem.update(slot, is_read, (uint64_t)addr, nullptr, (uint64_t)rip);
 }

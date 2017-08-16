@@ -1,4 +1,5 @@
 #include "reach_structured.hpp"
+#include <cassert>
 
 namespace reach {
 

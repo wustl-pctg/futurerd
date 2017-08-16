@@ -24,7 +24,7 @@ else
   $(error "Invalid mode.")
 endif
 
-INC = -I$(PROJECT_HOME)/include
+INC = -I$(RUNTIME_HOME)/include
 FLAGS = -Wall -Wfatal-errors -g $(INC)
 CFLAGS ?= -std=c99
 CXXFLAGS ?= -std=c++11 -fno-exceptions -fno-rtti

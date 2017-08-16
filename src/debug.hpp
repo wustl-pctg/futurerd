@@ -4,30 +4,26 @@
 #include <cstdio>
 
 #ifndef DNDEBUG
-#define DBG_TRACE(fmt, args...)                                      \
-  futurerd::debug::printf(futurerd::debug::TRACE,                    \
-                          "[%s]: " fmt "\n", __func__, ## args)
+#define DBG_TRACE(fmt, args...)                       \
+  debug::printf(debug::TRACE,               \
+                "[%s]: " fmt "\n", __func__, ## args)
 #else
 #define DBG_TRACE
 #endif
-
-namespace futurerd {
 
 namespace debug {
 
 enum DebugLevel : int {
   NONE = 0,
-  BASIC = 1,
-  TRACE = 2,
-  CALLBACK = 4,
-  MEMORY = 8
-};
+    BASIC = 1,
+    TRACE = 2,
+    CALLBACK = 4,
+    MEMORY = 8
+    };
 
-static DebugLevel g_level = futurerd::debug::BASIC;
+static DebugLevel g_level = debug::BASIC;
 
 [[noreturn]] void die(const char *fmt, ...);
 void printf(DebugLevel level, const char *fmt, ...);
 
 } // namespace debug
-
-} // namespace futurerd

@@ -3,11 +3,6 @@
 
 #include "debug.hpp"
 
-using namespace futurerd;
-using namespace debug;
-
-namespace futurerd {
-
 namespace debug {
 
 void printf(DebugLevel level, const char *fmt, ...) {
@@ -35,5 +30,3 @@ void printf(DebugLevel level, const char *fmt, ...) {
 }
 
 } // namespace debug
-
-} // namespace futurerd
