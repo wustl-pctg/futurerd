@@ -1,4 +1,6 @@
 // Should be a reachability data structure ONLY
+#pragma once
+
 #include "spbag.hpp"
 
 namespace reach {
@@ -9,10 +11,12 @@ public:
     spbag *Sbag, *Pbag;
   };
 
-  struct smem_data {
-    spbag *last_reader;
-    spbag *last_writer;
-  };
+  using smem_data = spbag;
+
+  // struct smem_data {
+  //   spbag *last_reader;
+  //   spbag *last_writer;
+  // };
 
   struct sfut_data {
     spbag *put_strand;
@@ -22,6 +26,7 @@ public:
   //structured() = delete;
   structured(sframe_data *initial);
   //~structured();
+  smem_data* active(sframe_data *f);
 
   // Parallelism creation
   void at_future_create(sframe_data *f);

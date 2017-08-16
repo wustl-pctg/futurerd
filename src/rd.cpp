@@ -11,16 +11,20 @@ bool race_detector::t_clear_stack = false;
 enum rd_policy race_detector::g_policy = RD_CONTINUE;
 size_t race_detector::g_num_races = 0;
 bool race_detector::t_checking_disabled = false;
-//reach::structured race_detector::g_reach;
+reach::structured race_detector::g_reach;
 shadow_mem race_detector::g_smem;
+shadow_stack<sframe_data> race_detector::t_sstack;
 
 race_detector::race_detector() {
   // Ensure only one race detector
   static bool init = false;
   assert(init == false);
   init = true;
+  
   t_sstack.push();
-
+  // not really, but need to initialize
+  g_reach.at_spawn(t_sstack.head());
+  
   __cilkrts_set_param("nworkers", "1");
 }
 
@@ -41,14 +45,15 @@ void race_detector::report_race(void* addr) {
     std::abort();
 }
 
+smem_data* race_detector::active() { return g_reach.active(t_sstack.head()); }
+
 void race_detector::check_access(bool is_read, void* rip,
                                  void* addr, size_t mem_size) {
   shadow_mem::addr_info_t *slot = g_smem.find((uint64_t)addr);
 
   // no previous accesses
   if (slot == nullptr) {
-    // XXX: Fix Null: should be active()
-    g_smem.insert(is_read, (uint64_t)addr, nullptr, (uint64_t)rip);
+    g_smem.insert(is_read, (uint64_t)addr, active(), (uint64_t)rip);
     return;
   }
   
@@ -65,6 +70,5 @@ void race_detector::check_access(bool is_read, void* rip,
   }
   
   // update shadow mem
-  // XXX: again, fix nullptr
-  g_smem.update(slot, is_read, (uint64_t)addr, nullptr, (uint64_t)rip);
+  g_smem.update(slot, is_read, (uint64_t)addr, active(), (uint64_t)rip);
 }

@@ -1,21 +1,23 @@
 // Race detection class and public API
+#pragma once
+
 #include "rd.h"
-#include "shadow_stack.hpp"
-#include "reach_structured.hpp"
+
+#include "reach.hpp"
 #include "shadow_mem.hpp"
+#include "shadow_stack.hpp"
 
 // On the one hand, we only ever want one race detector anyway, so it
 // seems silly to use a class with all static data. On the other hand,
 // this makes initialization slightly easier when using a static
 // library.
-// XXX: template race_detector with reachability data structure?
 class race_detector {
 public:
-  static shadow_stack<reach::structured::sframe_data> t_sstack;
+  static shadow_stack<sframe_data> t_sstack;
   static uint64_t t_stack_low_watermark;
   static bool t_clear_stack;
   static shadow_mem g_smem;
-  static reach::structured g_reach;
+  static reach_ds g_reach;
 
   static enum rd_policy g_policy;
   static size_t g_num_races;
@@ -24,8 +26,8 @@ public:
   race_detector();
   ~race_detector();
   
-  void reset() = delete; // re-enter Cilk after a break? stack_low_watermark?
-  void print_states() = delete; // FILE *output = stdout
+  //void reset() = delete; // re-enter Cilk after a break? stack_low_watermark?
+  //void print_state() = delete; // FILE *output = stdout
 
   static inline size_t num_races() { return g_num_races; }
   static inline void enable_checking() { t_checking_disabled = false; }
@@ -36,4 +38,5 @@ public:
   static void set_policy(enum rd_policy p); // not thread-safe
   static void report_race(void* addr);
   static void check_access(bool is_read, void* rip, void* addr, size_t mem_size);
+  static smem_data* active();
 }; // struct race_detector

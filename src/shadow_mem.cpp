@@ -31,9 +31,11 @@ void shadow_mem::update(addr_info_t *slot, bool is_read,
 }
 
 void shadow_mem::clear(addr_t start, addr_t end) {
-  //assert(ALIGN_BY_NEXT_MAX_GRAIN_SIZE(end) == end); 
+  assert(ALIGN_BY_NEXT_MAX_GRAIN_SIZE(end) == end); 
   assert(start < end);
-  assert(end-start < 4096);
+
+  // Not true for large malloc'ed blocks...
+  //assert(end-start < 4096);
 
   while(start != end) {
     m_shadow_map.erase(start);

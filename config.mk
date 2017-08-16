@@ -5,6 +5,5 @@ RUNTIME_HOME = $(PROJECT_HOME)/runtime
 RUNTIME_LIB = $(PROJECT_HOME)/build/lib/libcilkrts.a
 # RUNTIME_LIB = $(RUNTIME_HOME)/build/libcilkrts.a
 
-OPT_FLAGS = -O0
 TOOL_DEBUG = 1
-LTO = 1
+LTO = 0

@@ -3,10 +3,9 @@
 
 namespace reach {
 
-structured::structured(sframe_data *initial) {
-  initial->Sbag = new spbag(spbag::bag_kind::S);
-  initial->Pbag = nullptr; // will create this lazily when we need it
-}
+structured::structured(sframe_data *initial) { new_function(initial); }
+
+structured::smem_data* structured::active(sframe_data *f) { return f->Sbag; }
 
 /********** Parallelism Creation **********/
 void structured::new_function(sframe_data *f) {

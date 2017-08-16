@@ -3,6 +3,7 @@
 #include <map>
 
 #include "spbag.hpp"
+#include "reach.hpp"
 
 // Some of the driver code uses this stuff...
 #define LOG_KEY_SIZE  4
@@ -30,12 +31,11 @@
 // compute size / GRAIN_SIZE 
 #define SIZE_TO_NUM_GRAINS(size) (size >> LOG_GRAIN_SIZE) 
 
-
 //template<class mem_access_data>
 class shadow_mem {
 public:
   using addr_t = uint64_t;
-  using rd_info_t = spbag*;
+  using rd_info_t = smem_data*;
   struct access_t {
     rd_info_t access;
     addr_t rip;

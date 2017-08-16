@@ -10,44 +10,45 @@ CXX = $(COMPILER_HOME)/bin/clang++
 OPT_FLAGS = -O3
 DBG_FLAGS = -O0
 PROF_FLAGS = -O2
+INC = -I$(RUNTIME_HOME)/include
+FLAGS = -Wall -Wfatal-errors -g $(INC)
+ARFLAGS = rcs
+
 TOOL_DEBUG ?= 0
 
 ifeq ($(mode),release)
-	EXTRA_FLAGS += $(OPT_FLAGS)
+	FLAGS += $(OPT_FLAGS)
 else ifeq ($(mode),profile)
-  EXTRA_FLAGS += $(PROF_FLAGS)
+  FLAGS += $(PROF_FLAGS)
 else ifeq ($(mode),debug)
-  EXTRA_FLAGS += $(DBG_FLAGS)
+  FLAGS += $(DBG_FLAGS)
 else ifeq ($(mode),) # default value
-  EXTRA_FLAGS += $(DBG_FLAGS) 
+  FLAGS += $(DBG_FLAGS) 
 else
   $(error "Invalid mode.")
 endif
 
-INC = -I$(RUNTIME_HOME)/include
-FLAGS = -Wall -Wfatal-errors -g $(INC)
-CFLAGS ?= -std=c99
-CXXFLAGS ?= -std=c++11 -fno-exceptions -fno-rtti
-ARFLAGS = rcs
-
 LTO ?= 1
 ifeq ($(LTO),1)
-  EXTRA_FLAGS += -flto
+  FLAGS += -flto
   LDFLAGS += -flto
   ARFLAGS += --plugin $(COMPILER_HOME)/lib/LLVMgold.so
 endif
 
+CFLAGS ?= $(FLAGS) -std=c99
+CXXFLAGS ?= $(FLAGS) -std=c++11 -fno-exceptions -fno-rtti
+
 $(OBJ_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
-	$(CC) $(FLAGS) $(CFLAGS) $(EXTRA_FLAGS) -o $(OBJ_DIR)/$@ -c $<
+	$(CC) $(CFLAGS) -o $(OBJ_DIR)/$@ -c $<
 
 $(OBJ_DIR)/%.o: %.cpp
 	@mkdir -p $(dir $@)
-	$(CXX) $(FLAGS) $(CXXFLAGS) $(EXTRA_FLAGS) -o $@ -c $<
+	$(CXX) $(CXXFLAGS) -o $@ -c $<
 
 %.o: %.cpp
 	@mkdir -p $(dir $@)
-	$(CXX) $(FLAGS) $(CXXFLAGS) $(EXTRA_FLAGS) -o $@ -c $<
+	$(CXX) $(CXXFLAGS) -o $@ -c $<
 
 $(LIB_DIR)/lib%.a: $(OBJ)
 	@mkdir -p $(LIB_DIR)
