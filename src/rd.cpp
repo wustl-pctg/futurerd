@@ -6,20 +6,19 @@
 #include <cilk/cilk_api.h>
 // #include <internal/abi.h>
 
-
+uint64_t race_detector::t_stack_low_watermark = (uint64_t)(-1);
+bool race_detector::t_clear_stack = false;
+enum rd_policy race_detector::g_policy = RD_CONTINUE;
+size_t race_detector::g_num_races = 0;
+bool race_detector::t_checking_disabled = false;
+//reach::structured race_detector::g_reach;
+shadow_mem race_detector::g_smem;
 
 race_detector::race_detector() {
   // Ensure only one race detector
   static bool init = false;
   assert(init == false);
   init = true;
-
-  // Obviously this will need to change when we do this in parallel.
-  t_stack_low_watermark = (uint64_t)(-1);
-  t_clear_stack = false;
-  g_policy = RD_CONTINUE;
-  g_num_races = 0;
-  disable_checking();
   t_sstack.push();
 
   __cilkrts_set_param("nworkers", "1");

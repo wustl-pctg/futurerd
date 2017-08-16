@@ -18,7 +18,8 @@ public:
     spbag *put_strand;
   };
 
-  structured() = delete;
+  structured() {}
+  //structured() = delete;
   structured(sframe_data *initial);
   //~structured();
 

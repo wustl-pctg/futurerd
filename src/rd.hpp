@@ -19,7 +19,6 @@ public:
 
   static enum rd_policy g_policy;
   static size_t g_num_races;
-  static bool g_checking_disabled;
   static bool t_checking_disabled;
 
   race_detector();
@@ -29,9 +28,9 @@ public:
   void print_states() = delete; // FILE *output = stdout
 
   static inline size_t num_races() { return g_num_races; }
-  static inline void enable_checking() { g_checking_disabled = false; }
-  static inline void disable_checking() { g_checking_disabled = true; }
-  static inline bool should_check() { return !g_checking_disabled; }
+  static inline void enable_checking() { t_checking_disabled = false; }
+  static inline void disable_checking() { t_checking_disabled = true; }
+  static inline bool should_check() { return !t_checking_disabled; }
 
   // @todo{ Read environment variables for setting race-reporting policy.}
   static void set_policy(enum rd_policy p); // not thread-safe

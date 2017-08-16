@@ -38,7 +38,7 @@
 
 #include <iostream>
 #include <chrono>
-#include "bench.h"
+//#include "bench.h"
 
 #ifndef RAND_MAX
 #define RAND_MAX 32767
