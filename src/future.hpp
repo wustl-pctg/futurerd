@@ -13,14 +13,14 @@
 #define NOSANITIZE
 #else
 /// @todo{ Put weak symbols for cilktool functions for futures in the runtime }
-__attribute__((weak)) void cilk_future_create() {}
-__attribute__((weak)) void cilk_future_get_begin(sfut_data *) {}
-__attribute__((weak)) void cilk_future_get_end(sfut_data *) {}
-__attribute__((weak)) void cilk_future_finish_begin(sfut_data *) {}
-__attribute__((weak)) void cilk_future_finish_end(sfut_data *) {}
-__attribute__((weak)) void cilk_future_put_begin(sfut_data *) {}
-__attribute__((weak)) void cilk_future_put_end(sfut_data *) {}
 struct sfut_data {};
+__attribute__((weak)) void cilk_future_create() {}
+__attribute__((weak)) void cilk_future_get_begin(struct sfut_data *) {}
+__attribute__((weak)) void cilk_future_get_end(struct sfut_data *) {}
+__attribute__((weak)) void cilk_future_finish_begin(struct sfut_data *) {}
+__attribute__((weak)) void cilk_future_finish_end(struct sfut_data *) {}
+__attribute__((weak)) void cilk_future_put_begin(struct sfut_data *) {}
+__attribute__((weak)) void cilk_future_put_end(struct sfut_data *) {}
 #define NOSANITIZE
 #endif
 

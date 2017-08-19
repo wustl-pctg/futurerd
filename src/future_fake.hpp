@@ -1,10 +1,11 @@
 /********** Launching futures **********/
 
 // Convenience
-#define __DC disable_checking()
-#define __EC enable_checking()
+#define __DC //disable_checking()
+#define __EC //enable_checking()
 #define __FS //cilk_future_start()
 #define __FC //cilk_future_continuation();
+
 
 /** Asynchronously start foo(x,y) -> int with
  *  cilk_async(int, f, foo, x, y)
