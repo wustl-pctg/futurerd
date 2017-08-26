@@ -11,7 +11,7 @@ bool race_detector::t_clear_stack = false;
 enum rd_policy race_detector::g_policy = RD_CONTINUE;
 size_t race_detector::g_num_races = 0;
 bool race_detector::t_checking_disabled = false;
-reach::structured race_detector::g_reach;
+reach_ds race_detector::g_reach;
 shadow_mem race_detector::g_smem;
 shadow_stack<sframe_data> race_detector::t_sstack;
 

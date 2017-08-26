@@ -21,9 +21,6 @@ typedef race_detector rd; // convenience
 #include <cassert>
 #include <cstdlib> // atexit
 
-// XXX: How to choose this elsewhere?
-using sfut_data = reach::structured::sfut_data;
-using sframe_data = reach::structured::sframe_data;
 
 // In lieu of having two types of shadow frames:
 // Note: only works AFTER detach

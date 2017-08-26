@@ -6,3 +6,4 @@
 using reach_ds = reach::structured;
 using sframe_data = reach_ds::sframe_data;
 using smem_data = reach_ds::smem_data;
+using sfut_data = reach_ds::sfut_data;
