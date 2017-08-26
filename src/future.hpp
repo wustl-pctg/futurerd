@@ -4,9 +4,7 @@
 /// will be split out like the other cilk tool functions.}
 //#define RACE_DETECT
 #ifdef RACE_DETECT
-/// @todo{Figure out a good way to include the right reachability
-/// header file automatically.}
-#include "reach_structured.hpp"
+#include "reach.hpp"
 
 // Not supported in our version of clang...
 //#define NOSANITIZE __attribute__((no_sanitizer("thread")))
