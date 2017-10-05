@@ -4,7 +4,17 @@
 /// will be split out like the other cilk tool functions.}
 //#define RACE_DETECT
 #ifdef RACE_DETECT
-#include "reach.hpp"
+#include "rd.hpp"
+
+extern "C" {
+void cilk_future_create();
+void cilk_future_get_begin(sfut_data *);
+void cilk_future_get_end(sfut_data *);
+void cilk_future_finish_begin(sfut_data *);
+void cilk_future_finish_end(sfut_data *);
+void cilk_future_put_begin(sfut_data *);
+void cilk_future_put_end(sfut_data *);
+}
 
 // Not supported in our version of clang...
 //#define NOSANITIZE __attribute__((no_sanitizer("thread")))
@@ -59,7 +69,13 @@ public:
     cilk_future_finish_end(&m_rd_data);
   }
 
-  NOSANITIZE void finish(T val) { put(val); finish(); }
+  NOSANITIZE void finish(T val) {
+    // Have to do this b/c NOSANITIZE doesn't work for old clang version...
+    race_detector::disable_checking();
+    put(val); finish();
+    race_detector::enable_checking();
+  }
+  
   NOSANITIZE bool ready() { return m_stat >= status::PUT; }
   NOSANITIZE T get() {
     cilk_future_get_begin(&m_rd_data);
