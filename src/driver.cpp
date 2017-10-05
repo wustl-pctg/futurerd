@@ -29,17 +29,21 @@ typedef race_detector rd; // convenience
 extern "C" {
 
 // Public C API
-void set_policy(rd_policy p) { rd::set_policy(p); }
-size_t num_races() { return rd::num_races(); }
+void futurerd_set_policy(rd_policy p) { rd::set_policy(p); }
+size_t futurerd_num_races() { return rd::num_races(); }
 
 // The user uses these to wrap any code with benign races. We use them
 // to protect accesses to the Cilk stack frame.
-void enable_checking() { rd::enable_checking(); }
-void disable_checking() { rd::disable_checking(); }
-void should_check() { rd::should_check(); }
+void futurerd_enable_checking() { rd::enable_checking(); }
+void futurerd_disable_checking() { rd::disable_checking(); }
+void futurerd_should_check() { rd::should_check(); }
 
 void cilk_enter_begin() {
-  assert(!rd::t_sstack.empty());
+  //assert(!rd::t_sstack.empty());
+  //if (rd::t_sstack.size() > 1) rd::t_sstack.push_spawner();
+  // Create new frame, copy data from parent
+  sframe_data *p = rd::t_sstack.head();
+  *rd::t_sstack.push_spawner() = *p;
   rd::disable_checking();
 }
 
@@ -54,7 +58,8 @@ void cilk_enter_end(__cilkrts_stack_frame *sf, void *rsp)
 { rd::enable_checking(); }
 
 void cilk_detach_begin(__cilkrts_stack_frame *parent_sf) {
-  rd::g_reach.at_spawn(rd::t_sstack.push());
+  rd::g_reach.at_spawn(rd::t_sstack.spawn());
+  //rd::g_reach.at_spawn(rd::t_sstack.push_helper());
   rd::disable_checking();
 }
 
@@ -63,6 +68,7 @@ void cilk_detach_end() { rd::enable_checking(); }
 // Real futures will need helper frames/functions.
 void cilk_future_create() {
   assert(!rd::t_sstack.empty());
+  // XXX: push_helper?
   rd::g_reach.at_future_create(rd::t_sstack.push());
 }
 
@@ -75,14 +81,16 @@ void cilk_future_get_end(sfut_data *fut) {
 void cilk_sync_begin() { rd::disable_checking(); }
 
 void cilk_sync_end(__cilkrts_stack_frame *sf) {
-  // XXX: Only call rd::g_reach.at_sync() when we're really at a sync...
-  rd::g_reach.at_sync(rd::t_sstack.head());
+  // At the end of every Cilk function there is an implicit sync, even
+  // if we're already synced...
+  if (!rd::t_sstack.sync())
+    rd::g_reach.at_sync(rd::t_sstack.head());
   rd::enable_checking();
 }
 
 void continuation() {
   rd::t_clear_stack = true;
-  rd::t_sstack.pop();
+  rd::t_sstack.pop(); // pop helper frame
 }
 
 // We don't support separate "put" operations right now. We assume the
@@ -107,6 +115,8 @@ void cilk_future_finish_end(sfut_data *fut) {
 
 void cilk_leave_begin(__cilkrts_stack_frame* sf) {
   sframe_data *f = rd::t_sstack.head();
+
+  // Currently I create a frame at start, so we should always have a parent.
   sframe_data *p = rd::t_sstack.parent();
 
   // returning from a spawn
@@ -119,7 +129,9 @@ void cilk_leave_begin(__cilkrts_stack_frame* sf) {
     // (and including) spawn helper's stack frame.  Set the flag here
     // and the stack will be cleared in tsan_func_exit.
     continuation();
-  } 
+  }  else { // leaving a spawning frame
+    rd::t_sstack.pop();
+  }
 
   rd::disable_checking();
 }
