@@ -12,10 +12,10 @@ extern "C" {
 #include <stddef.h> // size_t
 
 // Not thread-safe
-void set_policy(enum rd_policy p);
-size_t num_races();
-void enable_checking();
-void disable_checking();
-void should_check();
+void futurerd_set_policy(enum rd_policy p);
+size_t futurerd_num_races();
+void futurerd_enable_checking();
+void futurerd_disable_checking();
+void futurerd_should_check();
 
 } // extern C
