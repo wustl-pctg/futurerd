@@ -78,9 +78,11 @@ public:
   
   NOSANITIZE bool ready() { return m_stat >= status::PUT; }
   NOSANITIZE T get() {
+    race_detector::disable_checking();
     cilk_future_get_begin(&m_rd_data);
     assert(m_stat == status::DONE); // for sequential futures
     cilk_future_get_end(&m_rd_data);
+    race_detector::enable_checking();
     return m_val;
   }
 }; // class future
