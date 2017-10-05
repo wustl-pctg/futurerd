@@ -48,7 +48,7 @@ public:
   }
   
   // XXX: ???
-   T* spawn() {
+   T* do_spawn() {
      // Current frame is no longer synced, if it was
      base_type::head()->synced = false;
      frame* f = base_type::push();
@@ -57,7 +57,7 @@ public:
      return this->head();
    }
   // Returns whether or not we were already synced
-  bool sync() {
+  bool do_sync() {
     frame* f = base_type::head();
     bool old = f->synced;
     f->synced = true;

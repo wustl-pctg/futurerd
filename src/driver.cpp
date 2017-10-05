@@ -58,7 +58,7 @@ void cilk_enter_end(__cilkrts_stack_frame *sf, void *rsp)
 { rd::enable_checking(); }
 
 void cilk_detach_begin(__cilkrts_stack_frame *parent_sf) {
-  rd::g_reach.at_spawn(rd::t_sstack.spawn());
+  rd::g_reach.at_spawn(rd::t_sstack.do_spawn());
   //rd::g_reach.at_spawn(rd::t_sstack.push_helper());
   rd::disable_checking();
 }
@@ -68,7 +68,8 @@ void cilk_detach_end() { rd::enable_checking(); }
 // Real futures will need helper frames/functions.
 void cilk_future_create() {
   assert(!rd::t_sstack.empty());
-  // XXX: push_helper?
+
+  // @TODO{Do we actually need a frame here?}
   rd::g_reach.at_future_create(rd::t_sstack.push());
 }
 
@@ -83,7 +84,7 @@ void cilk_sync_begin() { rd::disable_checking(); }
 void cilk_sync_end(__cilkrts_stack_frame *sf) {
   // At the end of every Cilk function there is an implicit sync, even
   // if we're already synced...
-  if (!rd::t_sstack.sync())
+  if (!rd::t_sstack.do_sync())
     rd::g_reach.at_sync(rd::t_sstack.head());
   rd::enable_checking();
 }
