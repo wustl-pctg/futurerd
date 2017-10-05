@@ -8,7 +8,8 @@ include $(TEST_DIR)/../common.mk
 INC += -I$(PROJECT_HOME)/llvm-cilk/include -I$(PROJECT_HOME)/src/
 INC += -I$(PROJECT_HOME)/cilkrts/include/
 
-APPFLAGS = -fcilkplus -fcilktool -fcilk-no-inline -fsanitize=thread
+APPFLAGS = -fcilkplus -fcilktool -fcilk-no-inline
+APPFLAGS += -fsanitize=thread -fsanitize-blacklist=../../blacklist.txt
 
 CFLAGS += $(APPFLAGS)
 CXXFLAGS += $(APPFLAGS)
