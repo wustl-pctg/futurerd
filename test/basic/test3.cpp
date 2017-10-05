@@ -7,13 +7,13 @@
 
 int g_shared = 0;
 
-int foo(cilk::future<int>& f) {
+int foo(cilk::future<int>* f) {
   g_shared = 57;
   return 42;
 }
 
-int bar(cilk::future<int>& f) {
-  int x = f.get();
+int bar(cilk::future<int>* f) {
+  int x = f->get();
   return g_shared - x;
 }
 
@@ -22,11 +22,11 @@ int main(int argc, char* argv[])
   FUTURE_PROLOG();
   TEST_SETUP();
 
-  create_future(int, f, foo, f);
+  cilk_async(int, f, foo, f);
   int x = bar(f);
 
   assert(x == 15);
-  assert(futurerd::num_races() == 0);
+  assert(futurerd_num_races() == 0);
 
   TEST_TEARDOWN();
   FUTURE_EPILOG();

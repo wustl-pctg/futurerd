@@ -19,9 +19,9 @@ int fib(int n)
 int main(int argc, char* argv[])
 {
   TEST_SETUP();
-  int result = fib(10);
-  assert(result == 55);
-  assert(futurerd::num_races() == 0);
+  int result = fib(2);
+  assert(result == 1);
+  assert(futurerd_num_races() == 0);
   TEST_TEARDOWN();
   return 0;
 }
