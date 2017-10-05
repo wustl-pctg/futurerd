@@ -8,7 +8,6 @@ LIB = $(LIB_DIR)/librd.a
 all: $(TARGETS)
 $(TARGETS) : % : %_test
 
-
 # -fsanitize-blacklist=blacklist.txt 
 # %_test: $(OBJ_DIR)/%.o $(LIB)
 %_test: %.o $(LIB)

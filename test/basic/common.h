@@ -1,11 +1,12 @@
 // Common definitions for the tests
 #include <cilk/cilk.h>
+#include <rd.h>
 #define spawn cilk_spawn
 #define sync cilk_sync
 
 // setup for a test
 #define TEST_SETUP()                      \
-  futurerd::set_policy(futurerd::SILENT); \
+  futurerd_set_policy(RD_SILENT); \
   
 // Don't actually need this for now (in C++)
 #define TEST_TEARDOWN()
