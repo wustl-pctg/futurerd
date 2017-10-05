@@ -20,7 +20,7 @@ __attribute__((weak)) void cilk_future_finish_end(struct sfut_data *) {}
 __attribute__((weak)) void cilk_future_put_begin(struct sfut_data *) {}
 __attribute__((weak)) void cilk_future_put_end(struct sfut_data *) {}
 #define NOSANITIZE
-#endif
+#endif // RACE_DETECT
 
 #ifndef __cilkfutures
 #include "future_fake.hpp"
