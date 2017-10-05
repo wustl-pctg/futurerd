@@ -1,4 +1,5 @@
 // Public API
+#pragma once
 
 enum rd_policy {
   RD_ABORT = 0,

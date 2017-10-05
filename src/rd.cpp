@@ -18,6 +18,9 @@ shadow_stack<sframe_data> race_detector::t_sstack;
 // create the race detector (intialize)
 race_detector g_detector;
 
+void race_detector::enable_checking() { t_checking_disabled = false; }
+void race_detector::disable_checking() { t_checking_disabled = true; }
+
 race_detector::race_detector() {
   // Ensure only one race detector
   static bool init = false;

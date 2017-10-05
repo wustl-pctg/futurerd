@@ -30,8 +30,10 @@ public:
   //void print_state() = delete; // FILE *output = stdout
 
   static inline size_t num_races() { return g_num_races; }
-  static inline void enable_checking() { t_checking_disabled = false; }
-  static inline void disable_checking() { t_checking_disabled = true; }
+  //static inline void enable_checking() { t_checking_disabled = false; }
+  //static inline void disable_checking() { t_checking_disabled = true; }
+  static void enable_checking();
+  static void disable_checking();
   static inline bool should_check() { return !t_checking_disabled; }
 
   // @todo{ Read environment variables for setting race-reporting policy.}
