@@ -56,12 +56,13 @@ public:
     m_tail = (index_t)0;
   }
 
-  void push()
+  T* push()
   {
     ++m_head;
     if (m_head == m_cap)
       double_cap();
     memset(&m_stack[m_head], 0, sizeof(T));
+    return &m_stack[m_head];
   }
 
   void pop()
