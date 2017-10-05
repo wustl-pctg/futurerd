@@ -4,8 +4,8 @@
 #define FUTURE_EPILOG()
 
 // Convenience
-#define __DC //disable_checking()
-#define __EC //enable_checking()
+#define __DC race_detector::disable_checking()
+#define __EC race_detector::enable_checking()
 #define __FS //cilk_future_start()
 #define __FC //cilk_future_continuation();
 
