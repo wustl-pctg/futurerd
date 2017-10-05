@@ -1,6 +1,8 @@
 // Common definitions for the tests
 #include <cilk/cilk.h>
+#define RACE_DETECT 1
 #include <rd.h>
+
 #define spawn cilk_spawn
 #define sync cilk_sync
 
