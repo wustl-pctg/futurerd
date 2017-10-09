@@ -34,7 +34,6 @@ int main(int argc, char* argv[])
   int x = bar(f);
 
   assert(x == 15 || x == -42);
-  std::cout << "Found " << futurerd_num_races() << " races." << std::endl;
   assert(futurerd_num_races() == 1);
 
   TEST_TEARDOWN();
