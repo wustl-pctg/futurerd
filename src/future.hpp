@@ -70,10 +70,17 @@ public:
   }
 
   NOSANITIZE void finish(T val) {
-    // Have to do this b/c NOSANITIZE doesn't work for old clang version...
-    race_detector::disable_checking();
-    put(val); finish();
-    race_detector::enable_checking();
+    /* I'd like to simply do this:
+     *  put(val); finish();
+     * But then clear_stack doesn't work correctly because all of
+     * the functions in this file get instrumented. In other words,
+     * the stack would get cleared at the end of finish(), instead of
+     * the end of this finish(val). */
+    
+    cilk_future_finish_begin(&m_rd_data); // disables checking
+    m_val = val;
+    m_stat = status::DONE;
+    cilk_future_finish_end(&m_rd_data); // enables checking
   }
   
   NOSANITIZE bool ready() { return m_stat >= status::PUT; }
