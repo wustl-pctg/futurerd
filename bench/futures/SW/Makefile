@@ -12,6 +12,7 @@ all: sw
 DEFINES = # -DRACE_DETECT
 
 OPT = -O3
+INCLUDE=-I$(PROJECT_HOME)/src
 CFLAGS = -g -Werror -Wall $(DEFINES) -std=c99 $(OPT) -fcilkplus $(INCLUDE)
 CXXFLAGS = -g -Werror -Wall $(DEFINES) -std=c++11 $(OPT) -fcilkplus $(INCLUDE)
  
