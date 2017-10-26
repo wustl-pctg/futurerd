@@ -2,21 +2,16 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <future.hpp>
 #include <cilk/cilk_api.h>
 
 #include "getoptions.hpp"
 
 #define SIZE_OF_ALPHABETS 4
 #define BASE_CASE_LOG 3 // base case = 2^3 * 2^3
-#define BLOCK_ALIGN(n) ((n >> (BASE_CASE_LOG*2)) << (BASE_CASE_LOG*2)) // n % 64 == 0
+#define BLOCK_ALIGN(n) ((n >> 4) << 4) // n % (64/4) == 0
 #define NUM_BLOCKS(n) (n >> BASE_CASE_LOG) 
 #define BLOCK_IND_TO_IND(i) (i << BASE_CASE_LOG)
-
-#define COMPUTE_LCS 0
-
-#define DIAGONAL 0
-#define LEFT 1
-#define UP   2
 
 static inline int max(int a, int b) {
     if( a < b )
@@ -33,7 +28,7 @@ static inline int max(int a, int b) {
  * a, b : input strings of size n-1
  * n    : length of input strings + 1
  **/
-int simple_seq_sw(int* stor, char *a, char *b, int n) {
+static int simple_seq_sw(int* stor, char *a, char *b, int n) {
 
     // solutions to LCS when not considering input b
     for(int i = 0; i < n; i++) { // vertical strip when j == 0
@@ -59,8 +54,8 @@ int simple_seq_sw(int* stor, char *a, char *b, int n) {
     return stor[(n-1)*n + (n-1)];
 }
 
-static inline void 
-process_sw_tile(int *stor, char *a, char *b, int n, int iB, int jB) {  
+static inline int 
+process_sw_tile(int *stor, char *a, char *b, int n, int iB, int jB) {
 
     int bSize = 1 << BASE_CASE_LOG;
 
@@ -86,9 +81,12 @@ process_sw_tile(int *stor, char *a, char *b, int n, int iB, int jB) {
             }
         }
     }
+    
+    return 0;
 }
 
-int wave_sw(int *stor, char *a, char *b, int n) {  
+/* Unused
+static int iter_sw(int *stor, char *a, char *b, int n) {  
 
     int iBlocks = NUM_BLOCKS(n);
     int jBlocks = NUM_BLOCKS(n);
@@ -99,6 +97,44 @@ int wave_sw(int *stor, char *a, char *b, int n) {
         }
     }
     
+    return stor[n*(n-1) + n-1];
+}
+*/
+
+static int wave_sw_with_futures(int *stor, char *a, char *b, int n) {  
+
+    int iBlocks = NUM_BLOCKS(n);
+    int jBlocks = NUM_BLOCKS(n);
+
+    cilk::future<int> * farray[iBlocks * jBlocks];
+
+    // compute the first square
+    create_future(int, farray[0], process_sw_tile, stor, a, b, n, 0, 0);
+    farray[0]->get();
+
+    // compute the upper triangle (assume nxn SW)
+    for(int num_waves = 1; num_waves < jBlocks; num_waves++) {
+        for(int jB = 0; jB <= num_waves; jB++) {
+            int iB = num_waves - jB;
+
+            if(jB > 0) { farray[iB*jBlocks + jB - 1]->get(); } // left dependencies
+            if(iB > 0) { farray[(iB-1)*jBlocks + jB]->get(); } // up dependencies
+            create_future(int, farray[iB*jBlocks + jB], process_sw_tile, stor, a, b, n, iB, jB);
+        }
+    }
+    
+    // lower half of triangle 
+    for(int num_waves = 1; num_waves < jBlocks; num_waves++) {
+        int iBase = iBlocks + num_waves - 1;
+        for(int jB = num_waves; jB < jBlocks; jB++) {
+            int iB = iBase - jB;
+            // fprintf(stderr, "updating (%d, %d)\n", iB, jB); 
+            if(jB > 0) { farray[iB*jBlocks + jB - 1]->get(); } // left depedency
+            if(iB > 0) { farray[(iB-1)*jBlocks + jB]->get(); } // up dependency
+            create_future(int, farray[iB*jBlocks + jB], process_sw_tile, stor, a, b, n, iB, jB);
+        }
+    }
+
     return stor[n*(n-1) + n-1];
 }
 
@@ -140,7 +176,7 @@ int main(int argc, char *argv[]) {
     a1[n-1] = '\0';
     b1[n-1] = '\0';
 
-    int result = wave_sw(stor1, a1, b1, n);
+    int result = wave_sw_with_futures(stor1, a1, b1, n);
 
     if(check) {
         char *a2 = (char *)malloc(n * sizeof(char));
