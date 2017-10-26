@@ -25,12 +25,7 @@ int main(int argc, char* argv[])
   FUTURE_PROLOG();
   TEST_SETUP();
 
-  //cilk_async(int, f, foo, f);
-  // Writing this manually to debug
-  race_detector::disable_checking();
-  auto f = new cilk::future<int>();
-  race_detector::enable_checking();
-  f->finish(foo(f));
+  cilk_async(int, f, foo, f);
   int x = bar(f);
 
   assert(x == 15 || x == -42);

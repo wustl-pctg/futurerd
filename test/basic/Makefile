@@ -1,7 +1,10 @@
+# I wrote this Makefile, but I no longer understand how or why it does
+# what it does. -Rob
 include ../test.mk
 TARGETS := test0 test1 test2 test3 test4 test5 test6 test7 test8 test9 test10 test11
 
 LIB = $(LIB_DIR)/librd.a
+LDFLAGS += $(LIB)
 
 .SECONDARY:
 
@@ -22,9 +25,11 @@ ccend=\033[0m
 check: $(TARGETS)
 	@printf "$(ccyellow) Begin basic tests ... $(ccend)\n"
 	@for test in $(TARGETS); do \
+		printf "$$test ..."; \
 		./$$test ; \
+		printf " passed!\n"; \
 	done
-	@printf "$(ccyellow) ... passed! $(ccend)\n"
+	@printf "$(ccyellow) ... all passed! $(ccend)\n"
 
 clean:
 	rm -rf $(TARGETS) *.o
