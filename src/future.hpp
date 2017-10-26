@@ -1,3 +1,13 @@
+// Template class for futures
+/* In an ideal world, this file would not get instrumented by thread
+   sanitizer. Unfortunately this is not an ideal world, so this file
+   gets inlined by the preprocessor into the client code and then
+   instrumented by TSAN. This causes some headaches, as seen below,
+   but can be worked around. If someone has some time on their hands,
+   they should merge our Cilk Plus branch of llvm/clang with a later
+   version, which includes attributes for disabling thread sanitizer.
+*/
+
 #include <cassert>
 
 /// @todo{Ideally the race detection functions in the future class
