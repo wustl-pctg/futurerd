@@ -21,7 +21,6 @@ typedef race_detector rd; // convenience
 #include <cassert>
 #include <cstdlib> // atexit
 
-
 // In lieu of having two types of shadow frames:
 // Note: only works AFTER detach
 #define IS_HELPER(sf) (sf->flags & CILK_FRAME_DETACHED)
@@ -43,7 +42,10 @@ void cilk_enter_begin() {
   //if (rd::t_sstack.size() > 1) rd::t_sstack.push_spawner();
   // Create new frame, copy data from parent
   sframe_data *p = rd::t_sstack.head();
-  *rd::t_sstack.push_spawner() = *p;
+  sframe_data *f = rd::t_sstack.push_spawner();
+  f->Sbag = p->Sbag;
+  f->Pbag = nullptr;
+  // *rd::t_sstack.push_spawner() = *p;
   rd::disable_checking();
 }
 
