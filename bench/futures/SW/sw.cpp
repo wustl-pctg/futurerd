@@ -3,13 +3,15 @@
 #include <stdio.h>
 #include <string.h>
 #include <future.hpp>
+#include <cilk/cilk.h>
 #include <cilk/cilk_api.h>
 
 #include "getoptions.hpp"
 
 #define SIZE_OF_ALPHABETS 4
 #define BASE_CASE_LOG 3 // base case = 2^3 * 2^3
-#define BLOCK_ALIGN(n) ((n >> 4) << 4) // n % (64/4) == 0
+// make sure n is divisible by base case
+#define BLOCK_ALIGN(n) (((n + (1 << BASE_CASE_LOG)-1) >> BASE_CASE_LOG) << BASE_CASE_LOG)  
 #define NUM_BLOCKS(n) (n >> BASE_CASE_LOG) 
 #define BLOCK_IND_TO_IND(i) (i << BASE_CASE_LOG)
 
@@ -88,11 +90,10 @@ process_sw_tile(int *stor, char *a, char *b, int n, int iB, int jB) {
 /* Unused
 static int iter_sw(int *stor, char *a, char *b, int n) {  
 
-    int iBlocks = NUM_BLOCKS(n);
-    int jBlocks = NUM_BLOCKS(n);
+    int nBlocks = NUM_BLOCKS(n);
 
-    for(int iB = 0; iB < iBlocks; iB++) {
-        for(int jB = 0; jB < jBlocks; jB++) {
+    for(int iB = 0; iB < nBlocks; iB++) {
+        for(int jB = 0; jB < nBlocks; jB++) {
             process_sw_tile(stor, a, b, n, iB, jB);   
         }
     }
@@ -101,44 +102,95 @@ static int iter_sw(int *stor, char *a, char *b, int n) {
 }
 */
 
-static int wave_sw_with_futures(int *stor, char *a, char *b, int n) {  
+// this is not structured use, because it's not single-touch
+/* Unused 
+static int wave_sw_with_futures(int *stor, char *a, char *b, int n) {
 
-    int iBlocks = NUM_BLOCKS(n);
-    int jBlocks = NUM_BLOCKS(n);
+    int nBlocks = NUM_BLOCKS(n);
 
-    cilk::future<int> * farray[iBlocks * jBlocks];
+    cilk::future<int> * farray[nBlocks * nBlocks];
 
     // compute the first square
     create_future(int, farray[0], process_sw_tile, stor, a, b, n, 0, 0);
     farray[0]->get();
 
     // compute the upper triangle (assume nxn SW)
-    for(int num_waves = 1; num_waves < jBlocks; num_waves++) {
+    for(int num_waves = 1; num_waves < nBlocks; num_waves++) {
         for(int jB = 0; jB <= num_waves; jB++) {
             int iB = num_waves - jB;
 
-            if(jB > 0) { farray[iB*jBlocks + jB - 1]->get(); } // left dependencies
-            if(iB > 0) { farray[(iB-1)*jBlocks + jB]->get(); } // up dependencies
-            create_future(int, farray[iB*jBlocks + jB], process_sw_tile, stor, a, b, n, iB, jB);
+            if(jB > 0) { farray[iB*nBlocks + jB - 1]->get(); } // left dependencies
+            if(iB > 0) { farray[(iB-1)*nBlocks + jB]->get(); } // up dependencies
+            create_future(int, farray[iB*nBlocks + jB], process_sw_tile, stor, a, b, n, iB, jB);
         }
     }
     
     // lower half of triangle 
-    for(int num_waves = 1; num_waves < jBlocks; num_waves++) {
-        int iBase = iBlocks + num_waves - 1;
-        for(int jB = num_waves; jB < jBlocks; jB++) {
+    for(int num_waves = 1; num_waves < nBlocks; num_waves++) {
+        int iBase = nBlocks + num_waves - 1;
+        for(int jB = num_waves; jB < nBlocks; jB++) {
             int iB = iBase - jB;
             // fprintf(stderr, "updating (%d, %d)\n", iB, jB); 
-            if(jB > 0) { farray[iB*jBlocks + jB - 1]->get(); } // left depedency
-            if(iB > 0) { farray[(iB-1)*jBlocks + jB]->get(); } // up dependency
-            create_future(int, farray[iB*jBlocks + jB], process_sw_tile, stor, a, b, n, iB, jB);
+            if(jB > 0) { farray[iB*nBlocks + jB - 1]->get(); } // left depedency
+            if(iB > 0) { farray[(iB-1)*nBlocks + jB]->get(); } // up dependency
+            create_future(int, farray[iB*nBlocks + jB], process_sw_tile, stor, a, b, n, iB, jB);
         }
     }
 
     return stor[n*(n-1) + n-1];
 }
+*/
 
-void gen_rand_string(char * s, int s_length) {
+static int process_sw_tile_with_get(cilk::future<int> * farray[], int *stor,
+                                    char *a, char *b, int n, int iB, int jB) {
+    
+    int nBlocks = NUM_BLOCKS(n);
+    
+    if(jB > 0) { farray[iB*nBlocks + jB - 1]->get(); } // left dependency
+    if(iB > 0) { farray[(iB-1)*nBlocks + jB]->get(); } // up dependency
+    
+    process_sw_tile(stor, a, b, n, iB, jB);
+
+    return 0;
+}
+
+static int wave_sw_with_futures_par(int *stor, char *a, char *b, int n) {
+
+    int nBlocks = NUM_BLOCKS(n);
+    int blocks = nBlocks * nBlocks;
+    
+    cilk::future<int> * farray[blocks];
+    
+    // initialize all future handles
+    cilk_for(int i=0; i < blocks; i++) {
+        create_future_handle(int, farray[i]);
+    }
+
+    cilk_for(int i=0; i < blocks; i++) {
+        int iB = i / nBlocks; // row block index 
+        int jB = i % nBlocks; // col block index
+        spawn_proc_with_future_handle(farray[i], process_sw_tile_with_get,
+                                      farray, stor, a, b, n, iB, jB);
+    }
+
+    return stor[n*(n-1) + n-1];
+}
+
+// Ensure that we run serially
+static void ensure_serial_execution(void) {
+  // assert(1 == __cilkrts_get_nworkers());
+  fprintf(stderr, "Forcing CILK_NWORKERS=1.\n");
+  char *e = getenv("CILK_NWORKERS");
+  if (!e || 0!=strcmp(e, "1")) {
+    // fprintf(err_io, "Setting CILK_NWORKERS to be 1\n");
+    if( setenv("CILK_NWORKERS", "1", 1) ) {
+      fprintf(stderr, "Error setting CILK_NWORKERS to be 1\n");
+      exit(1);
+    }
+  }
+}
+
+static void gen_rand_string(char * s, int s_length) {
   for(int i = 0; i < s_length; ++i ) {
     s[i] = (char)(rand() % SIZE_OF_ALPHABETS + 97);
   }
@@ -162,6 +214,8 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
+    ensure_serial_execution();
+     
     n = BLOCK_ALIGN(n); // round it to be 64-byte aligned
     printf("Compute SmithWaterman with %d x %d table.\n", n, n);
 
@@ -176,7 +230,7 @@ int main(int argc, char *argv[]) {
     a1[n-1] = '\0';
     b1[n-1] = '\0';
 
-    int result = wave_sw_with_futures(stor1, a1, b1, n);
+    int result = wave_sw_with_futures_par(stor1, a1, b1, n);
 
     if(check) {
         char *a2 = (char *)malloc(n * sizeof(char));

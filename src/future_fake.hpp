@@ -21,6 +21,13 @@
   __DC; (fut) = new cilk::future<T>(); __EC;    \
   __FS; fut->finish(func(args)); __FC;
 
+// Do the create_future as above, but in two steps
+#define create_future_handle(T, fut)       \
+  __DC; (fut) = new cilk::future<T>(); __EC;
+
+#define spawn_proc_with_future_handle(fut,func,args...)       \
+  __FS; fut->finish(func(args)); __FC;
+
 // Use preallocated memory for the future itself
 #define reuse_future(T,loc,func,args...)        \
   __DC; new(loc) cilk::future<T>(); __EC;       \

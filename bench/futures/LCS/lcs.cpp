@@ -3,13 +3,15 @@
 #include <stdio.h>
 #include <string.h>
 #include <future.hpp>
+#include <cilk/cilk.h>
 #include <cilk/cilk_api.h>
 
 #include "getoptions.hpp" 
 
 #define SIZE_OF_ALPHABETS 4
 #define BASE_CASE_LOG 3 // base case = 2^3 * 2^3
-#define BLOCK_ALIGN(n) ((n >> 4) << 4)   // n % (64/4) == 0
+// make sure n is divisible by base case
+#define BLOCK_ALIGN(n) (((n + (1 << BASE_CASE_LOG)-1) >> BASE_CASE_LOG) << BASE_CASE_LOG)  
 #define NUM_BLOCKS(n) (n >> BASE_CASE_LOG) 
 #define BLOCK_IND_TO_IND(i) (i << BASE_CASE_LOG)
 
@@ -117,11 +119,10 @@ static int process_lcs_tile(int *stor, char *a, char *b, int n, int iB, int jB) 
 /* Unused
 static int iter_lcs(int *stor, char *a, char *b, int n) {
 
-    int iBlocks = NUM_BLOCKS(n);
-    int jBlocks = NUM_BLOCKS(n);
+    int nBlocks = NUM_BLOCKS(n);
 
-    for(int iB = 0; iB < iBlocks; iB++) {
-        for(int jB = 0; jB < jBlocks; jB++) {
+    for(int iB = 0; iB < nBlocks; iB++) {
+        for(int jB = 0; jB < nBlocks; jB++) {
             process_lcs_tile(stor, a, b, n, iB, jB);
         }
     }
@@ -130,45 +131,84 @@ static int iter_lcs(int *stor, char *a, char *b, int n) {
 }
 */
 
-int wave_lcs_with_futures(int *stor, char *a, char *b, int n) {  
+// This is not actually structured use of futures, because it is not touch-once
+/*
+int wave_lcs_with_futures(int *stor, char *a, char *b, int n) {
 
-    int iBlocks = NUM_BLOCKS(n);
-    int jBlocks = NUM_BLOCKS(n);
+    int nBlocks = NUM_BLOCKS(n);
         
     // create an array of future pointers
-    cilk::future<int> * farray[iBlocks * jBlocks];
+    cilk::future<int> * farray[nBlocks * nBlocks];
     
     // initiate the first square
     create_future(int, farray[0], process_lcs_tile, stor, a, b, n, 0, 0);
     farray[0]->get();
 
     // upper half of triangle (we assume square NxN LCS) 
-    for(int num_waves = 1; num_waves < jBlocks; num_waves++) {
+    for(int num_waves = 1; num_waves < nBlocks; num_waves++) {
         for(int jB = 0; jB <= num_waves; jB++) {
             int iB = num_waves - jB;
             // fprintf(stderr, "updating (%d, %d)\n", iB, jB);  
-            if(jB > 0) { farray[iB*jBlocks + jB - 1]->get(); } // left depedency
-            if(iB > 0) { farray[(iB-1)*jBlocks + jB]->get(); } // up dependency
-            create_future(int, farray[iB*jBlocks + jB], process_lcs_tile, stor, a, b, n, iB, jB);
+            if(jB > 0) { farray[iB*nBlocks + jB - 1]->get(); } // left depedency
+            if(iB > 0) { farray[(iB-1)*nBlocks + jB]->get(); } // up dependency
+            create_future(int, farray[iB*nBlocks + jB], process_lcs_tile, stor, a, b, n, iB, jB);
         }
     }
 
     // lower half of triangle 
-    for(int num_waves = 1; num_waves < jBlocks; num_waves++) {
-        int iBase = iBlocks + num_waves - 1;
-        for(int jB = num_waves; jB < jBlocks; jB++) {
+    for(int num_waves = 1; num_waves < nBlocks; num_waves++) {
+        int iBase = nBlocks + num_waves - 1;
+        for(int jB = num_waves; jB < nBlocks; jB++) {
             int iB = iBase - jB;
             // fprintf(stderr, "updating (%d, %d)\n", iB, jB); 
-            if(jB > 0) { farray[iB*jBlocks + jB - 1]->get(); } // left depedency
-            if(iB > 0) { farray[(iB-1)*jBlocks + jB]->get(); } // up dependency
-            create_future(int, farray[iB*jBlocks + jB], process_lcs_tile, stor, a, b, n, iB, jB);
+            if(jB > 0) { farray[iB*nBlocks + jB - 1]->get(); } // left depedency
+            if(iB > 0) { farray[(iB-1)*nBlocks + jB]->get(); } // up dependency
+            create_future(int, farray[iB*nBlocks + jB], process_lcs_tile, stor, a, b, n, iB, jB);
         }
     }
 
     return stor[n*(n-1) + n-1];
 }
+*/
 
-void gen_rand_string(char * s, int s_length) {
+static int process_lcs_tile_with_get(cilk::future<int> * farray[], int *stor, 
+                                     char *a, char *b, int n, int iB, int jB) {
+
+    int nBlocks = NUM_BLOCKS(n);
+        
+    if(jB > 0) { farray[iB*nBlocks + jB - 1]->get(); } // left depedency
+    if(iB > 0) { farray[(iB-1)*nBlocks + jB]->get(); } // up dependency
+
+    process_lcs_tile(stor, a, b, n, iB, jB);
+
+    return 0;
+}
+
+int wave_lcs_with_futures_par(int *stor, char *a, char *b, int n) {
+
+    int nBlocks = NUM_BLOCKS(n);
+    int blocks = nBlocks * nBlocks;
+        
+    // create an array of future pointers
+    cilk::future<int> * farray[blocks];
+    
+    // make sure we initialize all handles
+    cilk_for(int i=0; i < blocks; i++) {
+        create_future_handle(int, farray[i]);
+    }
+    
+    // now we spawn off the function that will call get 
+    cilk_for(int i=0; i < blocks; i++) {
+        int iB = i / nBlocks; // row block index
+        int jB = i % nBlocks; // col block index
+        spawn_proc_with_future_handle(farray[i], process_lcs_tile_with_get, 
+                                      farray, stor, a, b, n, iB, jB);
+    }
+
+    return stor[n*(n-1) + n-1];
+}
+
+static void gen_rand_string(char * s, int s_length) {
   for(int i = 0; i < s_length; ++i ) {
     s[i] = (char)(rand() % SIZE_OF_ALPHABETS + 97);
   }
@@ -176,6 +216,22 @@ void gen_rand_string(char * s, int s_length) {
 
 const char* specifiers[] = {"-n", "-c", "-h"};
 int opt_types[] = {INTARG, BOOLARG, BOOLARG};
+
+
+// Ensure that we run serially
+static void ensure_serial_execution(void) {
+  // assert(1 == __cilkrts_get_nworkers());
+  fprintf(stderr, "Forcing CILK_NWORKERS=1.\n");
+  char *e = getenv("CILK_NWORKERS");
+  if (!e || 0!=strcmp(e, "1")) {
+    // fprintf(err_io, "Setting CILK_NWORKERS to be 1\n");
+    if( setenv("CILK_NWORKERS", "1", 1) ) {
+      fprintf(stderr, "Error setting CILK_NWORKERS to be 1\n");
+      exit(1);
+    }
+  }
+}
+
 
 int main(int argc, char *argv[]) {
 
@@ -192,7 +248,9 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    n = BLOCK_ALIGN(n); // round it to be 64-byte aligned
+    ensure_serial_execution();
+
+    n = BLOCK_ALIGN(n); // make sure it's divisible by base case 
     printf("Compute LCS with %d x %d table.\n", n, n);
 
     // str len is n-1, but allocated n to have the last char be \0
@@ -206,7 +264,7 @@ int main(int argc, char *argv[]) {
     a1[n-1] = '\0';
     b1[n-1] = '\0';
 
-    int result = wave_lcs_with_futures(stor1, a1, b1, n);
+    int result = wave_lcs_with_futures_par(stor1, a1, b1, n);
 
     if(check) {
         char *a2 = (char *)malloc(n * sizeof(char));
