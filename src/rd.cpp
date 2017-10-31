@@ -29,7 +29,8 @@ race_detector::race_detector() {
   
   t_sstack.push();
   // not really, but need to initialize
-  g_reach.at_spawn(t_sstack.head());
+  //g_reach.at_spawn(t_sstack.head());
+  g_reach.init(t_sstack.head());
   
   __cilkrts_set_param("nworkers", "1");
 }

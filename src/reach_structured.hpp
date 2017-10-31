@@ -20,12 +20,13 @@ public:
   structured() {}
   //structured() = delete;
   structured(sframe_data *initial);
+  void init(sframe_data *initial);
   //~structured();
   smem_data* active(sframe_data *f);
 
   // Parallelism creation
   void at_future_create(sframe_data *f);
-  void at_spawn(sframe_data *f);
+  void at_spawn(sframe_data *f, sframe_data *helper);
 
   // Parallelism deletion
   // void at_future_put(sfut_data*);
@@ -38,10 +39,11 @@ public:
 
   // Actually start a "strand" function that has already been "created"
   void begin_strand(sframe_data *f, sframe_data *p);
+  // Helper function for parallelism creation (spawns + create_future)
+  // Public for use by nonblock (should be friend class...)
+  void create_strand(sframe_data *f);
 
 private:
-  // Helper function for parallelism creation (spawns + create_future)
-  void create_strand(sframe_data *f);
   // Helper function for continuations
   void continuation(sframe_data *f, sframe_data *p);
 

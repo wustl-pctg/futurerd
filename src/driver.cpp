@@ -54,7 +54,7 @@ void cilk_enter_end(__cilkrts_stack_frame *sf, void *rsp)
 { rd::enable_checking(); }
 
 void cilk_detach_begin(__cilkrts_stack_frame *parent_sf) {
-  rd::g_reach.at_spawn(rd::t_sstack.do_spawn());
+  rd::g_reach.at_spawn(rd::t_sstack.head(), rd::t_sstack.do_spawn());
   //rd::g_reach.at_spawn(rd::t_sstack.push_helper());
   rd::disable_checking();
 }

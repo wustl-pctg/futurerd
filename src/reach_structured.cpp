@@ -6,7 +6,9 @@
 
 namespace reach {
 
-structured::structured(sframe_data *initial) { create_strand(initial); }
+structured::structured(sframe_data *initial) { init(initial); }
+
+void structured::init(sframe_data *initial) { create_strand(initial); }
 
 structured::smem_data* structured::active(sframe_data *f) { return f->Sbag; }
 
@@ -22,7 +24,8 @@ void structured::create_strand(sframe_data *f) {
 }
 
 void structured::at_future_create(sframe_data *f) { create_strand(f); }
-void structured::at_spawn(sframe_data *f) { LOG; create_strand(f); }
+void structured::at_spawn(sframe_data *f, sframe_data *helper)
+{ LOG; create_strand(helper); }
 
 /********** Parallelism Deletion **********/
 void structured::at_future_get(sframe_data *f, sfut_data *fut) {
@@ -34,7 +37,7 @@ void structured::at_future_get(sframe_data *f, sfut_data *fut) {
 // "spawned" in this block
 void structured::at_sync(sframe_data *f) { LOG;
   // make sure it's a real sync (XXX: ???)
-  if (!f->Pbag) return; 
+  if (!f->Pbag) return;
 
   f->Sbag->merge(f->Pbag);
   f->Pbag = nullptr;
@@ -48,8 +51,9 @@ void structured::continuation(sframe_data *f, sframe_data *p) {
   // if (!p->Pbag) p->Pbag = new spbag(spbag::bag_kind::P);
   // else p->Pbag->set_kind(spbag::bag_kind::P);
   // p->Pbag->merge(f->Sbag);
+  assert(f->Sbag);
 
-  if (!p->Pbag) 
+  if (!p->Pbag)
     p->Pbag = f->Sbag;
   else
     p->Pbag->merge(f->Sbag);
