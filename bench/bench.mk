@@ -12,8 +12,8 @@ LIB = $(LIB_DIR)/libfuturerd.a
 APPFLAGS = -fcilkplus -fcilk-no-inline
 BASEFLAGS =
 BAGFLAGS = -fcilktool
-RDFLAGS = -fsanitize=thread -DRACE_DETECT
+RDFLAGS = -fsanitize=thread -DRACE_DETECT -DNONBLOCKING_FUTURES
 
-CFLAGS += $(APPFLAGS) $(INC)
-CXXFLAGS += $(APPFLAGS) $(INC)
+CFLAGS += $(APPFLAGS) $(INC) $(RDFLAGS)
+CXXFLAGS += $(APPFLAGS) $(INC) $(RDFLAGS)
 LDFLAGS += $(LIB) $(RUNTIME_LIB) -ldl -lpthread
