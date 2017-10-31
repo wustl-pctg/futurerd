@@ -1,20 +1,28 @@
 #include "reach_structured.hpp"
 #include <cassert>
+#include <iostream>
+//#define LOG fprintf(stderr, "In %s\n", __PRETTY_FUNCTION__);
+#define LOG
 
 namespace reach {
 
-structured::structured(sframe_data *initial) { new_function(initial); }
+structured::structured(sframe_data *initial) { create_strand(initial); }
 
 structured::smem_data* structured::active(sframe_data *f) { return f->Sbag; }
 
 /********** Parallelism Creation **********/
-void structured::new_function(sframe_data *f) {
+void structured::begin_strand(sframe_data *f, sframe_data *p) {
+  f->Sbag = p->Sbag;
+  f->Pbag = nullptr;
+}
+
+void structured::create_strand(sframe_data *f) {
   f->Sbag = new spbag(spbag::bag_kind::S);
   f->Pbag = nullptr; // will create this lazily when we need it
 }
 
-void structured::at_future_create(sframe_data *f) { new_function(f); }
-void structured::at_spawn(sframe_data *f) { new_function(f); }
+void structured::at_future_create(sframe_data *f) { create_strand(f); }
+void structured::at_spawn(sframe_data *f) { LOG; create_strand(f); }
 
 /********** Parallelism Deletion **********/
 void structured::at_future_get(sframe_data *f, sfut_data *fut) {
@@ -24,7 +32,7 @@ void structured::at_future_get(sframe_data *f, sfut_data *fut) {
 
 // A sync is equivalent to calling "get" on all the futures that were
 // "spawned" in this block
-void structured::at_sync(sframe_data *f) {
+void structured::at_sync(sframe_data *f) { LOG;
   // make sure it's a real sync (XXX: ???)
   if (!f->Pbag) return; 
 
@@ -58,7 +66,7 @@ void structured::continuation(sframe_data *f, sframe_data *p) {
 }
 
 void structured::at_spawn_continuation(sframe_data *f, sframe_data *p)
-{ continuation(f,p); }
+{ LOG; continuation(f,p); }
 
 void structured::at_future_finish(sframe_data *f, sframe_data *p, sfut_data *fut) {
   continuation(f, p);

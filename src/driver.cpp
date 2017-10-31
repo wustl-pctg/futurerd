@@ -38,14 +38,8 @@ void futurerd_disable_checking() { rd::disable_checking(); }
 void futurerd_should_check() { rd::should_check(); }
 
 void cilk_enter_begin() {
-  //assert(!rd::t_sstack.empty());
-  //if (rd::t_sstack.size() > 1) rd::t_sstack.push_spawner();
-  // Create new frame, copy data from parent
   sframe_data *p = rd::t_sstack.head();
-  sframe_data *f = rd::t_sstack.push_spawner();
-  f->Sbag = p->Sbag;
-  f->Pbag = nullptr;
-  // *rd::t_sstack.push_spawner() = *p;
+  rd::g_reach.begin_strand(rd::t_sstack.push_spawner(), p);
   rd::disable_checking();
 }
 

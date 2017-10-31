@@ -13,11 +13,6 @@ public:
 
   using smem_data = spbag;
 
-  // struct smem_data {
-  //   spbag *last_reader;
-  //   spbag *last_writer;
-  // };
-
   struct sfut_data {
     spbag *put_strand;
   };
@@ -41,9 +36,12 @@ public:
   void at_spawn_continuation(sframe_data *f, sframe_data *p);
   void at_future_finish(sframe_data *f, sframe_data *p, sfut_data *fut);
 
+  // Actually start a "strand" function that has already been "created"
+  void begin_strand(sframe_data *f, sframe_data *p);
+
 private:
   // Helper function for parallelism creation (spawns + create_future)
-  void new_function(sframe_data *f);
+  void create_strand(sframe_data *f);
   // Helper function for continuations
   void continuation(sframe_data *f, sframe_data *p);
 

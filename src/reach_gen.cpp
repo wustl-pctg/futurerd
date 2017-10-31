@@ -1,5 +1,8 @@
 #include "reach.hpp"
 
+// 0 is fake, for representing nodes in R
+size_t reach::general::global_index = 1; 
+
 node add_node() {
   return global_index++;
   // Nothing else is necessary; resizing will be done automatically
