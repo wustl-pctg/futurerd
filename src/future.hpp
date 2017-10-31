@@ -16,6 +16,12 @@
 #ifdef RACE_DETECT
 #include "rd.hpp"
 
+// Convenience
+#define __DC race_detector::disable_checking()
+#define __EC race_detector::enable_checking()
+#define __FS //cilk_future_start()
+#define __FC //cilk_future_continuation();
+
 extern "C" {
 void cilk_future_create();
 void cilk_future_get_begin(sfut_data *);
@@ -30,6 +36,11 @@ void cilk_future_put_end(sfut_data *);
 //#define NOSANITIZE __attribute__((no_sanitizer("thread")))
 #define NOSANITIZE
 #else
+#define __DC
+#define __EC
+#define __FS
+#define __FC
+
 /// @todo{ Put weak symbols for cilktool functions for futures in the runtime }
 struct sfut_data {};
 __attribute__((weak)) void cilk_future_create() {}
@@ -95,11 +106,11 @@ public:
   
   NOSANITIZE bool ready() { return m_stat >= status::PUT; }
   NOSANITIZE T get() {
-    race_detector::disable_checking();
+    __DC;
     cilk_future_get_begin(&m_rd_data);
     assert(m_stat == status::DONE); // for sequential futures
     cilk_future_get_end(&m_rd_data);
-    race_detector::enable_checking();
+    __EC;
     return m_val;
   }
 }; // class future

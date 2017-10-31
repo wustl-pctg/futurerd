@@ -3,12 +3,6 @@
 #define FUTURE_PROLOG()
 #define FUTURE_EPILOG()
 
-// Convenience
-#define __DC race_detector::disable_checking()
-#define __EC race_detector::enable_checking()
-#define __FS //cilk_future_start()
-#define __FC //cilk_future_continuation();
-
 /** Asynchronously start foo(x,y) -> int with
  *  cilk_async(int, f, foo, x, y)
  */

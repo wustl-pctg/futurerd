@@ -4,17 +4,17 @@ CC = $(COMPILER_HOME)/bin/clang
 CXX = $(COMPILER_HOME)/bin/clang++
 
 RTS_INCLUDE=$(BUILD_DIR)/include
-LIBS=-ldl $(RUNTIME_LIB) $(LIB_DIR)/librd.a -lpthread #-lcilkrts
+LIBS=-ldl $(RUNTIME_LIB) $(LIB_DIR)/librd.a -lpthread
 #LIB_PATH=-L$(BUILD_DIR)/lib -Wl,-rpath -Wl,$(BUILD_DIR)/lib
 
 all: lcs
 
 DEFINES = # -DRACE_DETECT
 
-OPT = -O3 -flto
+OPT = -O0 -flto
 INCLUDE=-I$(PROJECT_HOME)/src
-CFLAGS = -g -Werror -Wall $(DEFINES) -std=c99 $(OPT) -fcilkplus $(INCLUDE) $(RDFLAGS)
-CXXFLAGS = -g -Werror -Wall $(DEFINES) -std=c++11 $(OPT) -fcilkplus $(INCLUDE) $(RDFLAGS)
+CFLAGS = -g -Werror -Wall $(DEFINES) -std=c99 $(OPT) -fcilkplus $(INCLUDE)
+CXXFLAGS = -g -Werror -Wall $(DEFINES) -std=c++11 $(OPT) -fcilkplus $(INCLUDE)
  
 lcs: lcs.o getoptions.cpp
 	$(CXX) $^ $(OPT) $(LIB_PATH) -lm $(LIBS) -o lcs
