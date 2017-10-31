@@ -1,4 +1,4 @@
-include ../../bench.mk
+include ../bench.mk
 
 .PHONY: all clean reallyclean
 
