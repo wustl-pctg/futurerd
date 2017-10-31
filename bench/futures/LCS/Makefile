@@ -1,27 +1,22 @@
 include ../../bench.mk
 
-CC = $(COMPILER_HOME)/bin/clang
-CXX = $(COMPILER_HOME)/bin/clang++
+.PHONY: all clean reallyclean
 
-RTS_INCLUDE=$(BUILD_DIR)/include
-LIBS=-ldl $(RUNTIME_LIB) $(LIB_DIR)/librd.a -lpthread
-#LIB_PATH=-L$(BUILD_DIR)/lib -Wl,-rpath -Wl,$(BUILD_DIR)/lib
+TARGETS = lcs sw
 
-all: lcs
+all: $(TARGETS) 
 
-DEFINES = # -DRACE_DETECT
+INC += -I../util
 
-OPT = -O0 -flto
-INCLUDE=-I$(PROJECT_HOME)/src
-CFLAGS = -g -Werror -Wall $(DEFINES) -std=c99 $(OPT) -fcilkplus $(INCLUDE)
-CXXFLAGS = -g -Werror -Wall $(DEFINES) -std=c++11 $(OPT) -fcilkplus $(INCLUDE)
- 
-lcs: lcs.o getoptions.cpp
-	$(CXX) $^ $(OPT) $(LIB_PATH) -lm $(LIBS) -o lcs
+sw: sw.o ../util/getoptions.o
+	$(CXX) $^ $(LDFLAGS) $(LIB) -o $@
 
-%.o: %.cpp
-	$(CXX) $< -I$(RTS_INCLUDE) -c $(CXXFLAGS)
+lcs: lcs.o ../util/getoptions.o
+	$(CXX) $^ $(LDFLAGS) $(LIB) -o $@
 
 # delete all object files
 clean:
-	rm -f *.o lcs core.*
+	rm -f *.o $(TARGETS) core.*
+
+reallyclean:
+	rm -f ../util/*.o *.o $(TARGETS) core.*
