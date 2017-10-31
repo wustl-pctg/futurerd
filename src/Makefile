@@ -7,8 +7,8 @@ SRC := driver.cpp rd.cpp
 SRC += mem_access.cpp shadow_mem.cpp
 
 # Reachability
-# SRC += reach_gen.cpp reach_nonblock.cpp
-SRC += reach_structured.cpp
+SRC += reach_gen.cpp reach_nonblock.cpp # Don't need for structured
+SRC += reach_structured.cpp # Even nonblocking needs this
 
 # Other helpers
 SRC += utils/union_find.cpp debug.cpp spbag.cpp

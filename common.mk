@@ -12,8 +12,8 @@ DBG_FLAGS = -O0
 PROF_FLAGS = -O2
 INC = -I$(RUNTIME_HOME)/include
 FLAGS = -Wall -Wfatal-errors -g $(INC)
-#FLAGS += -DNONBLOCKING_FUTURES
-FLAGS += -DSTRUCTURED_FUTURES
+FLAGS += -DNONBLOCKING_FUTURES
+#FLAGS += -DSTRUCTURED_FUTURES
 ARFLAGS = rcs
 
 TOOL_DEBUG ?= 0
@@ -25,7 +25,7 @@ else ifeq ($(mode),profile)
 else ifeq ($(mode),debug)
   FLAGS += $(DBG_FLAGS)
 else ifeq ($(mode),) # default value
-  FLAGS += $(DBG_FLAGS) 
+  FLAGS += $(DBG_FLAGS)
 else
   $(error "Invalid mode.")
 endif

@@ -4,8 +4,8 @@ CC = $(COMPILER_HOME)/bin/clang
 CXX = $(COMPILER_HOME)/bin/clang++
 
 RTS_INCLUDE=$(BUILD_DIR)/include
-LIBS=-lcilkrts -ldl 
-LIB_PATH=-L$(BUILD_DIR)/lib -Wl,-rpath -Wl,$(BUILD_DIR)/lib
+LIBS=-ldl $(RUNTIME_LIB) $(LIB_DIR)/librd.a -lpthread #-lcilkrts
+#LIB_PATH=-L$(BUILD_DIR)/lib -Wl,-rpath -Wl,$(BUILD_DIR)/lib
 
 all: lcs
 
