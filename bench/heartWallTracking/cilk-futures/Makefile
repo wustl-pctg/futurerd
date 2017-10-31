@@ -1,11 +1,11 @@
-include ../../../bench.mk
+include ../../bench.mk
 
-CC = $(COMPILER_HOME)/bin/clang
-CXX = $(COMPILER_HOME)/bin/clang++
+# CC = $(COMPILER_HOME)/bin/clang
+# CXX = $(COMPILER_HOME)/bin/clang++
 
-RTS_INCLUDE=$(BUILD_DIR)/include
-LIBS=-lcilkrts -ldl
-LIB_PATH=-L$(BUILD_DIR)/lib -Wl,-rpath -Wl,$(BUILD_DIR)/lib
+# RTS_INCLUDE=$(BUILD_DIR)/include
+# LIBS=-lcilkrts -ldl
+# LIB_PATH=-L$(BUILD_DIR)/lib -Wl,-rpath -Wl,$(BUILD_DIR)/lib
 
 DEFINES = -DOUTPUT # -DRACE_DETECT
 
@@ -17,15 +17,15 @@ CXXFLAGS = -g -Werror -Wall $(DEFINES) -std=c++11 $(OPT) -fcilkplus $(INCLUDE)
 all: heartwall
 
 compute-steps.o: compute-steps.cpp
-	$(CXX) $< -I./AVI -I$(RTS_INCLUDE) -c $(CXXFLAGS)
+	$(CXX) $< -I./AVI $(INC) -c $(CXXFLAGS) -o $@
 
 # link objects(binaries) together
 heartwall: main.o compute-steps.o ./AVI/avilib.o ./AVI/avimod.o
-	$(CXX) $^ $(OPT) $(LIB_PATH) -lm $(LIBS) -o heartwall
+	$(CXX) $^ $(LDFLAGS) $(LIB) -o heartwall
 
 # compile main function file into object (binary)
 main.o: main.cpp define.hpp
-	$(CXX) $< -I./AVI -I$(RTS_INCLUDE) -c $(CXXFLAGS)
+	$(CXX) $< -I./AVI $(INC) -c $(CXXFLAGS) -o $@
 
 ./AVI/avilib.o ./AVI/avimod.o:
 	cd AVI; make;

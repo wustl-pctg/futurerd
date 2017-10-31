@@ -1,13 +1,11 @@
-include ../../../bench.mk
+include ../../bench.mk
 
-# ifdef OUTPUT
-override OUTPUT = -DOUTPUT
-# endif
+OUTPUT = -DOUTPUT
 
 CC=gcc
 CXX=g++
 
-OPT = -g -O3 -Werror -Wall $(OUTPUT) -std=c99
+OPT_FLAGS = -g -O3 -Werror -Wall $(OUTPUT) -std=c99
 
 # link objects(binaries) together
 heartwall: main.o ./AVI/avilib.o ./AVI/avimod.o
@@ -15,7 +13,7 @@ heartwall: main.o ./AVI/avilib.o ./AVI/avimod.o
 
 # compile main function file into object (binary)
 main.o: main.c define.c kernel.c
-	$(CC) main.c -I./AVI -c $(OPT) -fopenmp
+	$(CC) main.c -I./AVI -c $(OPT_FLAGS) -fopenmp
 
 ./AVI/avilib.o ./AVI/avimod.o:
 	cd AVI; make;
