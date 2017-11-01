@@ -1,6 +1,10 @@
 #ifndef __UTIL_HPP__
 #define __UTIL_HPP__
 
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
 // Ensure that we run serially
 static void ensure_serial_execution(void) {
   // assert(1 == __cilkrts_get_nworkers());

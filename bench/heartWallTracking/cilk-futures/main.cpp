@@ -16,6 +16,8 @@
 #include "avimod.hpp"
 #include "define.hpp"
 
+#include "../../util/util.hpp"
+
 using namespace std;
 
 // defined in compute-steps.c
@@ -513,6 +515,8 @@ int main(int argc, char *argv []) {
         printf("ERROR: usage: heartwall <inputfile> <num of frames> <num of threads>\n");
         exit(1);
     }
+
+    ensure_serial_execution();
 
     char* video_file_name;
     video_file_name = argv[1];

@@ -163,6 +163,8 @@ int wave_lcs_with_futures(int *stor, char *a, char *b, int n) {
             create_future(int, farray[iB*nBlocks + jB], process_lcs_tile, stor, a, b, n, iB, jB);
         }
     }
+    // make sure the last square finishes before we move onto returning
+    farray[nBlocks * nBlocks - 1]->get();
 
     return stor[n*(n-1) + n-1];
 }
@@ -202,6 +204,8 @@ int wave_lcs_with_futures_par(int *stor, char *a, char *b, int n) {
         spawn_proc_with_future_handle(farray[i], process_lcs_tile_with_get, 
                                       farray, stor, a, b, n, iB, jB);
     }
+    // make sure the last square finishes before we move onto returning
+    farray[blocks-1]->get();
 
     return stor[n*(n-1) + n-1];
 }
