@@ -152,18 +152,63 @@ static int fh_index(int kB, int iB, int jB, int nBlocks) {
 }
 
 #ifdef STRUCTURED_FUTURES
+static int matmul_base_structured(DATA *A, DATA *B, DATA *C, 
+                                  int n, int iB, int kB, int jB, cilk::future<int> *f) {
+    DATA tmp[n*n];
+
+    // fprintf(stderr, "C(%d, %d) = A(%d, %d) x B(%d, %d)\n", iB, jB, iB, kB, kB, jB);
+    for(int i = 0; i < n; i++) {
+        for(int j = 0; j < n; j++) {
+            DATA c = 0.0;
+            for(int k = 0; k < n; k++) {
+                c += A[i*n + k] * B[k*n + j];
+            }
+            tmp[i*n + j] = c;
+        }
+    }
+    // make sure the previous kB that wrote to the same block C[iB, jB] is done
+    if(f != NULL) {
+        f->get();
+    }
+    for(int i = 0; i < n; i++) {
+        for(int j = 0; j < n; j++) {
+            C[i*n + j] += tmp[i*n + j];
+        }
+    }
+
+    return 0;
+}
+
 static void do_matmul_structured(DATA *A, DATA *B, DATA *C, int n) {
     
     int nBlocks = n >> POWER; // number of blocks per dimension
     int num_futures = nBlocks * nBlocks * nBlocks;
-    fhandles = new cilk::future<int> *[num_futures];
+    cilk::future<int> **fhandles = new cilk::future<int> *[num_futures];
 
     cilk_for(int iB = 0; iB < nBlocks; iB++) {
         cilk_for(int jB = 0; jB < nBlocks; jB++) {
-            for(int kB = 0; kB < nblocks; kB++) {
+            cilk::future<int> *f = NULL;
+            cilk::future<int> *prevf = NULL;
+            for(int kB = 0; kB < nBlocks; kB++) {
+                prevf = f; // first is NULL
+                f = fhandles[fh_index(kB, iB, jB, nBlocks)];
+                create_future(int, f, matmul_base_structured, A, B, C, n, iB, kB, jB, prevf);
             }
         }
     }
+
+    // wait for the very last kB blocks to finish
+    cilk_for(int iB = 0; iB < nBlocks; iB++) {
+        cilk_for(int jB = 0; jB < nBlocks; jB++) {
+            cilk::future<int> *f = fhandles[fh_index(nBlocks-1, iB, jB, nBlocks)];
+            f->get();
+        }
+    }
+
+    cilk_for(int i = 0; i < num_futures; i++) { // cleanup
+        delete fhandles[i];
+    }
+    
     delete[] fhandles;
 }
 #endif // STRUCTURED_FUTURES 
@@ -171,7 +216,7 @@ static void do_matmul_structured(DATA *A, DATA *B, DATA *C, int n) {
 #ifdef NONBLOCKING_FUTURES
 // use static global to avoid parameter proliferation
 static int nBlocks; // number of blocks in the original matrices
-static cilk::future<int> **fhandles; // future handles
+static cilk::future<int> **fhandles_g; // future handles
 
 static int matmul_base(DATA *A, DATA *B, DATA *C, int n, int iB, int kB, int jB) {
     DATA tmp[n*n];
@@ -188,7 +233,7 @@ static int matmul_base(DATA *A, DATA *B, DATA *C, int n, int iB, int kB, int jB)
     }
     // make sure the previous kB that wrote to the same block C[iB, jB] is done
     if(kB > 0) {
-        fhandles[fh_index(kB-1, iB, jB, nBlocks)]->get();
+        fhandles_g[fh_index(kB-1, iB, jB, nBlocks)]->get();
     }
     for(int i = 0; i < n; i++) {
         for(int j = 0; j < n; j++) {
@@ -209,7 +254,7 @@ int matmul(DATA *A, DATA *B, DATA *C, int n, int iB, int kB, int jB) {
 
     // Base case uses row-major order; switch to iterative traversal 
     if(n == BASE_CASE) {
-        spawn_proc_with_future_handle(fhandles[fh_index(kB, iB, jB, nBlocks)],
+        spawn_proc_with_future_handle(fhandles_g[fh_index(kB, iB, jB, nBlocks)],
             matmul_base, A, B, C, n, iB, kB, jB);
         return 0;
     }
@@ -253,10 +298,10 @@ static void do_matmul_unstructured(DATA *A, DATA *B, DATA *C, int n) {
     // initialize the static global vars
     nBlocks = n >> POWER; // number of blocks per dimension
     int num_futures = nBlocks * nBlocks * nBlocks;
-    fhandles = new cilk::future<int> *[num_futures];
+    fhandles_g = new cilk::future<int> *[num_futures];
 
     cilk_for(int i = 0; i < num_futures; i++) {
-        create_future_handle(int, fhandles[i]);
+        create_future_handle(int, fhandles_g[i]);
     }
 
     // clockmark_t begin_rm = ktiming_getmark(); 
@@ -265,10 +310,14 @@ static void do_matmul_unstructured(DATA *A, DATA *B, DATA *C, int n) {
 
     // make sure we get the last kB layer of futures before we return
     cilk_for(int i = 0; i < (nBlocks * nBlocks); i++) {
-        fhandles[(nBlocks-1)*(nBlocks * nBlocks) + i]->get();
+        fhandles_g[(nBlocks-1)*(nBlocks * nBlocks) + i]->get();
     }
 
-    delete[] fhandles;
+    cilk_for(int i = 0; i < num_futures; i++) { // cleanup
+        delete fhandles_g[i];
+    }
+    delete[] fhandles_g;
+    fhandles_g = NULL;
 }
 #endif // NONBLOCKING_FUTURES
 
