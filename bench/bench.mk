@@ -7,6 +7,7 @@ include $(BENCH_DIR)/../common.mk
 INC += -I$(PROJECT_HOME)/src    # for future.hpp
 INC += -I$(BUILD_DIR)/include   # for runtime include
 LIB = $(LIB_DIR)/librd.a
+LIB += $(RUNTIME_LIB) 
 
 # FUTURE_TYPE is already defined in common.mk, used both by the tool and the
 # user code.  In the user code, when race detection is on, if the tool is compiled
@@ -21,4 +22,4 @@ BAGFLAGS = -fcilktool
 
 CFLAGS += $(APPFLAGS) $(RDFLAGS)
 CXXFLAGS += $(APPFLAGS) $(RDFLAGS)
-LDFLAGS += $(LIB) $(RUNTIME_LIB) -lm -ldl -lpthread
+LDFLAGS += $(LIB) -lm -ldl -lpthread -lrt

@@ -20,7 +20,7 @@ ARFLAGS = rcs
 TOOL_DEBUG ?= 0
 
 ifeq ($(mode),release)
-	FLAGS += $(OPT_FLAGS)
+  FLAGS += $(OPT_FLAGS)
 else ifeq ($(mode),profile)
   FLAGS += $(PROF_FLAGS)
 else ifeq ($(mode),debug)
