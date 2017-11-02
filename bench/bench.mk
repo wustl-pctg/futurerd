@@ -14,8 +14,8 @@ LIB += $(RUNTIME_LIB)
 # to use STRUCTURED_FUTURES, we have to use STRUCTURED_FUTURE bench.  If the
 # tool is compiled to use NONBLOCKING_FUTURES, either construction of bench works. 
 # Thus, adding -DSTRUCTURED_FUTURES is the only valid additional flag.
-# FUTURE_TYPE += -DSTRUCTURED_FUTURES
 APPFLAGS = -fcilkplus -fcilk-no-inline
+APPFLAGS += -DSTRUCTURED_FUTURES
 BAGFLAGS = -fcilktool
 # Uncomment to enable race detection
 # RDFLAGS = -fsanitize=thread -DRACE_DETECT 

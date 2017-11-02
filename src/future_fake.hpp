@@ -1,4 +1,5 @@
 /********** Launching futures **********/
+#include <new>
 
 #define FUTURE_PROLOG()
 #define FUTURE_EPILOG()

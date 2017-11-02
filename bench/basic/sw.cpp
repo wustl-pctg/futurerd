@@ -93,16 +93,18 @@ static int wave_sw_with_futures(int *stor, char *a, char *b, int n) {
 
     int nBlocks = NUM_BLOCKS(n);
 
-    cilk::future<int> * farray[nBlocks * nBlocks];
+    // create an array of future objects
+    cilk::future<int> *farray = new cilk::future<int> [nBlocks * nBlocks];
 
     // walk the upper half of triangle, including the diagonal (we assume square NxN LCS) 
     for(int wave_front = 0; wave_front < nBlocks; wave_front++) {
         for(int jB = 0; jB <= wave_front; jB++) {
             int iB = wave_front - jB;
-            if(iB > 0) { farray[(iB-1)*nBlocks + jB]->get(); } // up dependency
+            if(iB > 0) { farray[(iB-1)*nBlocks + jB].get(); } // up dependency
             // since we are walking the wavefront serially, no need to get
             // left dependency --- already gotten by previous square.
-            create_future(int, farray[iB*nBlocks + jB], process_sw_tile, stor, a, b, n, iB, jB);
+            cilk::future<int> *f = &farray[iB*nBlocks + jB];
+            reuse_future(int, f, process_sw_tile, stor, a, b, n, iB, jB);
         }
     }
 
@@ -113,26 +115,28 @@ static int wave_sw_with_futures(int *stor, char *a, char *b, int n) {
             int iB = iBase - jB;
             // need to get both up and left dependencies for the last row, 
             // but otherwise just the up dependency. 
-            if(iB == (nBlocks - 1) && jB > 0) { farray[iB*nBlocks + jB - 1]->get(); } // left dependency
-            if(iB > 0) { farray[(iB-1)*nBlocks + jB]->get(); } // up dependency
-            create_future(int, farray[iB*nBlocks + jB], process_sw_tile, stor, a, b, n, iB, jB);
+            if(iB == (nBlocks - 1) && jB > 0) { farray[iB*nBlocks + jB - 1].get(); } // left dependency
+            if(iB > 0) { farray[(iB-1)*nBlocks + jB].get(); } // up dependency
+            cilk::future<int> *f = &farray[iB*nBlocks + jB];
+            reuse_future(int, f, process_sw_tile, stor, a, b, n, iB, jB);
         }
     }
     // make sure the last square finishes before we move onto returning
-    farray[nBlocks * nBlocks - 1]->get();
+    farray[nBlocks * nBlocks - 1].get();
+    delete[] farray;
 
     return stor[n*(n-1) + n-1];
 }
 #endif
 
 #ifdef NONBLOCKING_FUTURES
-static int process_sw_tile_with_get(cilk::future<int> * farray[], int *stor,
+static int process_sw_tile_with_get(cilk::future<int> * farray, int *stor,
                                     char *a, char *b, int n, int iB, int jB) {
     
     int nBlocks = NUM_BLOCKS(n);
     
-    if(jB > 0) { farray[iB*nBlocks + jB - 1]->get(); } // left dependency
-    if(iB > 0) { farray[(iB-1)*nBlocks + jB]->get(); } // up dependency
+    if(jB > 0) { farray[iB*nBlocks + jB - 1].get(); } // left dependency
+    if(iB > 0) { farray[(iB-1)*nBlocks + jB].get(); } // up dependency
     
     process_sw_tile(stor, a, b, n, iB, jB);
 
@@ -144,21 +148,18 @@ static int wave_sw_with_futures_par(int *stor, char *a, char *b, int n) {
     int nBlocks = NUM_BLOCKS(n);
     int blocks = nBlocks * nBlocks;
     
-    cilk::future<int> * farray[blocks];
+    cilk::future<int> *farray = new cilk::future<int> [blocks];
     
-    // initialize all future handles
-    cilk_for(int i=0; i < blocks; i++) {
-        create_future_handle(int, farray[i]);
-    }
-
     cilk_for(int i=0; i < blocks; i++) {
         int iB = i / nBlocks; // row block index 
         int jB = i % nBlocks; // col block index
-        spawn_proc_with_future_handle(farray[i], process_sw_tile_with_get,
-                                      farray, stor, a, b, n, iB, jB);
+        cilk::future<int> *f = &(farray[i]);
+        reuse_future(int, f, process_sw_tile_with_get, farray, stor, a, b, n, iB, jB);
     }
     // make sure the last square finishes before we move onto returning
-    farray[blocks-1]->get();
+    farray[blocks-1].get();
+    delete[] farray;
+    
 
     return stor[n*(n-1) + n-1];
 }

@@ -24,7 +24,7 @@
 #define BASE_CASE (1 << POWER) // the base case size = (2*POWER)
 
 // The following three should match
-#define DATA float 
+#define DATA float
 #if DATA == float
 #define do_check_iter(C,I,n) do_check_iter_float(C,I,n) // use what DATA defined to be
 #define init(A,n) init_float(A,n)                       // use what DATA defined to be
@@ -152,27 +152,40 @@ static int fh_index(int kB, int iB, int jB, int nBlocks) {
 }
 
 #ifdef STRUCTURED_FUTURES
+// C[i,j] = A[i,k] x B[k,j]
+// iB = block index in dimension i
+// kB = block index in dimension k
+// jB = block index in dimension j
 static int matmul_base_structured(DATA *A, DATA *B, DATA *C, 
-                                  int n, int iB, int kB, int jB, cilk::future<int> *f) {
+                                  int iB, int kB, int jB, cilk::future<int> *f) {
+    int n = BASE_CASE;
+    int block_index_A = z_convert(iB, kB);
+    int block_index_B = z_convert(kB, jB);
+    int block_index_C = z_convert(iB, jB);
+
+    // start address of the actual blocks that we should use to compute
+    DATA *myA = &A[(block_index_A) << (POWER*2)]; 
+    DATA *myB = &B[(block_index_B) << (POWER*2)];
+    DATA *myC = &C[(block_index_C) << (POWER*2)];
+    
     DATA tmp[n*n];
 
-    // fprintf(stderr, "C(%d, %d) = A(%d, %d) x B(%d, %d)\n", iB, jB, iB, kB, kB, jB);
-    for(int i = 0; i < n; i++) {
-        for(int j = 0; j < n; j++) {
+    for(int ii = 0; ii < n; ii++) {
+        for(int jj = 0; jj < n; jj++) {
             DATA c = 0.0;
-            for(int k = 0; k < n; k++) {
-                c += A[i*n + k] * B[k*n + j];
+            for(int kk = 0; kk < n; kk++) {
+                c += myA[ii*n + kk] * myB[kk*n + jj];
             }
-            tmp[i*n + j] = c;
+            tmp[ii*n + jj] = c;
         }
     }
     // make sure the previous kB that wrote to the same block C[iB, jB] is done
     if(f != NULL) {
         f->get();
     }
-    for(int i = 0; i < n; i++) {
-        for(int j = 0; j < n; j++) {
-            C[i*n + j] += tmp[i*n + j];
+    for(int ii = 0; ii < n; ii++) {
+        for(int jj = 0; jj < n; jj++) {
+            myC[ii*n + jj] += tmp[ii*n + jj];
         }
     }
 
@@ -181,9 +194,12 @@ static int matmul_base_structured(DATA *A, DATA *B, DATA *C,
 
 static void do_matmul_structured(DATA *A, DATA *B, DATA *C, int n) {
     
+    printf("Performing structured matmul with z-layout, %d x %d with base case %d x %d.\n",
+           n, n, BASE_CASE, BASE_CASE);
+
     int nBlocks = n >> POWER; // number of blocks per dimension
     int num_futures = nBlocks * nBlocks * nBlocks;
-    cilk::future<int> **fhandles = new cilk::future<int> *[num_futures];
+    cilk::future<int> *fhandles = new cilk::future<int> [num_futures];
 
     cilk_for(int iB = 0; iB < nBlocks; iB++) {
         cilk_for(int jB = 0; jB < nBlocks; jB++) {
@@ -191,8 +207,8 @@ static void do_matmul_structured(DATA *A, DATA *B, DATA *C, int n) {
             cilk::future<int> *prevf = NULL;
             for(int kB = 0; kB < nBlocks; kB++) {
                 prevf = f; // first is NULL
-                f = fhandles[fh_index(kB, iB, jB, nBlocks)];
-                create_future(int, f, matmul_base_structured, A, B, C, n, iB, kB, jB, prevf);
+                f = &(fhandles[fh_index(kB, iB, jB, nBlocks)]);
+                reuse_future(int, f, matmul_base_structured, A, B, C, iB, kB, jB, prevf);
             }
         }
     }
@@ -200,13 +216,8 @@ static void do_matmul_structured(DATA *A, DATA *B, DATA *C, int n) {
     // wait for the very last kB blocks to finish
     cilk_for(int iB = 0; iB < nBlocks; iB++) {
         cilk_for(int jB = 0; jB < nBlocks; jB++) {
-            cilk::future<int> *f = fhandles[fh_index(nBlocks-1, iB, jB, nBlocks)];
-            f->get();
+            fhandles[fh_index(nBlocks-1, iB, jB, nBlocks)].get();
         }
-    }
-
-    cilk_for(int i = 0; i < num_futures; i++) { // cleanup
-        delete fhandles[i];
     }
     
     delete[] fhandles;
@@ -216,7 +227,7 @@ static void do_matmul_structured(DATA *A, DATA *B, DATA *C, int n) {
 #ifdef NONBLOCKING_FUTURES
 // use static global to avoid parameter proliferation
 static int nBlocks; // number of blocks in the original matrices
-static cilk::future<int> **fhandles_g; // future handles
+static cilk::future<int> *fhandles_g; // future handles
 
 static int matmul_base(DATA *A, DATA *B, DATA *C, int n, int iB, int kB, int jB) {
     DATA tmp[n*n];
@@ -233,7 +244,7 @@ static int matmul_base(DATA *A, DATA *B, DATA *C, int n, int iB, int kB, int jB)
     }
     // make sure the previous kB that wrote to the same block C[iB, jB] is done
     if(kB > 0) {
-        fhandles_g[fh_index(kB-1, iB, jB, nBlocks)]->get();
+        fhandles_g[fh_index(kB-1, iB, jB, nBlocks)].get();
     }
     for(int i = 0; i < n; i++) {
         for(int j = 0; j < n; j++) {
@@ -246,6 +257,7 @@ static int matmul_base(DATA *A, DATA *B, DATA *C, int n, int iB, int kB, int jB)
 
 // matmul using unstructured future; divide and conquer untill we reach base case, 
 // C[i,j] = A[i,k] x B[k,j]
+// n = current block size 
 // iB: block index for the i dimension 
 // kB: block index for the k dimension 
 // jB: block index for the j dimension 
@@ -254,8 +266,8 @@ int matmul(DATA *A, DATA *B, DATA *C, int n, int iB, int kB, int jB) {
 
     // Base case uses row-major order; switch to iterative traversal 
     if(n == BASE_CASE) {
-        spawn_proc_with_future_handle(fhandles_g[fh_index(kB, iB, jB, nBlocks)],
-            matmul_base, A, B, C, n, iB, kB, jB);
+        cilk::future<int> *f = &(fhandles_g[fh_index(kB, iB, jB, nBlocks)]);
+        reuse_future(int, f, matmul_base, A, B, C, n, iB, kB, jB);
         return 0;
     }
 
@@ -295,14 +307,13 @@ int matmul(DATA *A, DATA *B, DATA *C, int n, int iB, int kB, int jB) {
 
 static void do_matmul_unstructured(DATA *A, DATA *B, DATA *C, int n) {
     
+    printf("Performing unstructured matmul with z-layout, %d x %d with base case %d x %d.\n",
+           n, n, BASE_CASE, BASE_CASE);
+
     // initialize the static global vars
     nBlocks = n >> POWER; // number of blocks per dimension
     int num_futures = nBlocks * nBlocks * nBlocks;
-    fhandles_g = new cilk::future<int> *[num_futures];
-
-    cilk_for(int i = 0; i < num_futures; i++) {
-        create_future_handle(int, fhandles_g[i]);
-    }
+    fhandles_g = new cilk::future<int> [num_futures];
 
     // clockmark_t begin_rm = ktiming_getmark(); 
     matmul(A, B, C, n, 0, 0, 0);
@@ -310,12 +321,9 @@ static void do_matmul_unstructured(DATA *A, DATA *B, DATA *C, int n) {
 
     // make sure we get the last kB layer of futures before we return
     cilk_for(int i = 0; i < (nBlocks * nBlocks); i++) {
-        fhandles_g[(nBlocks-1)*(nBlocks * nBlocks) + i]->get();
+        fhandles_g[(nBlocks-1)*(nBlocks * nBlocks) + i].get();
     }
 
-    cilk_for(int i = 0; i < num_futures; i++) { // cleanup
-        delete fhandles_g[i];
-    }
     delete[] fhandles_g;
     fhandles_g = NULL;
 }
@@ -339,9 +347,6 @@ int main(int argc, char *argv[]) {
     }
 
     DATA *A, *B, *C, *I = NULL;
-
-    printf("Performing matmul with z-layout, %d x %d with base case %d x %d.\n",
-           n, n, BASE_CASE, BASE_CASE);
 
     A = (DATA *) malloc(n * n * sizeof(DATA)); // source matrix 
     B = (DATA *) malloc(n * n * sizeof(DATA)); // source matrix
