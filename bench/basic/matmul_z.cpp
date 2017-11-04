@@ -226,8 +226,8 @@ static void do_matmul_structured(DATA *A, DATA *B, DATA *C, int n) {
 
 #ifdef NONBLOCKING_FUTURES
 // use static global to avoid parameter proliferation
-static int nBlocks; // number of blocks in the original matrices
-static cilk::future<int> *fhandles_g; // future handles
+static int g_nBlocks; // number of blocks in the original matrices
+static cilk::future<int> *g_fhandles; // future handles
 
 static int matmul_base(DATA *A, DATA *B, DATA *C, int n, int iB, int kB, int jB) {
     DATA tmp[n*n];
@@ -244,7 +244,7 @@ static int matmul_base(DATA *A, DATA *B, DATA *C, int n, int iB, int kB, int jB)
     }
     // make sure the previous kB that wrote to the same block C[iB, jB] is done
     if(kB > 0) {
-        fhandles_g[fh_index(kB-1, iB, jB, nBlocks)].get();
+        g_fhandles[fh_index(kB-1, iB, jB, g_nBlocks)].get();
     }
     for(int i = 0; i < n; i++) {
         for(int j = 0; j < n; j++) {
@@ -266,7 +266,7 @@ int matmul(DATA *A, DATA *B, DATA *C, int n, int iB, int kB, int jB) {
 
     // Base case uses row-major order; switch to iterative traversal 
     if(n == BASE_CASE) {
-        cilk::future<int> *f = &(fhandles_g[fh_index(kB, iB, jB, nBlocks)]);
+        cilk::future<int> *f = &(g_fhandles[fh_index(kB, iB, jB, g_nBlocks)]);
         reuse_future(int, f, matmul_base, A, B, C, n, iB, kB, jB);
         return 0;
     }
@@ -311,21 +311,21 @@ static void do_matmul_unstructured(DATA *A, DATA *B, DATA *C, int n) {
            n, n, BASE_CASE, BASE_CASE);
 
     // initialize the static global vars
-    nBlocks = n >> POWER; // number of blocks per dimension
-    int num_futures = nBlocks * nBlocks * nBlocks;
-    fhandles_g = new cilk::future<int> [num_futures];
+    g_nBlocks = n >> POWER; // number of blocks per dimension
+    int num_futures = g_nBlocks * g_nBlocks * g_nBlocks;
+    g_fhandles = new cilk::future<int> [num_futures];
 
     // clockmark_t begin_rm = ktiming_getmark(); 
     matmul(A, B, C, n, 0, 0, 0);
     // clockmark_t end_rm = ktiming_getmark();
 
     // make sure we get the last kB layer of futures before we return
-    cilk_for(int i = 0; i < (nBlocks * nBlocks); i++) {
-        fhandles_g[(nBlocks-1)*(nBlocks * nBlocks) + i].get();
+    cilk_for(int i = 0; i < (g_nBlocks * g_nBlocks); i++) {
+        g_fhandles[(g_nBlocks-1)*(g_nBlocks * g_nBlocks) + i].get();
     }
 
-    delete[] fhandles_g;
-    fhandles_g = NULL;
+    delete[] g_fhandles;
+    g_fhandles = NULL;
 }
 #endif // NONBLOCKING_FUTURES
 
