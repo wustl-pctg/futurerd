@@ -583,29 +583,28 @@ void compute_kernel(const public_struct *pub, private_struct *priv) {
         compute_startup(pub, priv);
     } else {
         int s1, s2, s3, s4, s5, s6, s7, s8, s9, s10;
-        cilk::future<int> *f1, *f2, *f3, *f4, *f5;
-        cilk::future<int> *f6, *f7, *f8, *f9, *f10;
+        cilk::future<int> f1, f2, f3, f4, f5, f6, f7, f8, f9, f10; 
 
-        create_future(int, f1, compute_step1, pub, priv);
-        create_future(int, f2, compute_step2, pub, priv);
-        create_future(int, f9, compute_step9, pub, priv);
-        s2 = f2->get();
-        create_future(int, f3, compute_step3, pub, priv);
-        s1 = f1->get();
-        create_future(int, f4, compute_step4, pub, priv);
-        create_future(int, f5, compute_step5, pub, priv);
-        s5 = f5->get();
-        create_future(int, f7, compute_step7, pub, priv);
-        s3 = f3->get();
-        s4 = f4->get();
-        create_future(int, f6, compute_step6, pub, priv);
-        s7 = f7->get();
-        s6 = f6->get();
-        create_future(int, f8, compute_step8, pub, priv);
-        s9 = f9->get();
-        s8 = f8->get();
-        create_future(int, f10, compute_step10, pub, priv);
-        s10 = f10->get();
+        reuse_future(int, (&f1), compute_step1, pub, priv);
+        reuse_future(int, (&f2), compute_step2, pub, priv);
+        reuse_future(int, (&f9), compute_step9, pub, priv);
+        s2 = f2.get();
+        reuse_future(int, (&f3), compute_step3, pub, priv);
+        s1 = f1.get();
+        reuse_future(int, (&f4), compute_step4, pub, priv);
+        reuse_future(int, (&f5), compute_step5, pub, priv);
+        s5 = f5.get();
+        reuse_future(int, (&f7), compute_step7, pub, priv);
+        s3 = f3.get();
+        s4 = f4.get();
+        reuse_future(int, (&f6), compute_step6, pub, priv);
+        s7 = f7.get();
+        s6 = f6.get();
+        reuse_future(int, (&f8), compute_step8, pub, priv);
+        s9 = f9.get();
+        s8 = f8.get();
+        reuse_future(int, (&f10), compute_step10, pub, priv);
+        s10 = f10.get();
         
         assert(s1 == frame_no);
         assert(s2 == frame_no);
@@ -617,17 +616,6 @@ void compute_kernel(const public_struct *pub, private_struct *priv) {
         assert(s8 == frame_no);
         assert(s9 == frame_no);
         assert(s10 == frame_no);
-
-        delete f1;
-        delete f2;
-        delete f3;
-        delete f4;
-        delete f5;
-        delete f6;
-        delete f7;
-        delete f8;
-        delete f9;
-        delete f10;
     }
 }
 #endif
@@ -635,81 +623,81 @@ void compute_kernel(const public_struct *pub, private_struct *priv) {
 #ifdef NONBLOCKING_FUTURES
 
 int compute_step1_with_get(const public_struct *pub, private_struct *priv, 
-                           cilk::future<int> *fhandles[], int frame_no) {
+                           cilk::future<int> *fhandles, int frame_no) {
     int s1 = compute_step1(pub, priv); 
     assert(s1 == frame_no);
     return s1;
 }
 
 int compute_step2_with_get(const public_struct *pub, private_struct *priv, 
-                           cilk::future<int> *fhandles[], int frame_no) {
+                           cilk::future<int> *fhandles, int frame_no) {
     int s2 = compute_step2(pub, priv);
     assert(s2 == frame_no);
     return s2;  
 }
 
 int compute_step3_with_get(const public_struct *pub, private_struct *priv, 
-                           cilk::future<int> *fhandles[], int frame_no) {
-    int s2 = fhandles[1]->get(); // step 2 needs to finish
+                           cilk::future<int> *fhandles, int frame_no) {
+    int s2 = fhandles[1].get(); // step 2 needs to finish
     assert(s2 == frame_no);
     return compute_step3(pub, priv); 
 }
 
 int compute_step4_with_get(const public_struct *pub, private_struct *priv, 
-                           cilk::future<int> *fhandles[], int frame_no) {
-    int s1 = fhandles[0]->get(); // step 1 needs to finish
-    int s2 = fhandles[1]->get(); // step 2 needs to finish
+                           cilk::future<int> *fhandles, int frame_no) {
+    int s1 = fhandles[0].get(); // step 1 needs to finish
+    int s2 = fhandles[1].get(); // step 2 needs to finish
     assert(s1 == frame_no && s2 == frame_no);
     return compute_step4(pub, priv);
 }
 
 int compute_step5_with_get(const public_struct *pub, private_struct *priv, 
-                           cilk::future<int> *fhandles[], int frame_no) {
-    int s1 = fhandles[0]->get(); // step 1 needs to finish
+                           cilk::future<int> *fhandles, int frame_no) {
+    int s1 = fhandles[0].get(); // step 1 needs to finish
     assert(s1 == frame_no);
     return compute_step5(pub, priv);
 }
 
 int compute_step6_with_get(const public_struct *pub, private_struct *priv, 
-                           cilk::future<int> *fhandles[], int frame_no) {
-    int s3 = fhandles[2]->get(); // step 3 needs to finish
-    int s4 = fhandles[3]->get(); // step 4 needs to finish
-    int s5 = fhandles[4]->get(); // step 5 needs to finish
+                           cilk::future<int> *fhandles, int frame_no) {
+    int s3 = fhandles[2].get(); // step 3 needs to finish
+    int s4 = fhandles[3].get(); // step 4 needs to finish
+    int s5 = fhandles[4].get(); // step 5 needs to finish
     assert(s3 == frame_no && s4 == frame_no && s5 == frame_no);
     return compute_step6(pub, priv);
 }
 
 int compute_step7_with_get(const public_struct *pub, private_struct *priv, 
-                           cilk::future<int> *fhandles[], int frame_no) {
-    int s5 = fhandles[4]->get(); // step 5 needs to finish
+                           cilk::future<int> *fhandles, int frame_no) {
+    int s5 = fhandles[4].get(); // step 5 needs to finish
     assert(s5 == frame_no);
     return compute_step7(pub, priv);
 }
 
 int compute_step8_with_get(const public_struct *pub, private_struct *priv, 
-                           cilk::future<int> *fhandles[], int frame_no) {
-    int s6 = fhandles[5]->get(); // step 6 needs to finish
-    int s7 = fhandles[6]->get(); // step 7 needs to finish
+                           cilk::future<int> *fhandles, int frame_no) {
+    int s6 = fhandles[5].get(); // step 6 needs to finish
+    int s7 = fhandles[6].get(); // step 7 needs to finish
     assert(s6 == frame_no && s7 == frame_no);
     return compute_step8(pub, priv);
 }
 
 int compute_step9_with_get(const public_struct *pub, private_struct *priv, 
-                           cilk::future<int> *fhandles[], int frame_no) {
-    int s9 = compute_step9(pub, priv); 
+                           cilk::future<int> *fhandles, int frame_no) {
+    int s9 = compute_step9(pub, priv);
     assert(s9 == frame_no);
     return s9;
 }
 
 int compute_step10_with_get(const public_struct *pub, private_struct *priv, 
-                            cilk::future<int> *fhandles[], int frame_no) {
-    int s8 = fhandles[7]->get(); // step 8 needs to finish
-    int s9 = fhandles[8]->get(); // step 9 needs to finish
+                            cilk::future<int> *fhandles, int frame_no) {
+    int s8 = fhandles[7].get(); // step 8 needs to finish
+    int s9 = fhandles[8].get(); // step 9 needs to finish
     assert(s8 == frame_no && s9 == frame_no);
     return compute_step10(pub, priv); 
 }
 
-typedef int (*compute_func_ptr_t) (const public_struct *, private_struct *, cilk::future<int> *[], int);
+typedef int (*compute_func_ptr_t) (const public_struct *, private_struct *, cilk::future<int> *, int);
 
 void compute_kernel(const public_struct *pub, private_struct *priv) {
     
@@ -720,28 +708,19 @@ void compute_kernel(const public_struct *pub, private_struct *priv) {
     } else {
         
         int s10 = 0;
-        cilk::future<int> *fhandles[10];
+        cilk::future<int> fhandles[10];
         compute_func_ptr_t func_ptr[10] = { compute_step1_with_get, compute_step2_with_get, 
             compute_step3_with_get, compute_step4_with_get, compute_step5_with_get, 
             compute_step6_with_get, compute_step7_with_get, compute_step8_with_get, 
             compute_step9_with_get, compute_step10_with_get };
 
-        // create future handles; could be a sequential loop
-        cilk_for(int i=0; i < 10; i++) { 
-            create_future_handle(int, fhandles[i]);
-        }
-
         // spawn off the computation; could be a sequential loop
         cilk_for(int i=0; i < 10; i++) {
-            spawn_proc_with_future_handle(fhandles[i], func_ptr[i], pub, priv, fhandles, frame_no); 
+            cilk::future<int> *f = &fhandles[i];
+            reuse_future(int, f, func_ptr[i], pub, priv, fhandles, frame_no); 
         }
-        s10 = fhandles[9]->get(); // make sure we finish the last step before returning
+        s10 = fhandles[9].get(); // make sure we finish the last step before returning
         assert(s10 == frame_no);
-
-        // cleanup; could be a sequential loop
-        cilk_for(int i=0; i < 10; i++) {
-            delete fhandles[i];
-        }
     }
 }
 #endif
