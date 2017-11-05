@@ -49,7 +49,7 @@ public:
   // Member data
 private:
   reach::general m_R;
-  reach::structured m_struct;
+  reach::structured m_sp; // series-parallel reachability
   node* t_current; // XXX: necessary?
 
 public:

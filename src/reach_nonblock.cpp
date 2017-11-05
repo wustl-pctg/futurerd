@@ -13,7 +13,7 @@ nonblock::smem_data* nonblock::active(sframe_data *f) {
 
 // Should be done in a constructor if possible
 void nonblock::init(sframe_data *initial) {
-  m_struct.init(&initial->sp);
+  m_sp.init(&initial->sp);
   t_current = new node();
   t_current->att_pred = t_current;
   attachify(t_current);
@@ -32,16 +32,16 @@ void nonblock::attachify(node* n) {
 /********** Parallelism Creation **********/
 
 void nonblock::begin_strand(sframe_data *f, sframe_data *p) {
-  m_struct.begin_strand(&f->sp,&p->sp);
+  m_sp.begin_strand(&f->sp,&p->sp);
   // Future stuff?
 }
 
 void nonblock::create_strand(sframe_data *f) {
-  m_struct.create_strand(&f->sp);
+  m_sp.create_strand(&f->sp);
 }
 
 void nonblock::at_spawn(sframe_data *f, sframe_data *h) {
-  m_struct.at_spawn(&f->sp, &h->sp);
+  m_sp.at_spawn(&f->sp, &h->sp);
 
   node *u = t_current; // fork node
   h->fork = u;
@@ -68,8 +68,10 @@ void nonblock::at_spawn(sframe_data *f, sframe_data *h) {
 // We don't have helper frames for futures, so this is actually the
 // new frame created for the new strand
 void nonblock::at_future_create(sframe_data *f) {
-  // Basically spawn without worrying about sync nodes
-  m_struct.at_future_create(&f->sp);
+
+  // Actually, should we call this at all? Really I think we're only
+  // using the structured part for the fork-join stuff..
+  //m_sp.at_future_create(&f->sp);
 
   node *u = t_current;
   assert(f->future_fork == nullptr);
@@ -187,7 +189,7 @@ void nonblock::continuation(sframe_data *f) { t_current = new node(); }
 void nonblock::at_spawn_continuation(sframe_data *f, sframe_data *p) {
   // Pop hasn't happened yet
   assert(f->fork); assert(f->lfc); assert(f->rfc == nullptr);
-  m_struct.at_spawn_continuation(&f->sp, &p->sp);
+  m_sp.at_spawn_continuation(&f->sp, &p->sp);
 
   f->ljp = t_current;
   continuation(f);
