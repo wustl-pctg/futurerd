@@ -19,7 +19,7 @@ public:
     node(reach::general::node _id = 0) : id(_id) {}
     void merge(node *n) { utils::uf::merge(this, n); }
   }; // struct node
-  
+
   struct sframe_data {
     structured::sframe_data sp;
 
@@ -30,7 +30,7 @@ public:
     node *ljp = nullptr; // rjp is t_current at sync
 
     node *future_fork = nullptr;
-    
+
     // continuation node, created and saved at spawns and create_futures
     //node *cont = nullptr; // XXX: Update to use of node_stack?
 
@@ -45,7 +45,7 @@ public:
   struct sfut_data {
     node* put_strand;
   };
-    
+
   // Member data
 private:
   reach::general m_R;
@@ -58,7 +58,7 @@ public:
   void init(sframe_data *initial);
 
   smem_data* active(sframe_data *f);
-  
+
   // Parallelism creation
   void at_future_create(sframe_data *f);
   void at_spawn(sframe_data *f, sframe_data *helper);
