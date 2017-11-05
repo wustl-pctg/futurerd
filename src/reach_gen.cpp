@@ -1,4 +1,4 @@
-#include "reach.hpp"
+#include "reach_gen.hpp"
 #include <cassert>
 
 using namespace reach;
