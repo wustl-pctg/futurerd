@@ -14,9 +14,15 @@ node general::add_node() {
   return id;
 }
 
-bool general::precedes(node x, node y) const {
+bool general::precedes(node x, node y) {
+
+  // x should definitely be in data
   assert(data.size() > x);
-  assert(data[x].size() > y);
+
+  // But sometimes we haven't used data[x] in a while
+  //assert(data[x].size() > y);
+  data[x].resize(data.size());
+
   return data[x][y];
 }
 

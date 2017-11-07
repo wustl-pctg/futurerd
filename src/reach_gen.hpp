@@ -10,9 +10,10 @@ public:
   using node = std::size_t;
   void add_edge(node from, node to);
   node add_node();
-  bool precedes(node x, node y) const;
+  bool precedes(node x, node y);
   general();
-  
+  void init();
+
 private:
   /// @todo{Use of std::vector for the reachability matrix will
   /// probably need to be rewritten for performance.}
