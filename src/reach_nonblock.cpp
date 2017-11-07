@@ -5,6 +5,25 @@ namespace reach {
 
 using node = nonblock::node;
 
+reach::general* nonblock::s_R = nullptr;;
+node* nonblock::t_current = nullptr;
+
+bool node::precedes_now() {
+  node *u = this;
+  node *v = t_current;
+
+  node *su = u->find();
+  if (!su->attached()) su = su->att_succ;
+
+  node *sv = v->find();
+  if (!sv->attached()) sv = sv->att_succ;
+
+  if (su == nullptr || sv == nullptr)
+    return false;
+
+  return s_R->precedes(su->id, sv->id);
+}
+
 nonblock::nonblock(sframe_data *initial) { init(initial); }
 
 nonblock::smem_data* nonblock::active(sframe_data *f) {
@@ -17,6 +36,7 @@ void nonblock::init(sframe_data *initial) {
   t_current = new node();
   t_current->att_pred = t_current;
   attachify(t_current);
+  s_R = &m_R;
 }
 
 void nonblock::attachify(node* n) {
@@ -71,7 +91,7 @@ void nonblock::at_future_create(sframe_data *f) {
 
   // Actually, should we call this at all? Really I think we're only
   // using the structured part for the fork-join stuff..
-  //m_sp.at_future_create(&f->sp);
+  m_sp.at_future_create(&f->sp);
 
   node *u = t_current;
   assert(f->future_fork == nullptr);
@@ -82,6 +102,8 @@ void nonblock::at_future_create(sframe_data *f) {
   node *v = new node(); // left (executed next, since we use eager execution)
   v->id = m_R.add_node();
   m_R.add_edge(u->find()->id, v->id);
+  v->att_pred = u;
+  // What about u's attached successor?
 
   //node *w = new node(); // right
   // w->id = m_R.add_node();
@@ -98,10 +120,12 @@ void nonblock::at_future_get(sframe_data *f, sfut_data *fut) {
   assert(fut->put_strand);
 
   node *u = t_current;
+  attachify(u);
 
   // Make a new attached set
   node *v = new node(m_R.add_node());
   m_R.add_edge(u->find()->id, v->id);
+  v->att_pred = u; // ??? What about w?
 
   // XXX: Not in the pseudocode but I don't see how you couldn't have this.
   node *w = fut->put_strand;
@@ -189,7 +213,7 @@ void nonblock::continuation(sframe_data *f) { t_current = new node(); }
 void nonblock::at_spawn_continuation(sframe_data *f, sframe_data *p) {
   // Pop hasn't happened yet
   assert(f->fork); assert(f->lfc); assert(f->rfc == nullptr);
-  m_sp.at_spawn_continuation(&f->sp, &p->sp);
+  nonblock::m_sp.at_spawn_continuation(&f->sp, &p->sp);
 
   f->ljp = t_current;
   continuation(f);
@@ -205,6 +229,7 @@ void nonblock::at_future_continuation(sframe_data *f, sframe_data *p) {
   assert(f->future_fork);
   node *w = new node(); // right
   w->id = m_R.add_node();
+  w->att_pred = f->future_fork;
   m_R.add_edge(f->future_fork->find()->id, w->id);
   f->future_fork = nullptr;
   t_current = w;

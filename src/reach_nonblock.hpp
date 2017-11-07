@@ -15,7 +15,7 @@ public:
     reach::general::node id; // id of node in R graph, or 0 if not in R (size_t)
     bool attached() { return id > 0; }
     node* find() { return static_cast<node*>(utils::uf::find(this)); }
-    bool precedes_now() { return true; }
+    bool precedes_now();
     node(reach::general::node _id = 0) : id(_id) {}
     void merge(node *n) { utils::uf::merge(this, n); }
   }; // struct node
@@ -47,10 +47,11 @@ public:
   };
 
   // Member data
-private:
+public:
   reach::general m_R;
+  static reach::general* s_R;
   reach::structured m_sp; // series-parallel reachability
-  node* t_current; // XXX: necessary?
+  static node* t_current; // XXX: necessary?
 
 public:
   nonblock() {}
