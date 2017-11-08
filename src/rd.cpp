@@ -10,7 +10,7 @@ uint64_t race_detector::t_stack_low_watermark = (uint64_t)(-1);
 bool race_detector::t_clear_stack = false;
 enum rd_policy race_detector::g_policy = RD_CONTINUE;
 size_t race_detector::g_num_races = 0;
-bool race_detector::t_checking_disabled = true;
+int race_detector::check_disabled = 0;
 reach_ds race_detector::g_reach;
 shadow_mem race_detector::g_smem;
 shadow_stack<sframe_data> race_detector::t_sstack;
@@ -18,8 +18,8 @@ shadow_stack<sframe_data> race_detector::t_sstack;
 // create the race detector (intialize)
 race_detector g_detector;
 
-void race_detector::enable_checking() { t_checking_disabled = false; }
-void race_detector::disable_checking() { t_checking_disabled = true; }
+void race_detector::enable_checking() { check_disabled--; }
+void race_detector::disable_checking() { check_disabled++; }
 
 race_detector::race_detector() {
   // Ensure only one race detector
@@ -66,13 +66,14 @@ void race_detector::check_access(bool is_read, void* rip,
   
   // check race with last writer
   if (slot->last_writer.access != nullptr // if last writer exists
-      && !slot->last_writer.access->precedes_now())
+      && !g_reach.precedes_now(t_sstack.head(), slot->last_writer.access)) {
     report_race(addr);
+  }
   
   // if write, check race with last read
   if (!is_read // if a write
       && slot->last_reader.access != nullptr // and last reader exists
-      && !slot->last_reader.access->precedes_now()) {
+      && !g_reach.precedes_now(t_sstack.head(), slot->last_reader.access)) {
     report_race(addr);
   }
   

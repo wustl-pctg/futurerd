@@ -12,13 +12,20 @@ namespace uf {
 
 std::size_t node::global_index = 0;
 
+// always link a lower rank node to a higher rank node
+// assuming rank works out, x <- y (link y into x)
 node* link(node* x, node* y) {
+  /*
   if (x == y) return x;
   if (y->rank > x->rank) return link(y,x);
 
-  // guaranteed that x has >= rank than y
+  // guaranteed that x has higher rank than y
   y->parent = x;
-  if (x->rank == y->rank) ++x->rank;
+  if (x->rank == y->rank) ++x->rank; // fix up the rank if necessary
+  return x;
+  */
+  // ANGE XXX: For now let's just always link y into x
+  y->parent = x;
   return x;
 }
 

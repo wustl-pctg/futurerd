@@ -11,7 +11,7 @@ struct node {
   std::size_t rank; /// rank is roughly the height
   node* parent = this;
 
-  node() : id(global_index++) {}
+  node() : id(global_index++), rank(0) { }
 }; // struct node
 
 node* find(node* x);

@@ -29,6 +29,7 @@ int main(int argc, char* argv[])
   int x = bar(f);
 
   assert(x == 15 || x == -42);
+  if(futurerd_num_races() != 1) fprintf(stderr, "races: %zu.\n", futurerd_num_races());
   assert(futurerd_num_races() == 1);
 
   TEST_TEARDOWN();

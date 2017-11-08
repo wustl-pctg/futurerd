@@ -29,6 +29,10 @@ int main(int argc, char* argv[])
 
   int result = fib(4);
   assert(result == 3);
+  size_t num_races = futurerd_num_races();
+  if(num_races != 1) {
+    fprintf(stderr, "num_race should have been 1 but it's %zu.\n", num_races);
+  }
   assert(futurerd_num_races() == 1);
 
   TEST_TEARDOWN();

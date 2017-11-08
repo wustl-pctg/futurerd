@@ -39,11 +39,14 @@ public:
 
   // Actually start a "strand" function that has already been "created"
   void begin_strand(sframe_data *f, sframe_data *p);
-  // Helper function for parallelism creation (spawns + create_future)
-  // Public for use by nonblock (should be friend class...)
-  void create_strand(sframe_data *f);
+  bool precedes_now(sframe_data *f, smem_data *last_access);
 
 private:
+  // Helper function for parallelism creation (spawns + create_future)
+  // Public for use by nonblock (should be friend class...)
+  // ANGE: Actually no, create_strand was never called in nonblock, so it
+  // never calls back to the structured one, either
+  void create_strand(sframe_data *f);
   // Helper function for continuations
   void continuation(sframe_data *f, sframe_data *p);
 

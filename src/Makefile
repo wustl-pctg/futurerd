@@ -1,5 +1,9 @@
 include ../common.mk
 
+# Need this flag or the race detector won't do anything
+CFLAGS += -DRACE_DETECT
+CXXFLAGS += -DRACE_DETECT
+
 # Basic tool functionality
 SRC := driver.cpp rd.cpp
 

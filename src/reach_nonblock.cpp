@@ -1,5 +1,7 @@
 #include "reach_nonblock.hpp"
 #include <cassert>
+#include <cstdio>
+#include <cstdlib>
 
 namespace reach {
 
@@ -30,11 +32,17 @@ nonblock::smem_data* nonblock::active(sframe_data *f) {
   return t_current;
 }
 
+bool nonblock::precedes_now(sframe_data *f, smem_data *last_access) {
+  if(last_access->sbag->precedes_now()) { return true; }
+  else { return last_access->precedes_now(); }
+}
+
 // Should be done in a constructor if possible
 void nonblock::init(sframe_data *initial) {
   m_sp.init(&initial->sp);
   t_current = new node();
   t_current->att_pred = t_current;
+  t_current->sbag = initial->sp.Sbag;
   attachify(t_current);
   s_R = &m_R;
 }
@@ -46,20 +54,29 @@ void nonblock::attachify(node* n) {
   // su is unattached
   su->id = m_R.add_node(); // make attached with node in R
   assert(su->att_pred);
+  assert(su->att_pred->find()->id <= su->id);
   m_R.add_edge(su->att_pred->find()->id, su->id);
+  assert(su->att_succ == nullptr);
+  su->att_succ = su;
 }
 
 /********** Parallelism Creation **********/
 
+// only called in driver when cilk_enter_begin (enter_helper_begin doesn't
+// call this). f is the sframe_data correponding to the cilk function, and p
+// is whatever at the head of the stack at the time.
 void nonblock::begin_strand(sframe_data *f, sframe_data *p) {
   m_sp.begin_strand(&f->sp,&p->sp);
   // Future stuff?
 }
 
+/* Commenting out things that doesn't seem to be used at the moment
 void nonblock::create_strand(sframe_data *f) {
+fprintf(stderr, "XXX create_strand called!.\n");
   m_sp.create_strand(&f->sp);
-}
+}*/
 
+// called at detach; f is the spawning Cilk function and h is the helper
 void nonblock::at_spawn(sframe_data *f, sframe_data *h) {
   m_sp.at_spawn(&f->sp, &h->sp);
 
@@ -70,7 +87,10 @@ void nonblock::at_spawn(sframe_data *f, sframe_data *h) {
   // Make new unattached set containing v
   node *v = new node(); // left child
   h->lfc = v;
-  v->att_pred = (u->find()->attached()) ? u : u->find()->att_pred;
+  // v->att_pred = (u->find()->attached()) ? u : u->find()->att_pred;
+  v->att_pred = u->find()->att_pred;
+  assert(v->att_pred != nullptr);
+  assert(v->att_pred->attached());
 
   //h->nodes.push_fork(u, w, v);
   // v->att_pred = u->find()->att_pred;
@@ -82,6 +102,7 @@ void nonblock::at_spawn(sframe_data *f, sframe_data *h) {
   // h->cont = w;
 
   t_current = v;
+  t_current->sbag = h->sp.Sbag;
 }
 
 // Outgoing non-SP edge
@@ -102,7 +123,7 @@ void nonblock::at_future_create(sframe_data *f) {
   node *v = new node(); // left (executed next, since we use eager execution)
   v->id = m_R.add_node();
   m_R.add_edge(u->find()->id, v->id);
-  v->att_pred = u;
+  v->att_pred = v->att_succ = v; // self
   // What about u's attached successor?
 
   //node *w = new node(); // right
@@ -111,6 +132,7 @@ void nonblock::at_future_create(sframe_data *f) {
 
   //f->cont = w;
   t_current = v;
+  t_current->sbag = f->sp.Sbag;
 }
 
 /********** Parallelism Deletion **********/
@@ -125,7 +147,7 @@ void nonblock::at_future_get(sframe_data *f, sfut_data *fut) {
   // Make a new attached set
   node *v = new node(m_R.add_node());
   m_R.add_edge(u->find()->id, v->id);
-  v->att_pred = u; // ??? What about w?
+  v->att_pred = v->att_succ = v; // self 
 
   // XXX: Not in the pseudocode but I don't see how you couldn't have this.
   node *w = fut->put_strand;
@@ -133,6 +155,7 @@ void nonblock::at_future_get(sframe_data *f, sfut_data *fut) {
   m_R.add_edge(w->find()->id, v->id);
 
   t_current = v;
+  t_current->sbag = f->sp.Sbag;
 }
 
 // Returns the new node j
@@ -146,14 +169,21 @@ node* nonblock::binary_join(node *f, // fork node
 
   // No non-SP edges
   if (!ljp_attached && !rjp_attached) {
+    assert(f->att_pred == ljp->att_pred);
+    assert(f->att_pred == rjp->att_pred);
     f->merge(ljp);
     f->merge(rjp);
     f->merge(j);
+    j->att_pred = j->find()->att_pred;
 
     // Both sides incident on non-SP edges
   } else if (ljp_attached && rjp_attached) {
     //f->attach();
     attachify(f);
+    assert(f->find()->attached());
+    assert(lfc->find()->attached());
+    assert(rfc->find()->attached());
+
     m_R.add_edge(f->find()->id, lfc->find()->id);
     m_R.add_edge(f->find()->id, rfc->find()->id);
 
@@ -175,10 +205,17 @@ node* nonblock::binary_join(node *f, // fork node
     assert(!unatt_pred->attached() && !unatt_succ->attached());
 
     if (!f->find()->attached()) f->merge(att_succ);
+    assert(f->find()->attached());
+
     att_pred->merge(j);
+    // since now the two are merged, the reachability of the two nodes in m_R
+    // need to be merged as well
+    m_R.merge_nodes(att_pred->find()->id, j->find()->id);
+
     unatt_pred->find()->att_succ = j->find();
   }
-
+  assert(j->att_pred);
+  
   return j;
 }
 
@@ -198,29 +235,36 @@ void nonblock::at_sync(sframe_data *f) {
 
   // Set current node
   //t_current = t2;
+  m_sp.at_sync(&f->sp);
 
   assert(f->fork); assert(f->lfc); assert(f->rfc); assert(f->ljp);
   t_current = binary_join(f->fork, f->lfc, f->rfc, f->ljp, t_current);
+  t_current->sbag = f->sp.Sbag;
   f->fork = f->lfc = f->rfc = f->ljp = nullptr;
 }
 
 /********** Continuations **********/
 // Returning from a spawned function or future function.
 // This is all the other non-join nodes, right?
+// ANGE: XXX Why separate this out??
 void nonblock::continuation(sframe_data *f) { t_current = new node(); }
 
 // f is the helper frame, p is parent
 void nonblock::at_spawn_continuation(sframe_data *f, sframe_data *p) {
   // Pop hasn't happened yet
   assert(f->fork); assert(f->lfc); assert(f->rfc == nullptr);
-  nonblock::m_sp.at_spawn_continuation(&f->sp, &p->sp);
+  m_sp.at_spawn_continuation(&f->sp, &p->sp);
 
   f->ljp = t_current;
-  continuation(f);
+  continuation(f); // t_current changed here
+  t_current->sbag = p->sp.Sbag;
   f->rfc = t_current;
-  *p = *f;
+  f->rfc->att_pred = f->fork->find()->att_pred;
+  // *p = *f; ANGE: this is bad; overwriting the sp frames 
+  copy_nonblock_data(p, f); // p = dst, f = source
 }
 
+// f is the current head and p is the parent
 void nonblock::at_future_continuation(sframe_data *f, sframe_data *p) {
   // Use p because the pop hasn't happened yet
   // Except we're not really doing anything with the "future helper"
@@ -229,17 +273,20 @@ void nonblock::at_future_continuation(sframe_data *f, sframe_data *p) {
   assert(f->future_fork);
   node *w = new node(); // right
   w->id = m_R.add_node();
-  w->att_pred = f->future_fork;
+  w->att_pred = w->att_succ = w; // self
   m_R.add_edge(f->future_fork->find()->id, w->id);
   f->future_fork = nullptr;
   t_current = w;
+  t_current->sbag = p->sp.Sbag; // w represents the continuation in the parent
 }
 
 // Called when a future task completes. We know we're going to have
 // non-SP edges out from here, we just don't know where to yet.
+// f is the current head (frame for future) and p is the parent
 void nonblock::at_future_finish(sframe_data *f, sframe_data *p, sfut_data* fut) {
   // Save for later, i.e. at_get
   fut->put_strand = t_current;
+  f->sp.Sbag->set_kind(spbag::bag_kind::P); // now that future is done, it's a P bag
 
   // NB: Is it okay to do this here? Seems easier than during
   // at_get(), since a future may have get() called on it multiple

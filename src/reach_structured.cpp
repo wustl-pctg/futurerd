@@ -13,6 +13,7 @@ void structured::init(sframe_data *initial) { create_strand(initial); }
 structured::smem_data* structured::active(sframe_data *f) { return f->Sbag; }
 
 /********** Parallelism Creation **********/
+// p is the parent (caller), and f is the current strand
 void structured::begin_strand(sframe_data *f, sframe_data *p) {
   f->Sbag = p->Sbag;
   f->Pbag = nullptr;
@@ -24,6 +25,7 @@ void structured::create_strand(sframe_data *f) {
 }
 
 void structured::at_future_create(sframe_data *f) { create_strand(f); }
+// f is the Cilk function spawning, which called the helper
 void structured::at_spawn(sframe_data *f, sframe_data *helper)
 { LOG; create_strand(helper); }
 
@@ -41,6 +43,10 @@ void structured::at_sync(sframe_data *f) { LOG;
 
   f->Sbag->merge(f->Pbag);
   f->Pbag = nullptr;
+}
+
+bool structured::precedes_now(sframe_data *curr, smem_data *last_access) {
+    return last_access->precedes_now();
 }
 
 /********** Continuations **********/
@@ -69,6 +75,7 @@ void structured::continuation(sframe_data *f, sframe_data *p) {
   // f->Pbag->merge(f->Sbag);
 }
 
+// f: helper of the previous spawn, p: parent
 void structured::at_spawn_continuation(sframe_data *f, sframe_data *p)
 { LOG; continuation(f,p); }
 

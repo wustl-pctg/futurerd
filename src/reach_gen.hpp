@@ -13,6 +13,7 @@ public:
   bool precedes(node x, node y);
   general();
   void init();
+  void merge_nodes(node this_node, node that_node);
 
 private:
   /// @todo{Use of std::vector for the reachability matrix will

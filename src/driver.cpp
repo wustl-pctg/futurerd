@@ -66,6 +66,8 @@ void cilk_future_create() {
   assert(!rd::t_sstack.empty());
 
   // @TODO{Do we actually need a frame here?}
+  // ANGE: Yes we do because we need a separate Sbags for the future frame and
+  // its parent function that created the future.
   rd::g_reach.at_future_create(rd::t_sstack.push());
 }
 

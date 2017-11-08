@@ -74,20 +74,24 @@ private:
 public:
 
   NOSANITIZE future() : m_stat(status::CREATED)
-  { cilk_future_create(); }
+  { __DC; cilk_future_create(); __EC; }
   
   NOSANITIZE void put(T val) {
+    __DC;
     cilk_future_put_begin(&m_rd_data);
     m_val = val;
     m_stat = status::PUT;
     cilk_future_put_end(&m_rd_data);
+    __EC;
   }
 
   NOSANITIZE void finish() {
+    __DC;
     cilk_future_finish_begin(&m_rd_data);
     assert(m_stat == status::PUT);
     m_stat = status::DONE;
     cilk_future_finish_end(&m_rd_data);
+    __EC;
   }
 
   NOSANITIZE void finish(T val) {
@@ -98,13 +102,15 @@ public:
      * the stack would get cleared at the end of finish(), instead of
      * the end of this finish(val). */
     
+    __DC;
     cilk_future_finish_begin(&m_rd_data); // disables checking
     m_val = val;
     m_stat = status::DONE;
     cilk_future_finish_end(&m_rd_data); // enables checking
+    __EC;
   }
   
-  NOSANITIZE bool ready() { return m_stat >= status::PUT; }
+  NOSANITIZE bool ready() { __DC; bool res = m_stat >= status::PUT; __EC; return res; }
   NOSANITIZE T get() {
     __DC;
     cilk_future_get_begin(&m_rd_data);

@@ -26,6 +26,9 @@ int main(int argc, char* argv[])
   int x = g->get();
 
   assert(x == 15 || x == -42);
+  if(futurerd_num_races() != 1) {
+    fprintf(stderr, "num_race should have been 1 but it's %zu.\n", futurerd_num_races());
+  }
   assert(futurerd_num_races() == 1);
   
   TEST_TEARDOWN();

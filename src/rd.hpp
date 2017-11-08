@@ -21,7 +21,7 @@ public:
 
   static enum rd_policy g_policy;
   static size_t g_num_races;
-  static bool t_checking_disabled;
+  static int check_disabled;
 
   race_detector();
   ~race_detector();
@@ -34,7 +34,7 @@ public:
   //static inline void disable_checking() { t_checking_disabled = true; }
   static void enable_checking();
   static void disable_checking();
-  static inline bool should_check() { return !t_checking_disabled; }
+  static inline bool should_check() { return check_disabled == 0; }
 
   // @todo{ Read environment variables for setting race-reporting policy.}
   static void set_policy(enum rd_policy p); // not thread-safe

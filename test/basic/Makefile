@@ -32,4 +32,4 @@ check: $(TARGETS)
 	@printf "$(ccyellow) ... all passed! $(ccend)\n"
 
 clean:
-	rm -rf $(TARGETS) *.o
+	rm -rf $(TARGETS) *.o core.*

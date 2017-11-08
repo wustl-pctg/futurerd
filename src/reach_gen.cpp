@@ -26,9 +26,30 @@ bool general::precedes(node x, node y) {
   return data[x][y];
 }
 
-
 void general::add_edge(node from, node to) {
   assert(data.size() > from);
   data[from].resize(data.size());
   data[from][to] = true;
+}
+
+// merge 'this_node' into 'that_node'
+void general::merge_nodes(node this_node, node that_node) {
+  assert(data.size() > this_node);
+  assert(data.size() > that_node);
+  assert(data[that_node].size() <= data.size());
+  data[that_node].resize(data.size());
+
+  // copy every outgoing edges from this_node into that_node
+  for(int i=0; i < data[this_node].size(); i++) {
+    if(data[this_node][i] == true) {
+      data[that_node][i] = true;
+    }
+  }
+
+  // copy every incoming edges going into this_node to that_node
+  for(int i=0; i < data.size(); i++) {
+    if(data[i][this_node] == true) {
+      data[i][that_node] = true;
+    }
+  }
 }

@@ -13,6 +13,7 @@ public:
     node *att_pred = nullptr;
     node *att_succ = nullptr;
     reach::general::node id; // id of node in R graph, or 0 if not in R (size_t)
+    structured::smem_data *sbag; // ANGE: a bit hacky, but good enough for now
     bool attached() { return id > 0; }
     node* find() { return static_cast<node*>(utils::uf::find(this)); }
     bool precedes_now();
@@ -77,10 +78,11 @@ public:
   void at_future_finish(sframe_data *f, sframe_data *p, sfut_data* fut);
 
   void begin_strand(sframe_data *f, sframe_data *p);
+  bool precedes_now(sframe_data *f, smem_data *last_access); 
 
 private:
   // Helper function for parallelism creation (spawns + create_future)
-  void create_strand(sframe_data *f);
+  // void create_strand(sframe_data *f);
 
   // Helper function for continuations
   void continuation(sframe_data *f);
@@ -93,6 +95,15 @@ private:
                     node *lfc, node *rfc, // left, right fork children
                     node *ljp, node *rjp); // left, right join children
 
+
+  static inline void 
+  copy_nonblock_data(sframe_data *dst, sframe_data *src) {
+    dst->fork = src->fork;  
+    dst->lfc = src->lfc;  
+    dst->rfc = src->rfc;  
+    dst->ljp = src->ljp;  
+    dst->future_fork = src->future_fork;  
+  }
 
 }; // class nonblock
 } // namespace reach
