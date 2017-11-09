@@ -11,10 +11,10 @@ OPT_FLAGS = -O3
 DBG_FLAGS = -O0
 PROF_FLAGS = -O2
 INC = -I$(RUNTIME_HOME)/include
-FUTURE_TYPE = -DNONBLOCKING_FUTURES 
-# FUTURE_TYPE = -DSTRUCTURED_FUTURES
+FUTURE_TYPE = -DNONBLOCKING_FUTURES
+#FUTURE_TYPE = -DSTRUCTURED_FUTURES
 FLAGS = -Wall -Wfatal-errors -g $(INC)
-FLAGS += $(FUTURE_TYPE) 
+FLAGS += $(FUTURE_TYPE)
 ARFLAGS = rcs
 
 TOOL_DEBUG ?= 0
@@ -39,7 +39,7 @@ ifeq ($(LTO),1)
 endif
 
 CFLAGS ?= $(FLAGS) -std=c99
-CXXFLAGS ?= $(FLAGS) -std=c++11 -fno-exceptions -fno-rtti
+CXXFLAGS ?= $(FLAGS) -std=c++11 #-fno-exceptions -fno-rtti
 
 $(OBJ_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)

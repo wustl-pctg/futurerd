@@ -7,11 +7,18 @@ namespace reach {
 
 using node = nonblock::node;
 
-reach::general* nonblock::s_R = nullptr;;
 node* nonblock::t_current = nullptr;
 
-bool node::precedes_now() {
-  node *u = this;
+nonblock::nonblock(sframe_data *initial) { init(initial); }
+
+nonblock::smem_data* nonblock::active(sframe_data *f) {
+  return t_current;
+}
+
+bool nonblock::precedes_now(sframe_data *f, smem_data *last_access) {
+  if(last_access->sbag->precedes_now()) { return true; }
+
+  node *u = last_access;
   node *v = t_current;
 
   node *su = u->find();
@@ -23,18 +30,7 @@ bool node::precedes_now() {
   if (su == nullptr || sv == nullptr)
     return false;
 
-  return s_R->precedes(su->id, sv->id);
-}
-
-nonblock::nonblock(sframe_data *initial) { init(initial); }
-
-nonblock::smem_data* nonblock::active(sframe_data *f) {
-  return t_current;
-}
-
-bool nonblock::precedes_now(sframe_data *f, smem_data *last_access) {
-  if(last_access->sbag->precedes_now()) { return true; }
-  else { return last_access->precedes_now(); }
+  return m_R.precedes(su->id, sv->id);
 }
 
 // Should be done in a constructor if possible
@@ -44,7 +40,6 @@ void nonblock::init(sframe_data *initial) {
   t_current->att_pred = t_current;
   t_current->sbag = initial->sp.Sbag;
   attachify(t_current);
-  s_R = &m_R;
 }
 
 void nonblock::attachify(node* n) {
@@ -228,13 +223,13 @@ void nonblock::at_sync(sframe_data *f) {
   // node *t1; // left join parent (t_1)
   //node *t2 = t_current; // right join parent (t_2)
 
-
   // while (frame->nodes.pop(&f, &s1, &s2, &t1)) {
   //   t2 = binary_join(f, s1, s2, t1, t2);
   // }
 
   // Set current node
   //t_current = t2;
+  
   m_sp.at_sync(&f->sp);
 
   assert(f->fork); assert(f->lfc); assert(f->rfc); assert(f->ljp);
@@ -244,10 +239,6 @@ void nonblock::at_sync(sframe_data *f) {
 }
 
 /********** Continuations **********/
-// Returning from a spawned function or future function.
-// This is all the other non-join nodes, right?
-// ANGE: XXX Why separate this out??
-void nonblock::continuation(sframe_data *f) { t_current = new node(); }
 
 // f is the helper frame, p is parent
 void nonblock::at_spawn_continuation(sframe_data *f, sframe_data *p) {
@@ -256,11 +247,10 @@ void nonblock::at_spawn_continuation(sframe_data *f, sframe_data *p) {
   m_sp.at_spawn_continuation(&f->sp, &p->sp);
 
   f->ljp = t_current;
-  continuation(f); // t_current changed here
+  t_current = new node();
   t_current->sbag = p->sp.Sbag;
   f->rfc = t_current;
   f->rfc->att_pred = f->fork->find()->att_pred;
-  // *p = *f; ANGE: this is bad; overwriting the sp frames 
   copy_nonblock_data(p, f); // p = dst, f = source
 }
 
@@ -269,7 +259,6 @@ void nonblock::at_future_continuation(sframe_data *f, sframe_data *p) {
   // Use p because the pop hasn't happened yet
   // Except we're not really doing anything with the "future helper"
   // frames...do we even need them?
-  //continuation(p);
   assert(f->future_fork);
   node *w = new node(); // right
   w->id = m_R.add_node();

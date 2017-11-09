@@ -16,7 +16,6 @@ public:
     structured::smem_data *sbag; // ANGE: a bit hacky, but good enough for now
     bool attached() { return id > 0; }
     node* find() { return static_cast<node*>(utils::uf::find(this)); }
-    bool precedes_now();
     node(reach::general::node _id = 0) : id(_id) {}
     void merge(node *n) { utils::uf::merge(this, n); }
   }; // struct node
@@ -50,7 +49,6 @@ public:
   // Member data
 public:
   reach::general m_R;
-  static reach::general* s_R;
   reach::structured m_sp; // series-parallel reachability
   static node* t_current; // XXX: necessary?
 
@@ -81,12 +79,6 @@ public:
   bool precedes_now(sframe_data *f, smem_data *last_access); 
 
 private:
-  // Helper function for parallelism creation (spawns + create_future)
-  // void create_strand(sframe_data *f);
-
-  // Helper function for continuations
-  void continuation(sframe_data *f);
-
   // make the set containing u attached if not already
   void attachify(node *n);
 
