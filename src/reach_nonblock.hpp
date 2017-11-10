@@ -2,14 +2,17 @@
 
 // We don't actually need the structured part, just the fork/join part
 // of SP Bags.
+#include "utils/stack.hpp"
 #include "reach_structured.hpp"
 #include "reach_gen.hpp"
 
 namespace reach {
 class nonblock {
+protected:
+  static constexpr uint32_t DEFAULT_SYNC_BLOCK_SIZE = 16;
+
 public:
   struct node : utils::uf::node { // inherit from union-find node type
-
     node *att_pred = nullptr;
     node *att_succ = nullptr;
     reach::general::node id; // id of node in R graph, or 0 if not in R (size_t)
@@ -17,26 +20,25 @@ public:
     bool attached() { return id > 0; }
     node* find() { return static_cast<node*>(utils::uf::find(this)); }
     node(reach::general::node _id = 0) : id(_id) {}
+    // always merge that into this. 
     void merge(node *n) { utils::uf::merge(this, n); }
   }; // struct node
 
+  struct fork_node_data {
+    node *fork = nullptr; // the fork node
+    node *lfc = nullptr;  // the left-fork child
+    node *rfc = nullptr;  // the right-fork child
+    node *ljp = nullptr;  // the last strand of a spawned child
+  };
+
+  typedef utils::stack<fork_node_data> fork_stack_t;
   struct sframe_data {
     structured::sframe_data sp;
-
     // Future RD stuff.
-    node *fork = nullptr;
-    node *lfc = nullptr;
-    node *rfc = nullptr;
-    node *ljp = nullptr; // rjp is t_current at sync
-
     node *future_fork = nullptr;
-
-    // continuation node, created and saved at spawns and create_futures
-    //node *cont = nullptr; // XXX: Update to use of node_stack?
-
-    // NB: We will probably need to save some more things here to handle
-    // joins with in-degree > 2.
-    //node_stack nodes;
+    // for handling joins with in-degree > 2; last-in first-out
+    fork_stack_t fork_stack;
+    sframe_data() : fork_stack(DEFAULT_SYNC_BLOCK_SIZE) {}
   };
 
   //struct smem_data {};
@@ -82,19 +84,23 @@ private:
   // make the set containing u attached if not already
   void attachify(node *n);
 
-  // Helper function for syncs
+  // Helper function for syncs; assume binary join
   node* binary_join(node *f, // fork node
                     node *lfc, node *rfc, // left, right fork children
                     node *ljp, node *rjp); // left, right join children
 
+  // Helper function for syncs; if join is not binary
+  node* perform_join(sframe_data *f);
+  void handle_binary_fork_at_sync(node *f, // fork node
+                                  node *lfc, node *rfc,  // left, right fork children
+                                  node *ljp, node *rjp); // left, (fake) right join parent 
 
   static inline void 
-  copy_nonblock_data(sframe_data *dst, sframe_data *src) {
+  copy_fork_stack_data(fork_node_data *dst, fork_node_data *src) {
     dst->fork = src->fork;  
     dst->lfc = src->lfc;  
     dst->rfc = src->rfc;  
     dst->ljp = src->ljp;  
-    dst->future_fork = src->future_fork;  
   }
 
 }; // class nonblock

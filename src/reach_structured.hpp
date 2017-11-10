@@ -9,6 +9,7 @@ public:
 
   struct sframe_data {
     spbag *Sbag, *Pbag;
+    sframe_data() : Sbag(nullptr), Pbag(nullptr) { }
   };
 
   using smem_data = spbag;

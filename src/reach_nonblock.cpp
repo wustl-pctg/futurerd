@@ -78,12 +78,13 @@ void nonblock::at_spawn(sframe_data *f, sframe_data *h) {
   m_sp.at_spawn(&f->sp, &h->sp);
 
   node *u = t_current; // fork node
-  h->fork = u;
-  h->rfc = h->ljp = nullptr;
+  h->fork_stack.push();
+  h->fork_stack.head()->fork = u;
 
   // Make new unattached set containing v
   node *v = new node(); // left child
-  h->lfc = v;
+  h->fork_stack.head()->lfc = v;
+
   // v->att_pred = (u->find()->attached()) ? u : u->find()->att_pred;
   v->att_pred = u->find()->att_pred;
   assert(v->att_pred != nullptr);
@@ -155,6 +156,113 @@ void nonblock::at_future_get(sframe_data *f, sfut_data *fut) {
 
   t_current = v;
   t_current->sbag = f->sp.Sbag;
+}
+
+node* nonblock::perform_join(sframe_data *f) {
+
+  int ind = 0;
+  int num_attached = 0; // counting number of attached branch
+  int num_jparents = f->fork_stack.size() + 1;
+  node *fake_rjp = t_current;
+
+  // nodes going into join node in reverse serial order, i.e., t_current is 0th
+  node *join_parents[num_jparents];
+  join_parents[ind++] = t_current;
+
+  node *j = new node(); // join node: the continuation after sync
+  assert(j->find() == j);
+    
+  if(t_current->find()->attached()) { num_attached++; }
+
+  // we first process all the binary fork in reversed sequential order
+  while(f->fork_stack.empty() == false) {
+    // we process the fork node in reversed sequential order
+    fork_node_data *fndata = f->fork_stack.head();
+    handle_binary_fork_at_sync(fndata->fork, fndata->lfc, fndata->rfc, fndata->ljp, fake_rjp);
+    fake_rjp = fndata->fork;
+    if(fake_rjp->find()->attached()) { num_attached++; }
+    join_parents[ind++] = fndata->ljp; // needed for processing join node
+    f->fork_stack.pop();
+    // should have been merged into the same unattached set if nothing is attached
+    assert(num_attached > 0 || t_current->find() == fake_rjp->find());
+  }
+  assert(ind == num_jparents);
+
+  // then, based on the number of attached join parent, we process the join
+  if(num_attached == 0) {
+    t_current->merge(j); // merge j into it
+    assert(!j->find()->attached() && j->find()->att_pred);
+  } else if(num_attached == 1) {
+    for(int i=0; i < num_jparents; i++) {
+      if( join_parents[i]->find()->attached() ) {
+        join_parents[i]->merge(j); // merge j into the single attached parent
+      }
+    }
+  } else { // multiple attached join parent 
+    j->id = m_R.add_node(); // make j into its own attached set
+  }
+
+  if(num_attached > 0) {
+    assert(j->find()->attached());
+    // now that the attached set for the join is setup, we can add edges from 
+    // attached parent to it and make it the attached successor for unattached parents
+    for(int i=0; i < num_jparents; i++) {
+      node *pset = join_parents[i]->find();
+      if(!pset->attached()) { pset->att_succ = j->find(); }
+      else { m_R.add_edge(pset->find()->id, j->find()->id); }
+    }
+  }
+
+  return j;
+}
+
+// we don't actually have rjp for every fork. Instead, we pass in the
+// most-recently processed fork node as a proxy (and we process them in
+// reversed sequential order).  
+// For a given fork node, if both branches are unattached, the fork node would 
+// be unattached and merged into the same unattached set; if at least one branch 
+// is attached, the fork will be attached, and that corresponding right-branch for 
+// the next fork is also attached.  Since we don't do anything with the set of 
+// rjp unless both branches are attached, it's ok to use the last-processed fork node
+// as a proxy for rjp for the next fork,
+void nonblock::handle_binary_fork_at_sync(node *f, // fork node
+                                          node *lfc, node *rfc, // left, right fork children
+                                          node *ljp, node *rjp  // left, (fake) right join parent 
+                                          ) {
+  assert(f && lfc && rfc && ljp && rjp);
+  bool ljp_attached = ljp->find()->attached();
+  bool rjp_attached = rjp->find()->attached();
+
+  // No non-SP edges
+  if (!ljp_attached && !rjp_attached) {
+    assert(lfc->find() == ljp->find() && rfc->find() == rjp->find());
+    assert(f->find()->att_pred == ljp->find()->att_pred);
+    assert(f->find()->att_pred == rjp->find()->att_pred);
+    f->merge(ljp);
+    f->merge(rjp);
+
+    // Both sides incident on non-SP edges
+  } else if (ljp_attached && rjp_attached) {
+    attachify(f);
+    assert(f->find()->attached());
+    assert(lfc->find()->attached());
+    assert(rfc->find()->attached());
+    m_R.add_edge(f->find()->id, lfc->find()->id);
+    m_R.add_edge(f->find()->id, rfc->find()->id);
+
+  } else {
+    node *att_succ, *unatt_succ; // attached/unattached fork children
+    if (ljp_attached) {
+      att_succ = lfc->find(); unatt_succ = rfc->find();
+    } else {
+      att_succ = rfc->find(); unatt_succ = lfc->find();
+    }
+    assert(att_succ->attached());
+    assert(!unatt_succ->attached());
+
+    if (!f->find()->attached()) { att_succ->merge(f); }
+    assert(f->find()->attached());
+  }
 }
 
 // Returns the new node j
@@ -236,27 +344,32 @@ void nonblock::at_sync(sframe_data *f) {
   
   m_sp.at_sync(&f->sp);
 
-  assert(f->fork); assert(f->lfc); assert(f->rfc); assert(f->ljp);
-  t_current = binary_join(f->fork, f->lfc, f->rfc, f->ljp, t_current);
+  assert(f->fork_stack.size() != 0);
+  t_current = perform_join(f); // perform_join returns the join node
   t_current->sbag = f->sp.Sbag;
-  f->fork = f->lfc = f->rfc = f->ljp = nullptr;
 }
 
 /********** Continuations **********/
 
 // f is the helper frame, p is parent
 void nonblock::at_spawn_continuation(sframe_data *f, sframe_data *p) {
-  // Pop hasn't happened yet
-  assert(f->fork); assert(f->lfc); assert(f->rfc == nullptr);
+  // f is the spawn helper, so in principle it should have seen only one spawn
+  assert(f->fork_stack.size() == 1);
+  // with eager execution of future, we should have unset it already even if
+  // we created a future within the spawned subcomputation
+  assert(f->future_fork == nullptr); 
+  fork_node_data *fndata = f->fork_stack.head();
+  assert(fndata->fork && fndata->lfc && !fndata->rfc);
+
   m_sp.at_spawn_continuation(&f->sp, &p->sp);
 
-  f->ljp = t_current;
+  fndata->ljp = t_current;
   t_current = new node();
   t_current->sbag = p->sp.Sbag;
-  f->rfc = t_current;
-  assert(f->rfc->find() == f->rfc);
-  f->rfc->att_pred = f->fork->find()->att_pred;
-  copy_nonblock_data(p, f); // p = dst, f = source
+  assert(t_current->find() == t_current);
+  fndata->rfc = t_current;
+  fndata->rfc->att_pred = fndata->fork->find()->att_pred;
+  copy_fork_stack_data(p->fork_stack.push(), fndata); // p = dst, f = source
 }
 
 // f is the current head and p is the parent

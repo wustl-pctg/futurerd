@@ -48,6 +48,12 @@ public:
     m_stack = new T[m_cap];
   }
 
+  stack(index_t cap_size) : m_cap(cap_size)
+  {
+    reset();
+    m_stack = new T[m_cap];
+  }
+
   ~stack() { delete[] m_stack; }
 
   void reset()
@@ -61,7 +67,8 @@ public:
     ++m_head;
     if (m_head == m_cap)
       double_cap();
-    memset(&m_stack[m_head], 0, sizeof(T));
+    // memset(&m_stack[m_head], 0, sizeof(T));
+    new(&m_stack[m_head]) T();
     return &m_stack[m_head];
   }
 
