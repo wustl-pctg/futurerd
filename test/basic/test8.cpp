@@ -27,10 +27,7 @@ int main(int argc, char* argv[])
   cilk_async(int, f, fib, 10);
 
   assert(f->get() == 55);
-  if(futurerd_num_races() == 0) {
-    fprintf(stderr, "num_race should have > 0 but it's %zu.\n", futurerd_num_races());
-  }
-  assert(futurerd_num_races() > 0);
+  assert_atleast(1);
 
   TEST_TEARDOWN();
   FUTURE_EPILOG();

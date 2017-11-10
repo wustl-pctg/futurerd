@@ -25,11 +25,7 @@ int main(int argc, char* argv[])
   TEST_SETUP();
   int result = fib(2);
   assert(result == 1);
-  size_t num_races = futurerd_num_races();
-  if(num_races != 0) { 
-    fprintf(stderr, "Should not have detected race, but num races = %zu.\n", num_races);
-  }
-  assert(futurerd_num_races() == 0);
+  assert_detected(0);
   TEST_TEARDOWN();
   return 0;
 }

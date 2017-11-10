@@ -23,12 +23,9 @@ int main(int argc, char* argv[])
   int x = bar();
   sync;
 
+  // We will definitely see 57 since we run sequentially.
   assert(x == 0 || x == 57);
-  size_t num_races = futurerd_num_races();
-  if(num_races != 1) {
-    fprintf(stderr, "num_race should have been 1 but it's %zu.\n", num_races);
-  }
-  assert(futurerd_num_races() == 1);
+  assert_detected(1);
 
   TEST_TEARDOWN();
   

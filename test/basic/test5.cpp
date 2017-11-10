@@ -22,15 +22,10 @@ int main(int argc, char* argv[])
   
   int shared = 0;
   cilk_async(int, f, foo, f, shared);
-  //create_future(int, f, foo, f, shared);
   int x = bar(f, shared);
 
   assert(x == 15);
-  size_t num_races = futurerd_num_races();
-  if(num_races != 0) { 
-    fprintf(stderr, "Should not have detected race, but num races = %zu.\n", num_races);
-  }
-  assert(futurerd_num_races() == 0);
+  assert_detected(0);
 
   TEST_TEARDOWN();
   FUTURE_EPILOG();
