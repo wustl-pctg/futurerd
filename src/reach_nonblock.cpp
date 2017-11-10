@@ -52,6 +52,8 @@ void nonblock::attachify(node* n) {
   assert(su->att_pred->find()->id <= su->id);
   m_R.add_edge(su->att_pred->find()->id, su->id);
   assert(su->att_succ == nullptr);
+  // ANGE XXX: do we care to update att_pred to self?  probly not because we'd never
+  // query our own att_pred if we are already attached.
   su->att_succ = su;
 }
 
@@ -118,6 +120,7 @@ void nonblock::at_future_create(sframe_data *f) {
   node *v = new node(); // left (executed next, since we use eager execution)
   v->id = m_R.add_node();
   m_R.add_edge(u->find()->id, v->id);
+  assert(v->find() == v);
   v->att_pred = v->att_succ = v; // self
   // What about u's attached successor?
 
@@ -142,6 +145,7 @@ void nonblock::at_future_get(sframe_data *f, sfut_data *fut) {
   // Make a new attached set
   node *v = new node(m_R.add_node());
   m_R.add_edge(u->find()->id, v->id);
+  assert(v->find() == v);
   v->att_pred = v->att_succ = v; // self 
 
   // XXX: Not in the pseudocode but I don't see how you couldn't have this.
@@ -164,12 +168,12 @@ node* nonblock::binary_join(node *f, // fork node
 
   // No non-SP edges
   if (!ljp_attached && !rjp_attached) {
-    assert(f->att_pred == ljp->att_pred);
-    assert(f->att_pred == rjp->att_pred);
+    assert(f->find()->att_pred == ljp->find()->att_pred);
+    assert(f->find()->att_pred == rjp->find()->att_pred);
     f->merge(ljp);
     f->merge(rjp);
     f->merge(j);
-    j->att_pred = j->find()->att_pred;
+    assert(j->find()->att_pred == f->find()->att_pred);
 
     // Both sides incident on non-SP edges
   } else if (ljp_attached && rjp_attached) {
@@ -199,17 +203,17 @@ node* nonblock::binary_join(node *f, // fork node
     assert(att_pred->attached() && att_succ->attached());
     assert(!unatt_pred->attached() && !unatt_succ->attached());
 
-    if (!f->find()->attached()) f->merge(att_succ);
+    if (!f->find()->attached()) { att_succ->merge(f); }
     assert(f->find()->attached());
 
     att_pred->merge(j);
     // since now the two are merged, the reachability of the two nodes in m_R
     // need to be merged as well
-    m_R.merge_nodes(att_pred->find()->id, j->find()->id);
+    // m_R.merge_nodes(att_pred->find()->id, j->find()->id);
 
     unatt_pred->find()->att_succ = j->find();
   }
-  assert(j->att_pred);
+  assert(j->find()->att_pred);
   
   return j;
 }
@@ -250,6 +254,7 @@ void nonblock::at_spawn_continuation(sframe_data *f, sframe_data *p) {
   t_current = new node();
   t_current->sbag = p->sp.Sbag;
   f->rfc = t_current;
+  assert(f->rfc->find() == f->rfc);
   f->rfc->att_pred = f->fork->find()->att_pred;
   copy_nonblock_data(p, f); // p = dst, f = source
 }
@@ -261,6 +266,7 @@ void nonblock::at_future_continuation(sframe_data *f, sframe_data *p) {
   // frames...do we even need them?
   assert(f->future_fork);
   node *w = new node(); // right
+  assert(w->find() == w);
   w->id = m_R.add_node();
   w->att_pred = w->att_succ = w; // self
   m_R.add_edge(f->future_fork->find()->id, w->id);

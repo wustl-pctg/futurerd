@@ -29,8 +29,7 @@ node* link(node* x, node* y) {
   return x;
 }
 
-node* find(node* x)
-{
+node* find(node* x) {
   /// cilksan does this by using a list rather than recursion, which
   /// may be faster.
   if (x->parent != x) 
