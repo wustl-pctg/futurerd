@@ -108,8 +108,7 @@ void nonblock::at_spawn(sframe_data *f, sframe_data *h) {
 // new frame created for the new strand
 void nonblock::at_future_create(sframe_data *f) {
 
-  // Actually, should we call this at all? Really I think we're only
-  // using the structured part for the fork-join stuff..
+  // Just create a new Sbag, since this is a new strand.
   m_sp.at_future_create(&f->sp);
 
   node *u = t_current;
@@ -123,13 +122,7 @@ void nonblock::at_future_create(sframe_data *f) {
   m_R.add_edge(u->find()->id, v->id);
   assert(v->find() == v);
   v->att_pred = v->att_succ = v; // self
-  // What about u's attached successor?
 
-  //node *w = new node(); // right
-  // w->id = m_R.add_node();
-  // m_R.add_edge(u->find()->id, w->id);
-
-  //f->cont = w;
   t_current = v;
   t_current->sbag = f->sp.Sbag;
 }
@@ -385,7 +378,10 @@ void nonblock::at_future_continuation(sframe_data *f, sframe_data *p) {
   m_R.add_edge(f->future_fork->find()->id, w->id);
   f->future_fork = nullptr;
   t_current = w;
+  
   t_current->sbag = p->sp.Sbag; // w represents the continuation in the parent
+  // t_current->sbag = f->sp.Sbag;
+  // p->sp = f->sp; // move the bags over
 }
 
 // Called when a future task completes. We know we're going to have
@@ -394,11 +390,13 @@ void nonblock::at_future_continuation(sframe_data *f, sframe_data *p) {
 void nonblock::at_future_finish(sframe_data *f, sframe_data *p, sfut_data* fut) {
   // Save for later, i.e. at_get
   fut->put_strand = t_current;
+
   f->sp.Sbag->set_kind(spbag::bag_kind::P); // now that future is done, it's a P bag
 
-  // NB: Is it okay to do this here? Seems easier than during
-  // at_get(), since a future may have get() called on it multiple
-  // times.
+  // Conceptually this happens at get(), but doing it here prevents it
+  // from happening multiple times if get() is called multiple
+  // times. However, calling it multiple times shouldn't affect
+  // correctness.
   attachify(t_current);
 
   // The only way we know of a future continuation, currently.
