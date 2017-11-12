@@ -7,6 +7,7 @@
 #include <cassert>
 #include <cstdint> // int types like uint32_t, uint64_t, etc.
 #include <cstring> // memset
+#include <cstdlib> // malloc
 
 namespace utils {
 
@@ -45,19 +46,27 @@ public:
   stack() : m_cap(DEFAULT_CAPACITY)
   {
     reset();
-    m_stack = new T[m_cap];
+    //m_stack = new T[m_cap];
+    m_stack = (T*) malloc(sizeof(T) * m_cap);
   }
 
   stack(index_t cap_size) : m_cap(cap_size)
   {
     reset();
-    m_stack = new T[m_cap];
+    //m_stack = new T[m_cap];
+    m_stack = (T*) malloc(sizeof(T) * m_cap);
   }
 
-  ~stack() { delete[] m_stack; }
+  ~stack() {
+    //delete[] m_stack;
+    reset();
+    free(m_stack);
+  }
 
   void reset()
   {
+    // for (int i{0}; i <= m_head; ++i)
+    //   m_stack[i].~T();
     m_head = (index_t)-1;
     m_tail = (index_t)0;
   }
