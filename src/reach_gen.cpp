@@ -30,6 +30,14 @@ void general::add_edge(node from, node to) {
   assert(data.size() > from);
   data[from].resize(data.size());
   data[from][to] = true;
+
+  for (node i{1}; i < data.size(); ++i) {
+    data[i].resize(data.size());
+    if (data[i][from]) {
+      data[i][to] = true;
+    }
+  }
+
 }
 
 // merge 'this_node' into 'that_node'
