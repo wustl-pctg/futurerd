@@ -53,6 +53,12 @@ __attribute__((weak)) void cilk_future_put_end(struct sfut_data *) {}
 #define NOSANITIZE
 #endif // RACE_DETECT
 
+// Without this, there are sometimes races on future handles. These
+// are not real races, but due to the fact that checking is not
+// disabled until we fully enter the future methods.
+#define cilk_future_get(fut) __DC; (fut)->get(); __EC;
+#define cilk_future_get_result(v, fut) __DC; (v) = (fut)->get(); __EC;
+
 #ifndef __cilkfutures
 #include "future_fake.hpp"
 #endif
