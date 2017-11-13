@@ -318,8 +318,7 @@ static void do_matmul_unstructured(DATA *A, DATA *B, DATA *C, int n) {
     g_nBlocks = n >> POWER; // number of blocks per dimension
     int num_futures = g_nBlocks * g_nBlocks * g_nBlocks;
     //g_fhandles = new cilk::future<int> [num_futures];
-    cilk::future<int> *g_fhandles = (cilk::future<int>*)
-      malloc(sizeof(cilk::future<int>) * num_futures);
+    g_fhandles = (cilk::future<int>*) malloc(sizeof(cilk::future<int>) * num_futures);
 
 
     // clockmark_t begin_rm = ktiming_getmark(); 
