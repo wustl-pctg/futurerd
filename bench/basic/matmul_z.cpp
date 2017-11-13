@@ -199,7 +199,10 @@ static void do_matmul_structured(DATA *A, DATA *B, DATA *C, int n) {
 
     int nBlocks = n >> POWER; // number of blocks per dimension
     int num_futures = nBlocks * nBlocks * nBlocks;
-    cilk::future<int> *fhandles = new cilk::future<int> [num_futures];
+    //cilk::future<int> *fhandles = new cilk::future<int>[num_futures];
+    cilk::future<int> *fhandles = (cilk::future<int>*)
+      malloc(sizeof(cilk::future<int>) * num_futures);
+
 
     cilk_for(int iB = 0; iB < nBlocks; iB++) {
         cilk_for(int jB = 0; jB < nBlocks; jB++) {
@@ -220,7 +223,8 @@ static void do_matmul_structured(DATA *A, DATA *B, DATA *C, int n) {
         }
     }
     
-    delete[] fhandles;
+    //delete[] fhandles;
+    free(fhandles);
 }
 #endif // STRUCTURED_FUTURES 
 
@@ -313,7 +317,10 @@ static void do_matmul_unstructured(DATA *A, DATA *B, DATA *C, int n) {
     // initialize the static global vars
     g_nBlocks = n >> POWER; // number of blocks per dimension
     int num_futures = g_nBlocks * g_nBlocks * g_nBlocks;
-    g_fhandles = new cilk::future<int> [num_futures];
+    //g_fhandles = new cilk::future<int> [num_futures];
+    cilk::future<int> *g_fhandles = (cilk::future<int>*)
+      malloc(sizeof(cilk::future<int>) * num_futures);
+
 
     // clockmark_t begin_rm = ktiming_getmark(); 
     matmul(A, B, C, n, 0, 0, 0);
@@ -324,7 +331,8 @@ static void do_matmul_unstructured(DATA *A, DATA *B, DATA *C, int n) {
         g_fhandles[(g_nBlocks-1)*(g_nBlocks * g_nBlocks) + i].get();
     }
 
-    delete[] g_fhandles;
+    //delete[] g_fhandles;
+    free(g_fhandles);
     g_fhandles = NULL;
 }
 #endif // NONBLOCKING_FUTURES

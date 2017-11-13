@@ -138,7 +138,9 @@ int wave_lcs_with_futures(int *stor, char *a, char *b, int n) {
     int nBlocks = NUM_BLOCKS(n);
         
     // create an array of future objects
-    cilk::future<int> *farray = new cilk::future<int> [nBlocks * nBlocks];
+    //cilk::future<int> *farray = new cilk::future<int> [nBlocks * nBlocks];
+    cilk::future<int> *farray = (cilk::future<int>*)
+      malloc(sizeof(cilk::future<int>) * nBlocks * nBlocks);
     
     // walk the upper half of triangle, including the diagonal (we assume square NxN LCS) 
     for(int wave_front = 0; wave_front < nBlocks; wave_front++) {
@@ -168,7 +170,8 @@ int wave_lcs_with_futures(int *stor, char *a, char *b, int n) {
     // make sure the last square finishes before we move onto returning
     farray[nBlocks * nBlocks - 1].get();
 
-    delete[] farray;
+    //delete[] farray;
+    free(farray);
 
     return stor[n*(n-1) + n-1];
 }
@@ -194,7 +197,10 @@ int wave_lcs_with_futures_par(int *stor, char *a, char *b, int n) {
     int blocks = nBlocks * nBlocks;
         
     // create an array of future handles 
-    cilk::future<int> *farray = new cilk::future<int> [blocks];
+    //cilk::future<int> *farray = new cilk::future<int> [blocks];
+    cilk::future<int> *farray = (cilk::future<int>*)
+      malloc(sizeof(cilk::future<int>) * blocks);
+
     
     // now we spawn off the function that will call get 
     cilk_for(int i=0; i < blocks; i++) {
@@ -206,7 +212,8 @@ int wave_lcs_with_futures_par(int *stor, char *a, char *b, int n) {
     // make sure the last square finishes before we move onto returning
     farray[blocks-1].get();
 
-    delete[] farray;
+    //delete[] farray;
+    free(farray);
 
     return stor[n*(n-1) + n-1];
 }
