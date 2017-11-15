@@ -202,13 +202,16 @@ int wave_lcs_with_futures_par(int *stor, char *a, char *b, int n) {
       malloc(sizeof(cilk::future<int>) * blocks);
 
     
-    // now we spawn off the function that will call get 
+    // now we spawn off the function that will call get
+    CILKFOR_BEGIN;
     cilk_for(int i=0; i < blocks; i++) {
+      CILKFOR_ITER_BEGIN;
         int iB = i / nBlocks; // row block index
         int jB = i % nBlocks; // col block index
         cilk::future<int> *f = &(farray[i]);
         reuse_future(int, f, process_lcs_tile_with_get, farray, stor, a, b, n, iB, jB);
-    }
+        CILKFOR_ITER_END;
+    } CILKFOR_END;
     // make sure the last square finishes before we move onto returning
     farray[blocks-1].get();
 
