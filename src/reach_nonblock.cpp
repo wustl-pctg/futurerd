@@ -157,6 +157,7 @@ node* nonblock::perform_join(sframe_data *f) {
   int num_attached = 0; // counting number of attached branch
   int num_jparents = f->fork_stack.size() + 1;
   node *fake_rjp = t_current;
+  assert(t_current->find()->att_pred);
 
   // nodes going into join node in reverse serial order, i.e., t_current is 0th
   node *join_parents[num_jparents];
@@ -193,6 +194,7 @@ node* nonblock::perform_join(sframe_data *f) {
     }
   } else { // multiple attached join parent 
     j->id = m_R.add_node(); // make j into its own attached set
+    j->att_pred = j->att_succ = j;
   }
 
   if(num_attached > 0) {
@@ -206,6 +208,7 @@ node* nonblock::perform_join(sframe_data *f) {
     }
   }
 
+  assert(j->find()->att_pred);
   return j;
 }
 
