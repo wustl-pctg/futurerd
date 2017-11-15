@@ -1,5 +1,5 @@
 #!/bin/bash
-for i in `seq 0 20`;
+for i in `seq 0 22`;
 do  
     echo "---------------------------------------------------------"
     echo "Running test $i"
