@@ -203,7 +203,6 @@ static void do_matmul_structured(DATA *A, DATA *B, DATA *C, int n) {
     cilk::future<int> *fhandles = (cilk::future<int>*)
       malloc(sizeof(cilk::future<int>) * num_futures);
 
-
     cilk_for(int iB = 0; iB < nBlocks; iB++) {
         cilk_for(int jB = 0; jB < nBlocks; jB++) {
             cilk::future<int> *f = NULL;
@@ -213,7 +212,9 @@ static void do_matmul_structured(DATA *A, DATA *B, DATA *C, int n) {
                 f = &(fhandles[fh_index(kB, iB, jB, nBlocks)]);
                 reuse_future(int, f, matmul_base_structured, A, B, C, iB, kB, jB, prevf);
             }
+            __end_cilk_for_body();
         }
+        __end_cilk_for_body();
     }
 
     // wait for the very last kB blocks to finish
@@ -233,10 +234,10 @@ static void do_matmul_structured(DATA *A, DATA *B, DATA *C, int n) {
 static int g_nBlocks; // number of blocks in the original matrices
 static cilk::future<int> *g_fhandles; // future handles
 
-static int matmul_base(DATA *A, DATA *B, DATA *C, int n, int iB, int kB, int jB) {
+static int __attribute__ ((noinline))
+matmul_base(DATA *A, DATA *B, DATA *C, int n, int iB, int kB, int jB) {
     DATA tmp[n*n];
 
-    // fprintf(stderr, "C(%d, %d) = A(%d, %d) x B(%d, %d)\n", iB, jB, iB, kB, kB, jB);
     for(int i = 0; i < n; i++) {
         for(int j = 0; j < n; j++) {
             DATA c = 0.0;
@@ -246,6 +247,9 @@ static int matmul_base(DATA *A, DATA *B, DATA *C, int n, int iB, int kB, int jB)
             tmp[i*n + j] = c;
         }
     }
+    __set_low_water_mark();
+
+    // fprintf(stderr, "C(%d, %d) = A(%d, %d) x B(%d, %d)\n", iB, jB, iB, kB, kB, jB);
     // make sure the previous kB that wrote to the same block C[iB, jB] is done
     if(kB > 0) {
         g_fhandles[fh_index(kB-1, iB, jB, g_nBlocks)].get();
@@ -268,6 +272,8 @@ static int matmul_base(DATA *A, DATA *B, DATA *C, int n, int iB, int kB, int jB)
 int matmul(DATA *A, DATA *B, DATA *C, int n, int iB, int kB, int jB) { 
             // the last two could have been global var
 
+    fprintf(stderr, "matmul called with %p, %p, %p, %d, %d, %d, %d.\n",
+            A, B, C, n, iB, kB, jB);
     // Base case uses row-major order; switch to iterative traversal 
     if(n == BASE_CASE) {
         cilk::future<int> *f = &(g_fhandles[fh_index(kB, iB, jB, g_nBlocks)]);

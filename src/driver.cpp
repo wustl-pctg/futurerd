@@ -169,7 +169,7 @@ void cilk_leave_end() {
 //void __tsan_destroy() {}
 void __tsan_init() {
   static bool init = false;
-  assert(init == false);
+  // assert(init == false);
   init = true;
 
   //std::atexit(__tsan_destroy);
@@ -196,9 +196,14 @@ void __tsan_write2(void *addr) { tsan_access(false, addr, 2, __builtin_return_ad
 void __tsan_write4(void *addr) { tsan_access(false, addr, 4, __builtin_return_address(0)); }
 void __tsan_write8(void *addr) { tsan_access(false, addr, 8, __builtin_return_address(0)); }
 void __tsan_write16(void *addr) { tsan_access(false, addr, 16, __builtin_return_address(0)); }
-void __tsan_func_entry(void *pc){ }
 void __tsan_vptr_read(void **vptr_p) {}
 void __tsan_vptr_update(void **vptr_p, void *new_val) {}
+
+void __tsan_func_entry(void *pc) { 
+  uint64_t res = (uint64_t) __builtin_frame_address(0);
+  if(rd::t_stack_low_watermark > res)
+    rd::t_stack_low_watermark = res;
+}
 
 /* We would like to clear the shadow memory correponding to the cactus
  * stack whenever we leave a Cilk function.  Unfortunately, variables are 

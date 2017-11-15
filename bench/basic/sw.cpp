@@ -172,12 +172,13 @@ static int wave_sw_with_futures_par(int *stor, char *a, char *b, int n) {
     cilk::future<int> *farray = (cilk::future<int>*)
       malloc(sizeof(cilk::future<int>) * blocks);
 
-    
+    #pragma cilk grainsize = 1
     cilk_for(int i=0; i < blocks; i++) {
         int iB = i / nBlocks; // row block index 
         int jB = i % nBlocks; // col block index
         cilk::future<int> *f = &(farray[i]);
         reuse_future(int, f, process_sw_tile_with_get, farray, stor, a, b, n, iB, jB);
+        __end_cilk_for_body();
     }
     // make sure the last square finishes before we move onto returning
     //farray[blocks-1].get();

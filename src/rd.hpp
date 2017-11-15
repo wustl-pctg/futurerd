@@ -38,7 +38,7 @@ public:
 
   // @todo{ Read environment variables for setting race-reporting policy.}
   static void set_policy(enum rd_policy p); // not thread-safe
-  static void report_race(void* addr);
+  static void report_race(void* addr, uint64_t last_rip, uint64_t this_rip);
   static void check_access(bool is_read, void* rip, void* addr, size_t mem_size);
   static smem_data* active();
 }; // struct race_detector

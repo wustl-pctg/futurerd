@@ -18,8 +18,8 @@ APPFLAGS = -fcilkplus -fcilk-no-inline
 # APPFLAGS += -DSTRUCTURED_FUTURES
 BAGFLAGS = -fcilktool
 # Uncomment to enable race detection
-# RDFLAGS = -fsanitize=thread -DRACE_DETECT 
+RDFLAGS = -fsanitize=thread -DRACE_DETECT 
 
-CFLAGS += $(APPFLAGS) $(RDFLAGS)
-CXXFLAGS += $(APPFLAGS) $(RDFLAGS)
+CFLAGS += $(APPFLAGS) $(BAGFLAGS) $(RDFLAGS)
+CXXFLAGS += $(APPFLAGS) $(BAGFLAGS) $(RDFLAGS)
 LDFLAGS += $(LIB) -lm -ldl -lpthread -lrt

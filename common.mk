@@ -53,6 +53,9 @@ $(OBJ_DIR)/%.o: %.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -o $@ -c $<
 
+%.S: %.cpp
+	$(CXX) $(CXXFLAGS) -o $@ -S $<
+
 $(LIB_DIR)/lib%.a: $(OBJ)
 	@mkdir -p $(LIB_DIR)
 	ar $(ARFLAGS) $@ $(OBJ)

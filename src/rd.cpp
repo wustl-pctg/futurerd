@@ -46,9 +46,10 @@ void race_detector::set_policy(enum rd_policy p) {
 }
 
 // @todo{report_race() should report what kind of race, i.e. RW, WR, or WW}
-void race_detector::report_race(void* addr) {
+void race_detector::report_race(void* addr, uint64_t last_rip, uint64_t this_rip) {
   if (! (g_policy == RD_SILENT) )
-    fprintf(stderr, "Race detected at %p\n", addr);
+    fprintf(stderr, "Race detected at %p, last rip %lx, this rip %lx\n", addr, 
+            last_rip, this_rip);
   g_num_races++;
   if (g_policy == RD_ABORT)
     std::abort();
@@ -59,7 +60,8 @@ smem_data* race_detector::active() { return g_reach.active(t_sstack.head()); }
 void race_detector::check_access(bool is_read, void* rip,
                                  void* addr, size_t mem_size) {
   shadow_mem::addr_info_t *slot = g_smem.find((uint64_t)addr);
-
+  // fprintf(stderr, "Checking %d, rip %p, addr %p, active %p.\n", is_read, rip, addr, active());
+    
   // no previous accesses
   if (slot == nullptr) {
     g_smem.insert(is_read, (uint64_t)addr, active(), (uint64_t)rip);
@@ -69,14 +71,16 @@ void race_detector::check_access(bool is_read, void* rip,
   // check race with last writer
   if (slot->last_writer.access != nullptr // if last writer exists
       && !g_reach.precedes_now(t_sstack.head(), slot->last_writer.access)) {
-    report_race(addr);
+    report_race(addr, slot->last_writer.rip, (uint64_t)rip);
+    exit(1);
   }
   
   // if write, check race with last read
   if (!is_read // if a write
       && slot->last_reader.access != nullptr // and last reader exists
       && !g_reach.precedes_now(t_sstack.head(), slot->last_reader.access)) {
-    report_race(addr);
+    report_race(addr, slot->last_reader.rip, (uint64_t)rip);
+    exit(2);
   }
   
   // update shadow mem
