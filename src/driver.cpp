@@ -37,6 +37,28 @@ void futurerd_enable_checking() { rd::enable_checking(); }
 void futurerd_disable_checking() { rd::disable_checking(); }
 void futurerd_should_check() { rd::should_check(); }
 
+// This is slightly dangerous since the initialization of the loop
+// variable will not be changed. But this should not be a problem b/c
+// the compiler already makes sure that the loop variable must be
+// declared in the loop; it cannot be a shared local variable.
+void cilk_for_begin() { rd::disable_checking(); }
+void cilk_for_end() { rd::enable_checking(); }
+void cilk_for_iteration_begin() { rd::enable_checking(); }
+
+// We need to clear the stack immediately, since local variables are
+// shared amonst logically-parallel iterations
+void cilk_for_iteration_end() {
+  rd::disable_checking();
+  // __cilk_for_helper is calling this, so that helper's base pointer
+  // is the stack_high_watermark to clear (stack grows downward)
+  uint64_t hi = (uint64_t)__builtin_frame_address(1);
+  uint64_t lo = (uint64_t)__builtin_frame_address(0);
+  
+  assert(lo && lo != (uint64_t)-1);
+  assert(hi && lo <= hi);
+  rd::g_smem.clear(lo, hi);
+}
+
 void cilk_enter_begin() {
   sframe_data *p = rd::t_sstack.head();
   rd::g_reach.begin_strand(rd::t_sstack.push_spawner(), p);
