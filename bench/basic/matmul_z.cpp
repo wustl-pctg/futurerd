@@ -238,6 +238,7 @@ static int __attribute__ ((noinline))
 matmul_base(DATA *A, DATA *B, DATA *C, int n, int iB, int kB, int jB) {
     DATA tmp[n*n];
 
+    __set_low_water_mark(&tmp);
     for(int i = 0; i < n; i++) {
         for(int j = 0; j < n; j++) {
             DATA c = 0.0;
@@ -247,7 +248,6 @@ matmul_base(DATA *A, DATA *B, DATA *C, int n, int iB, int kB, int jB) {
             tmp[i*n + j] = c;
         }
     }
-    __set_low_water_mark();
 
     // fprintf(stderr, "C(%d, %d) = A(%d, %d) x B(%d, %d)\n", iB, jB, iB, kB, kB, jB);
     // make sure the previous kB that wrote to the same block C[iB, jB] is done
