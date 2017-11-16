@@ -25,4 +25,23 @@ static void gen_rand_string(char * s, int s_length, int range) {
   }
 }
 
+extern "C" {
+void cilk_for_iteration_begin();
+void cilk_for_iteration_end();
+void cilk_for_begin();
+void cilk_for_end();
+}
+
+#ifdef RACE_DETECT
+#define CILKFOR_ITER_BEGIN cilk_for_iteration_begin()
+#define CILKFOR_ITER_END cilk_for_iteration_end()
+#define CILKFOR_BEGIN cilk_for_begin()
+#define CILKFOR_END cilk_for_end()
+#else
+#define CILKFOR_ITER_BEGIN
+#define CILKFOR_ITER_END
+#define CILKFOR_BEGIN
+#define CILKFOR_END
+#endif
+
 #endif // __UTIL_HPP__
