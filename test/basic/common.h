@@ -32,3 +32,15 @@ static inline void assert_atleast(size_t n) {
       abort();
     }
 }
+
+extern "C" {
+void cilk_for_iteration_begin();
+void cilk_for_iteration_end();
+void cilk_for_begin();
+void cilk_for_end();
+}
+
+#define CILKFOR_ITER_BEGIN cilk_for_iteration_begin()
+#define CILKFOR_ITER_END cilk_for_iteration_end()
+#define CILKFOR_BEGIN cilk_for_begin()
+#define CILKFOR_END cilk_for_end()
