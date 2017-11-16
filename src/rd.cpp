@@ -10,7 +10,7 @@ uint64_t race_detector::t_stack_low_watermark = (uint64_t)(-1);
 bool race_detector::t_clear_stack = false;
 enum rd_policy race_detector::g_policy = RD_CONTINUE;
 size_t race_detector::g_num_races = 0;
-int race_detector::check_disabled = 0;
+int race_detector::check_disabled = 1;
 reach_ds race_detector::g_reach;
 shadow_mem race_detector::g_smem;
 shadow_stack<sframe_data> race_detector::t_sstack;
@@ -26,6 +26,8 @@ race_detector::race_detector() {
   static bool init = false;
   assert(init == false);
   init = true;
+
+  enable_checking();
   
   t_sstack.push();
   // not really, but need to initialize
