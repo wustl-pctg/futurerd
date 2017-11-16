@@ -2,7 +2,7 @@
 #pragma once
 
 enum rd_policy {
-  RD_ABORT = 0,
+  RD_EXIT = 0,
   RD_CONTINUE = 1, // *print* and continue
   RD_SILENT = 2,
   RD_LAST_POLICY,
