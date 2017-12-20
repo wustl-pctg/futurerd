@@ -1,8 +1,8 @@
 #!/bin/bash
-for i in `seq 0 22`;
+for f in test[0-9] test[0-9][0-9]
 do  
     echo "---------------------------------------------------------"
-    echo "Running test $i"
-    ./test$i
+    echo "Running $f"
+    ./$f
     echo "---------------------------------------------------------"
-done
+

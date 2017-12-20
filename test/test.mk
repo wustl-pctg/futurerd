@@ -9,7 +9,7 @@ INC += -I$(PROJECT_HOME)/llvm-cilk/include -I$(PROJECT_HOME)/src/
 INC += -I$(PROJECT_HOME)/cilkrts/include/
 
 APPFLAGS = -fcilkplus -fcilktool -fcilk-no-inline -DRACE_DETECT
-APPFLAGS += -fsanitize=thread -fsanitize-blacklist=../../blacklist.txt
+APPFLAGS += -fsanitize=thread #-fsanitize-blacklist=../../blacklist.txt
 
 CFLAGS += $(APPFLAGS)
 CXXFLAGS += $(APPFLAGS)
