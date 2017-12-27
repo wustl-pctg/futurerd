@@ -577,9 +577,12 @@ int main(int argc, char *argv []) {
         //====================================================================================================
 
         #pragma cilk grainsize = grain_size
+        CILKFOR_BEGIN;
         cilk_for(int i=0; i<pub.allPoints; i++) {
+            CILKFOR_ITER_BEGIN;
             compute_kernel(&pub, &(priv[i]));
-        }
+            CILKFOR_ITER_END;
+        } CILKFOR_END;
 
         //====================================================================================================
         //	FREE MEMORY FOR FRAME

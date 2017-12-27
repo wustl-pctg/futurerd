@@ -6,6 +6,8 @@
 
 #include "define.hpp"
 
+#include "../../util/util.hpp"
+
 //=========================================================================
 //=========================================================================
 //	COMPUTE FUNCTION
@@ -715,10 +717,13 @@ void compute_kernel(const public_struct *pub, private_struct *priv) {
             compute_step9_with_get, compute_step10_with_get };
 
         // spawn off the computation; could be a sequential loop
+        CILKFOR_BEGIN;
         cilk_for(int i=0; i < 10; i++) {
+            CILKFOR_ITER_BEGIN;
             cilk::future<int> *f = &fhandles[i];
             reuse_future(int, f, func_ptr[i], pub, priv, fhandles, frame_no); 
-        }
+            CILKFOR_ITER_END;
+        } CILKFOR_END;
         s10 = fhandles[9].get(); // make sure we finish the last step before returning
         assert(s10 == frame_no);
     }

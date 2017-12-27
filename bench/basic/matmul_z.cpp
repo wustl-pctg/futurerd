@@ -249,7 +249,6 @@ matmul_base(DATA *A, DATA *B, DATA *C, int n, int iB, int kB, int jB) {
         }
     }
 
-    // fprintf(stderr, "C(%d, %d) = A(%d, %d) x B(%d, %d)\n", iB, jB, iB, kB, kB, jB);
     // make sure the previous kB that wrote to the same block C[iB, jB] is done
     if(kB > 0) {
         g_fhandles[fh_index(kB-1, iB, jB, g_nBlocks)].get();
@@ -272,8 +271,6 @@ matmul_base(DATA *A, DATA *B, DATA *C, int n, int iB, int kB, int jB) {
 int matmul(DATA *A, DATA *B, DATA *C, int n, int iB, int kB, int jB) { 
             // the last two could have been global var
 
-    fprintf(stderr, "matmul called with %p, %p, %p, %d, %d, %d, %d.\n",
-            A, B, C, n, iB, kB, jB);
     // Base case uses row-major order; switch to iterative traversal 
     if(n == BASE_CASE) {
         cilk::future<int> *f = &(g_fhandles[fh_index(kB, iB, jB, g_nBlocks)]);
