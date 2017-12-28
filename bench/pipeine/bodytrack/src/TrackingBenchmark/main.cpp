@@ -284,13 +284,15 @@ int mainTBB(string path, int cameras, int frames, int particles,
         cout << "Number of Threads configured by task scheduler" << endl;
     }
     else
-    {	init.initialize(threads); 
+    {	
+        init.initialize(threads); 
         cout << "Number of Threads : " << threads << endl;
     }
 
     TrackingModelTBB model;
     if(!model.Initialize(path, cameras, layers)) //Initialize model parameters
-    {	cout << endl << "Error loading initialization data." << endl;
+    {	
+        cout << endl << "Error loading initialization data." << endl;
         return 0;
     }
 
@@ -317,6 +319,7 @@ int mainTBB(string path, int cameras, int frames, int particles,
     pipeline.add_filter(pf);
     pipeline.run(1);
     pipeline.clear();
+
 
     return 1;
 }
