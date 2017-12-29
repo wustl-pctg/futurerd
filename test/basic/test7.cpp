@@ -20,8 +20,10 @@ int main(int argc, char* argv[])
   FUTURE_PROLOG();
   TEST_SETUP();
 
-  cilk_async(int, f, foo);
-  cilk_async(int, g, bar, f);
+  //cilk_async(int, f, foo);
+  auto f = async_helper<int>(foo);
+  //cilk_async(int, g, bar, f);
+  auto g = async_helper<int,cilk::future<int>*>(bar, f);
   g_shared = 57;
   int x = g->get();
 

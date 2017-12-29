@@ -7,7 +7,7 @@
 
 int g_shared = 0;
 
-int foo(cilk::future<int>* f) {
+int foo() {
   g_shared = 57;
   return 42;
 }
@@ -22,7 +22,8 @@ int main(int argc, char* argv[])
   FUTURE_PROLOG();
   TEST_SETUP();
 
-  cilk_async(int, f, foo, f);
+  //cilk_async(int, f, foo, f);
+  auto f = async_helper<int>(foo);
   int x = bar(f);
 
   assert(x == 15);

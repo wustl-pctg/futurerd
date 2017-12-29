@@ -17,8 +17,9 @@ int main() {
   cilk_for(int i = 0; i < n; ++i) {
     CILKFOR_ITER_BEGIN;
     int x = 57;
-    auto f = &(farray[i]);
-    reuse_future(int, f, foo, shared, x);
+    //auto f = &(farray[i]);
+    //reuse_future(int, f, foo, shared, x);
+    reasync_helper<int,int&,int>(&farray[i], foo, shared, x);
     CILKFOR_ITER_END;
   } CILKFOR_END;
 

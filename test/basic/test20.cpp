@@ -14,12 +14,11 @@ int foo(int& shared) {
 }
 
 cilk::future<int>* bar(int& s1, int& s2) {
-  cilk_async(int, f, fut, s2);
+  //cilk_async(int, f, fut, s2);
+  auto f = async_helper<int,int&>(fut, s2);
   s1 = 42;
   return f;
 }
-
-
 
 int main() {
   TEST_SETUP();
@@ -28,7 +27,8 @@ int main() {
   {
     s1 = s2 = -1;
 
-    cilk_async(int, f, fut, s1);
+    //cilk_async(int, f, fut, s1);
+    auto f = async_helper<int,int&>(fut, s1);
   
     // Clang (erroneously) thinks f could be uninitialized
     // I think this is fixed in modern versions of clang...
@@ -54,7 +54,8 @@ int main() {
   {
     s1 = s2 = -1;
 
-    cilk_async(int, f, fut, s1);
+    //cilk_async(int, f, fut, s1);
+    auto f = async_helper<int,int&>(fut, s1);
   
     // Clang (erroneously) thinks f could be uninitialized
     // I think this is fixed in modern versions of clang...

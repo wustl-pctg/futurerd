@@ -21,7 +21,8 @@ int main() {
   {
     res1 = res2 = -1;
     int s = -1;
-    cilk_async(int, f, fut1_param, s);
+    //cilk_async(int, f, fut1_param, s);
+    auto f = async_helper<int,int&>(fut1_param, s);
     res1 = spawn foo_param(f, s);
     res2 = bar_param(f, s);
     sync;

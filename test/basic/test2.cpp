@@ -5,7 +5,7 @@
 #include "common.h"
 #include <future.hpp>
 
-int foo(cilk::future<int>* f) { return 42; }
+int foo() { return 42; }
 int bar(cilk::future<int>* f) { return f->get(); }
 
 int main(int argc, char* argv[])
@@ -13,7 +13,8 @@ int main(int argc, char* argv[])
   FUTURE_PROLOG();
   TEST_SETUP();
 
-  cilk_async(int, f, foo, f);
+  //cilk_async(int, f, foo, f);
+  auto f = async_helper<int>(foo);
   int x = bar(f);
 
   assert(x == 42);

@@ -24,7 +24,8 @@ int main(int argc, char* argv[])
   FUTURE_PROLOG();
   TEST_SETUP();
 
-  cilk_async(int, f, fib, 10);
+  //cilk_async(int, f, fib, 10);
+  auto f = async_helper<int,int>(fib,10);
 
   assert(f->get() == 55);
   assert_atleast(1);

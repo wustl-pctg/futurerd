@@ -15,7 +15,8 @@ int foo(int& shared, cilk::future<int>* f) {
 
 cilk::future<int>* bar(int& shared) {
   shared = 42;
-  cilk_async(int, f, fut, shared);
+  //cilk_async(int, f, fut, shared);
+  auto f = async_helper<int,int&>(fut,shared);
   return f;
 }
 
@@ -28,7 +29,8 @@ int main() {
   { // left side touches, right side creates a future
     s1 = s2 = -1;
 
-    cilk_async(int, f, fut, s1);
+    //cilk_async(int, f, fut, s1);
+    auto f = async_helper<int,int&>(fut,s1);
   
     // Clang (erroneously) thinks f could be uninitialized
     // I think this is fixed in modern versions of clang...
@@ -53,7 +55,8 @@ int main() {
   { // now opposite: left side creates, left side touches
     s1 = s2 = -1;
 
-    cilk_async(int, f, fut, s1);
+    //cilk_async(int, f, fut, s1);
+    auto f = async_helper<int,int&>(fut,s1);
   
     // Clang (erroneously) thinks f could be uninitialized
     // I think this is fixed in modern versions of clang...

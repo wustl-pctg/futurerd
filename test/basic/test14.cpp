@@ -14,8 +14,10 @@ int main() {
   int res1, res2;
   
   res1 = res2 = -1;
-  cilk_async(int, f, fut_task);
-  cilk_async(int, g, fut_task);
+  //cilk_async(int, f, fut_task);
+  auto f = async_helper<int>(fut_task);
+  //cilk_async(int, g, fut_task);
+  auto g = async_helper<int>(fut_task);
   res1 = spawn foo(f);
   res2 = foo(g);
   sync;

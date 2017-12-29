@@ -36,8 +36,10 @@ int main() {
   // No shared data at all
   {
     res1 = res2 = -1;
-    cilk_async(int, f, fut1_none);
-    cilk_async(int, g, fut2_none);
+    //cilk_async(int, f, fut1_none);
+    auto f = async_helper<int>(fut1_none);
+    //cilk_async(int, g, fut2_none);
+    auto g = async_helper<int>(fut2_none);
     res1 = spawn foo_none(f);
     res2 = bar_none(g);
     sync;
@@ -51,8 +53,10 @@ int main() {
     res1 = res2 = -1;
     int s1, s2;
     s1 = s2 = -1;
-    cilk_async(int, f, fut1_param, s1);
-    cilk_async(int, g, fut2_param, s2);
+    //cilk_async(int, f, fut1_param, s1);
+    auto f = async_helper<int,int&>(fut1_param, s1);
+    //cilk_async(int, g, fut2_param, s2);
+    auto g = async_helper<int,int&>(fut2_param, s2);
     res1 = spawn foo_param(f, s1);
     res2 = foo_param(g, s2);
     sync;
@@ -64,8 +68,10 @@ int main() {
   // Shared global variable
   {
     res1 = res2 = -1;
-    cilk_async(int, f, fut1_global);
-    cilk_async(int, g, fut2_global);
+    //cilk_async(int, f, fut1_global);
+    auto f = async_helper<int>(fut1_global);
+    //cilk_async(int, g, fut2_global);
+    auto g = async_helper<int>(fut2_global);
     res1 = spawn foo_global(f);
     res2 = bar_global(g);
     sync;

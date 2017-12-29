@@ -5,7 +5,7 @@
 #include "common.h"
 #include <future.hpp>
 
-int foo(cilk::future<int>* f, int& shared) {
+int foo(int& shared) {
   shared = 57;
   return 42;
 }
@@ -21,7 +21,8 @@ int main(int argc, char* argv[])
   TEST_SETUP();
   
   int shared = 0;
-  cilk_async(int, f, foo, f, shared);
+  //cilk_async(int, f, foo, f, shared);
+  auto f = async_helper<int,int&>(foo, shared);
   int x = bar(f, shared);
 
   assert(x == 15);

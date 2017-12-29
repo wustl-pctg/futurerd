@@ -8,13 +8,15 @@ int fut(int& shared) {
 }
 
 cilk::future<int>* foo(int& shared) {
-  cilk_async(int, f, fut, shared);
+  //cilk_async(int, f, fut, shared);
+  auto f = async_helper<int,int&>(fut,shared);
   shared = 42;
   return f;
 }
 
 cilk::future<int>* bar(int& shared) {
-  cilk_async(int, f, fut, shared);
+  //cilk_async(int, f, fut, shared);
+  auto f = async_helper<int,int&>(fut,shared);
   return f;
 }
 

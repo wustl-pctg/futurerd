@@ -19,8 +19,10 @@ int main(int argc, char* argv[])
   
   int shared = 0;
   
-  cilk_async(int, f, foo);
-  cilk_async(int, g, bar, f, shared);
+  //cilk_async(int, f, foo);
+  auto f = async_helper<int>(foo);
+  //cilk_async(int, g, bar, f, shared);
+  auto g = async_helper<int,cilk::future<int>*,int&>(bar, f, shared);
   shared = 57;
   int x = g->get();
 
