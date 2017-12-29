@@ -53,10 +53,6 @@ bool structured::precedes_now(sframe_data *curr, smem_data *last_access) {
 // Returning from a spawned function or future function
 // f is the spawned/created frame, p is the parent frame
 void structured::continuation(sframe_data *f, sframe_data *p) {
-  // XXX: can't we just change f->Sbag to be a bag, then assign it to p->Pbag?
-  // if (!p->Pbag) p->Pbag = new spbag(spbag::bag_kind::P);
-  // else p->Pbag->set_kind(spbag::bag_kind::P);
-  // p->Pbag->merge(f->Sbag);
   assert(f->Sbag);
 
   if (!p->Pbag)
@@ -68,11 +64,6 @@ void structured::continuation(sframe_data *f, sframe_data *p) {
   // XXX: is there a cleaner way to do this?
   spbag::find(p->Pbag)->set_kind(spbag::bag_kind::P);
   //p->Pbag->set_kind(spbag::bag_kind::P);
-
-  // XXX: can't we just change f->Sbag to be a Pbag, rather than
-  // creating a new bag?
-  // if (!f->Pbag) f->Pbag = new spbag(spbag::bag_kind::P);
-  // f->Pbag->merge(f->Sbag);
 }
 
 // f: helper of the previous spawn, p: parent
