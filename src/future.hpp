@@ -28,6 +28,7 @@ void cilk_future_get_begin(sfut_data *);
 void cilk_future_get_end(sfut_data *);
 void cilk_future_finish_begin(sfut_data *);
 void cilk_future_finish_end(sfut_data *);
+void cilk_future_helper_leave(sfut_data *);
 void cilk_future_put_begin(sfut_data *);
 void cilk_future_put_end(sfut_data *);
 }
@@ -48,6 +49,7 @@ __attribute__((weak)) void cilk_future_get_begin(struct sfut_data *) {}
 __attribute__((weak)) void cilk_future_get_end(struct sfut_data *) {}
 __attribute__((weak)) void cilk_future_finish_begin(struct sfut_data *) {}
 __attribute__((weak)) void cilk_future_finish_end(struct sfut_data *) {}
+__attribute__((weak)) void cilk_future_helper_leave(sfut_data *) {}
 __attribute__((weak)) void cilk_future_put_begin(struct sfut_data *) {}
 __attribute__((weak)) void cilk_future_put_end(struct sfut_data *) {}
 #define NOSANITIZE
@@ -58,10 +60,6 @@ __attribute__((weak)) void cilk_future_put_end(struct sfut_data *) {}
 // disabled until we fully enter the future methods.
 #define cilk_future_get(fut) __DC; (fut)->get(); __EC;
 #define cilk_future_get_result(v, fut) __DC; (v) = (fut)->get(); __EC;
-
-#ifndef __cilkfutures
-#include "future_fake.hpp"
-#endif
 
 namespace cilk {
 
@@ -75,9 +73,9 @@ private:
 
   status m_stat;
   T m_val;
-  sfut_data m_rd_data;
 
 public:
+  sfut_data m_rd_data;
 
   NOSANITIZE future() : m_stat(status::CREATED)
   { __DC; cilk_future_create(); __EC; }
@@ -109,10 +107,10 @@ public:
      * the end of this finish(val). */
     
     __DC;
-    cilk_future_finish_begin(&m_rd_data); // disables checking
+    //cilk_future_finish_begin(&m_rd_data); // disables checking
     m_val = val;
     m_stat = status::DONE;
-    cilk_future_finish_end(&m_rd_data); // enables checking
+    //cilk_future_finish_end(&m_rd_data); // enables checking
     __EC;
   }
   
@@ -148,3 +146,7 @@ public:
 
 
 } // namespace cilk
+
+#ifndef __cilkfutures
+#include "future_fake.hpp"
+#endif

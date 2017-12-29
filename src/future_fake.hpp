@@ -4,6 +4,40 @@
 #define FUTURE_PROLOG()
 #define FUTURE_EPILOG()
 
+// Helper function versions
+// I think there are better ways of doing this, but they have so far
+// bested my C++11/14/17 knowledge. Probably some fancy template
+// metaprogramming, plus almost surely some ways to use lambda
+// functions. Unfortunately, the helper function must NOT be inlined,
+// but it seems that our version of clang does not support lambda
+// function attributes like noinline...
+template<typename ReturnType, typename... Args>
+[[gnu::noinline]] cilk::future<ReturnType>*
+async_helper(ReturnType (*func)(Args...), Args... args)
+{
+  __DC;
+  auto __fut = new cilk::future<ReturnType>();
+  __FS;
+  __EC;
+  __fut->finish(func(args...));
+  cilk_future_helper_leave(&__fut->m_rd_data);
+  return __fut;
+}
+
+template<typename ReturnType, typename... Args>
+[[gnu::noinline]] void
+reasync_helper(cilk::future<ReturnType>* __fut,
+               ReturnType (*func)(Args...), Args... args) {
+  __DC;
+  
+  new(__fut) cilk::future<ReturnType>();
+  __FS; // "start" the future
+  __EC;
+  __fut->finish(func(args...));
+  cilk_future_helper_leave(&__fut->m_rd_data);
+  return;
+}
+
 /** Asynchronously start foo(x,y) -> int with
  *  cilk_async(int, f, foo, x, y)
  */
@@ -13,24 +47,27 @@
 
 // Allocate new future, but set it to a given variable
 #define create_future(T,fut,func,args...)       \
-  __DC; (fut) = new cilk::future<T>(); __EC;    \
-  __FS; fut->finish(func(args)); __FC;
+  __DC; (fut) = new cilk::future<T>(); __EC;   \
+  __FS; (fut)->finish(func(args)); __FC;
 
 // Do the create_future as above, but in two steps
 #define create_future_handle(T, fut)       \
   __DC; (fut) = new cilk::future<T>(); __EC;
 
 #define spawn_proc_with_future_handle(fut,func,args...)       \
-  __FS; fut->finish(func(args)); __FC;
+  __FS; (fut)->finish(func(args)); __FC;
 
 // Use preallocated memory for the future itself
+// Use a temporary variable in case "loc" is e.g. farray[i], which may
+// cause a race on i
 #define reuse_future(T,loc,func,args...)        \
-  __DC; new(loc) cilk::future<T>(); __EC;       \
-  __FS; loc->finish(func(args)); __FC;
+  {__DC; auto __f = (loc);                      \
+    new(__f) cilk::future<T>(); __EC;             \
+    __FS; (__f)->finish(func(args)); __FC;}
 
 // When we need to return a pair of futures...
 // can't think of a better way to do this...
-#define cilk_pg_async2(T,f1,f2,func,args...)       \
+#define cilk_pg_async2(T,f1,f2,func,args...)          \
   __DC; auto (f1) = new cilk::future<T>();            \
   auto (f2) = new cilk::future<T>(); __EC;            \
   __FS; func(args);                                    \

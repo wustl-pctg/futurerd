@@ -134,6 +134,14 @@ void cilk_future_finish_end(sfut_data *fut) {
   rd::enable_checking();
 }
 
+void cilk_future_helper_leave(sfut_data *fut) {
+  sframe_data *f = rd::t_sstack.head();
+  sframe_data *p = rd::t_sstack.parent();
+  rd::g_reach.at_future_finish(f, p, fut);
+  continuation();
+  rd::enable_checking();
+}
+
 void cilk_leave_begin(__cilkrts_stack_frame* sf) {
   sframe_data *f = rd::t_sstack.head();
 
