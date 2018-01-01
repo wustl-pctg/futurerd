@@ -29,15 +29,10 @@
 #include <iomanip>
 
 //Add defines USE_OPENMP, USE_THREADS or USE_TBB for threaded versions if not using config file (Windows).
-//#define USE_OPENMP
-//#define USE_THREADS
 //#define USE_TBB
-
-#if defined(USE_OPENMP)
-#include <omp.h>
-#include "ParticleFilterOMP.h"
-#include "TrackingModelOMP.h"
-#endif //USE_OPENMP
+//#define USE_THREADS
+//#define USE_OPENMP
+//#define USE_CILK_FUTURE
 
 #if defined(USE_THREADS)
 #include "threads/Thread.h"
@@ -45,6 +40,20 @@
 #include "ParticleFilterPthread.h"
 #include "TrackingModelPthread.h"
 #endif //USE_THREADS
+
+#if defined(USE_OPENMP)
+#include <omp.h>
+#include "ParticleFilterOMP.h"
+#include "TrackingModelOMP.h"
+#endif //USE_OPENMP
+
+#if defined(USE_CILK_FUTURE)
+#include <cilk/cilk.h>
+#include <future.hpp>
+#include <util/util.hpp>
+#include "ParticleFilterCilk.h"
+#include "TrackingModelCilk.h"
+#endif 
 
 #if defined(USE_TBB)
 #include "tbb/task_scheduler_init.h"
@@ -80,7 +89,7 @@ bool ProcessCmdLine(int argc, char **argv, string &path, int &cameras, int &fram
     string    usage("Usage : Track (Dataset Path) (# of cameras) (# of frames to process)\n");
     usage += string("              (# of particles) (# of annealing layers) \n");
     usage += string("              [thread model] [# of threads] [write .bmp output (nonzero = yes)]\n\n");
-    usage += string("        Thread model : 0 = Auto-select from available models\n");
+    usage += string("        Thread model : 0 = Serial\n");
     usage += string("                       1 = Intel TBB                 ");
 #ifdef USE_TBB
     usage += string("\n");
@@ -99,7 +108,12 @@ bool ProcessCmdLine(int argc, char **argv, string &path, int &cameras, int &fram
 #else
     usage += string("(unavailable)\n");
 #endif
-    usage += string("                       4 = Serial\n");
+    usage += string("                       4 = Cilk with futures         ");
+#ifdef USE_CILK_FUTURE
+    usage += string("\n");
+#else
+    usage += string("(unavailable)\n");
+#endif
 
     string errmsg("Error : invalid argument - ");
     if(argc < 6 || argc > 9) //check for valid number of arguments
@@ -252,6 +266,7 @@ int mainPthreads(string path, int cameras, int frames,
     for(int i = 0; i < frames; i++) //process each set of frames
     { 
      	cout << "Processing frame " << i << endl;
+
         if(!pf.Update((float)i)) //Run particle filter step
         {	cout << "Error loading observation data" << endl;
             workers.JoinAll();
@@ -270,6 +285,120 @@ int mainPthreads(string path, int cameras, int frames,
 }
 #endif
 
+#if defined(USE_CILK_FUTURE)
+// this function process the second (last) stage of the pipeline 
+static int processFrameStageTwo(int frameNum, cilk::future<int> *prevFrameStageTwo, 
+                                cilk::future<int> *stageTwoFutures,
+                                ParticleFilterCilk<TrackingModelCilk> &pf, 
+                                ofstream &outputFileAvg, bool OutputBMP) { 
+    
+    // if this is not the first frame, wait for prev frame to complete stage two
+    if(prevFrameStageTwo) { 
+        prevFrameStageTwo->get();
+    }
+    
+    if(!pf.Update((float)frameNum)) { //Run particle filter step
+        cout << "Error loading observation data" << endl;
+        return 0;
+    }
+
+    vector<float> estimate; //expected pose from particle distribution
+
+    pf.Estimate(estimate); //get average pose of the particle distribution
+    WritePose(outputFileAvg, estimate);
+    if(OutputBMP) {
+        pf.Model().OutputBMP(estimate, frameNum);//save output bitmap file
+    }
+
+    return 1;
+}
+
+// this function process the first stage of the pipeline and spawn off the
+// second stage with future (but does not wait for it to return)
+static int processFrame(int frameNum, cilk::future<int> *prevFrameStageOne,
+                        cilk::future<int> *stageTwoFutures,
+                        TrackingModelCilk &model,
+                        ParticleFilterCilk<TrackingModelCilk> &pf,
+                        ofstream &outputFileAvg, bool OutputBMP) {
+
+    cout << "Processing frame " << frameNum << endl;
+
+    // prevFrameStageOne would be null for the very first frame, in which case
+    // we skip calling GetObservation on the model, since that has been done already 
+    if(prevFrameStageOne == nullptr) {
+        assert(frameNum == 0);
+        reuse_future(int, &stageTwoFutures[frameNum], processFrameStageTwo, 
+                     frameNum, nullptr, stageTwoFutures, pf, outputFileAvg, OutputBMP);
+    } else {
+        // otherwise, we wait for the first stage of the previous frame to
+        // finish before we proceed with this frame
+        prevFrameStageOne->get();
+        model.GetObservation(frameNum);
+        reuse_future(int, &stageTwoFutures[frameNum], processFrameStageTwo, 
+                     frameNum, &stageTwoFutures[frameNum-1], stageTwoFutures, 
+                     pf, outputFileAvg, OutputBMP); 
+    }
+
+    return 1;
+}
+
+int mainCilkFuture(string path, int cameras, int frames, int particles, 
+                   int layers, int threads, bool OutputBMP) {
+
+    cout << "Running with Cilk with future" << endl;
+
+    if(threads > 1) {
+        cout << "Currently Cilk with futures can only run with single thread.\n" << endl;
+    }
+    ensure_serial_execution(); 
+
+    TrackingModelCilk model;
+    if(!model.Initialize(path, cameras, layers)) { //Initialize model parameters
+        cout << endl << "Error loading initialization data." << endl;
+        return 0;
+    }
+
+    model.SetNumThreads(particles);
+    model.GetObservation(0); //load data for first frame
+
+    //particle filter (with Cilk) instantiated with body tracking model type
+    ParticleFilterCilk<TrackingModelCilk> pf;
+
+    pf.SetModel(model);	//set the particle filter model
+    //generate initial set of particles and evaluate the log-likelihoods
+    pf.InitializeParticles(particles);
+
+    cout << "Using dataset : " << path << endl;
+    cout << particles << " particles with " << layers << " annealing layers" << endl << endl;
+    ofstream outputFileAvg((path + "poses.txt").c_str());
+
+    // this is where timing should start
+    
+    cilk::future<int> *stageOneFutures = 
+        (cilk::future<int>*) malloc(sizeof(cilk::future<int>) * frames);
+    cilk::future<int> *stageTwoFutures = 
+        (cilk::future<int>*) malloc(sizeof(cilk::future<int>) * frames);
+
+    // Create the pipeline - one stage for image processing, one for particle filter update
+    for(int i = 0; i < frames; i++) {//process each set of frames
+        if(i == 0) {
+            reuse_future(int, &stageOneFutures[i], processFrame, 
+                         i, nullptr, stageTwoFutures, model, pf, outputFileAvg, OutputBMP);
+        } else {
+            reuse_future(int, &stageOneFutures[i], processFrame, 
+                         i, &stageOneFutures[i-1], stageTwoFutures, 
+                         model, pf, outputFileAvg, OutputBMP);
+        }
+    }
+    stageTwoFutures[frames-1].get(); // wait for last frame's stage two to complete
+    
+    free(stageOneFutures);
+    free(stageTwoFutures);
+    // this is where timing should end 
+
+    return 1;
+}
+#endif 
 
 #if defined(USE_TBB)
 //Body tracking threaded with Intel TBB
@@ -387,65 +516,68 @@ int main(int argc, char **argv)
         threadModel = 2;
 #elif defined(USE_OPENMP)
         threadModel = 3;
-#else
+#elif defined(USE_CILK_FUTURE)
         threadModel = 4;
 #endif
     }
 
     switch(threadModel)
     {
-        case 0 :
-            //This case should never happen, 
-            //we auto-select the thread model before this switch
-            cout << "Internal error. Aborting." << endl;
-            exit(1);
+        case 0 : // sequential case
+            //single threaded tracking
+            mainSingleThread(path, cameras, frames, particles, layers, OutputBMP);
             break;
 
         case 1 :
 #if defined(USE_TBB)
             //Intel TBB threads tracking
             mainTBB(path, cameras, frames, particles, layers, threads, OutputBMP);
-            break;
 #else
             cout << "Not compiled with Intel TBB support. " << endl;
-            cout << "If the environment supports it, rebuild with USE_TBB #defined." << endl;
-            break;  
+            cout << "If the environment supports it, rebuild with USE_TBB #defined."
+                 << endl;
 #endif
+            break;  
 
         case 2 :
 #if defined(USE_THREADS)
             //Posix threads tracking
             mainPthreads(path, cameras, frames, particles, layers, threads, OutputBMP);
-            break;
 #else
             cout << "Not compiled with Posix threads support. " << endl;
-            cout << "If the environment supports it, rebuild with USE_THREADS #defined." << endl;
-            break;
+            cout << "If the environment supports it, rebuild with USE_THREADS #defined."
+                 << endl;
 #endif
+            break;
 
         case 3 : 
 #if defined(USE_OPENMP)
             //OpenMP threaded tracking
             mainOMP(path, cameras, frames, particles, layers, threads, OutputBMP);
-            break;
 #else
             cout << "Not compiled with OpenMP support. " << endl;
-            cout << "If the environment supports OpenMP, rebuild with USE_OPENMP #defined." << endl;
-            break;
+            cout << "If the environment supports OpenMP, rebuild with USE_OPENMP #defined." 
+                 << endl;
 #endif
+            break;
 
         case 4 :
-            //single threaded tracking
-            mainSingleThread(path, cameras, frames, particles, layers, OutputBMP);
+#if defined(USE_CILK_FUTURE)
+            //Cilk with futures 
+            threads = 1; // have to run single threaded
+            mainCilkFuture(path, cameras, frames, particles, layers, threads, OutputBMP);
+#else
+            cout << "Not compiled with Cilk future support. " << endl;
+#endif
             break;
 
         default : 
             cout << "Invalid thread model argument. " << endl;
-            cout << "Thread model : 0 = Auto-select thread model" << endl;
+            cout << "Thread model : 0 = Serial" << endl;
             cout << "               1 = Intel TBB" << endl;
             cout << "               2 = Posix / Windows Threads" << endl;
             cout << "               3 = OpenMP" << endl;
-            cout << "               4 = Serial" << endl;
+            cout << "               4 = Cilk with future" << endl;
             break;
     }
 

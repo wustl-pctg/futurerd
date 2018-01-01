@@ -7,8 +7,8 @@ TARGETS = lcs sw matmul_z
 all: $(TARGETS) 
 
 INC += -I../util
-# CXXFLAGS += -fsanitize=undefined
-# LIB += $(LIB_DIR)/libubsan.a
+CFLAGS += $(APPFLAGS) $(RDFLAGS)
+CXXFLAGS += $(APPFLAGS) $(RDFLAGS)
 
 lcs: lcs.o ../util/getoptions.o
 	$(CXX) $^ $(LDFLAGS) $(LIB) -o $@

@@ -7,6 +7,8 @@ TARGETS = sum
 all: $(TARGETS) 
 
 INC += -I../util
+CFLAGS += $(APPFLAGS) $(RDFLAGS)
+CXXFLAGS += $(APPFLAGS) $(RDFLAGS)
 
 sum: sum.o
 	$(CXX) $^ $(LDFLAGS) $(LIB) -o $@

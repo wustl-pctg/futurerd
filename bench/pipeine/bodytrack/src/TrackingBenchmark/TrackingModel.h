@@ -91,7 +91,7 @@ public:
 
     //Calculates Log likelihood for a given set of body pose angles 
     //(and translation - all are in the vector)
-    float LogLikelihood(const std::vector<float> &v, bool &valid, int thread = 0);
+    float LogLikelihood(const std::vector<float> &v, bool &valid, const int thread = 0);
 
     //Draw body geometry onto camera image and save as BMP
     bool OutputBMP(const std::vector<float> &pose, int frame);

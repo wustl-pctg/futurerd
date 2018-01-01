@@ -1,5 +1,3 @@
-include ../../../../bench.mk
-
 .PHONEY: all clean
 
 # SOURCES is not used; for reference only
@@ -8,10 +6,10 @@ FlexDraw.h FlexFilter.h FlexImage.h FlexImageStatus.h FlexImageStore.h \
 FlexIO.h FlexLib.h FlexOperators.h FlexThreshold.h FlexTransform.h \
 FlexImage.cpp FlexIO.cpp
 
-OBJDIR = clang-obj
+OBJDIR = gcc-obj
 OBJECTS = $(OBJDIR)/FlexImage.o $(OBJDIR)/FlexIO.o
 
-CXXFLAGS += -O3 -g -funroll-loops -fprefetch-loop-arrays -fpermissive -fno-exceptions -fexceptions -Wall -Wno-unknown-pragmas # -static-libgcc -Wl,--hash-style=both,--as-needed
+CXXFLAGS = -O3 -g -funroll-loops -fprefetch-loop-arrays -fpermissive -fno-exceptions -fexceptions -Wall -Wno-unknown-pragmas # -static-libgcc -Wl,--hash-style=both,--as-needed
 
 AR = ar
 LIBRARY = $(OBJDIR)/libflex.a
@@ -26,6 +24,7 @@ $(OBJDIR)/%.o: %.cpp
 
 $(LIBRARY): $(OBJECTS)
 	$(AR) $(ARFLAGS) $@ $^
+	ranlib $@
 
 clean:
 	rm -f $(OBJDIR)/*.o $(LIBRARY)

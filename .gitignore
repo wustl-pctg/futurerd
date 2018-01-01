@@ -1,3 +1,4 @@
-config.mk.mine
+*.mine
 cilkrts_src
 build
+llvm-cilk
