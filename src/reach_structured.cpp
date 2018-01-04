@@ -71,8 +71,11 @@ void structured::at_spawn_continuation(sframe_data *f, sframe_data *p)
 { LOG; continuation(f,p); }
 
 void structured::at_future_finish(sframe_data *f, sframe_data *p, sfut_data *fut) {
-  continuation(f, p);
-  fut->put_strand = p->Pbag;
+  //continuation(f, p);
+  //fut->put_strand = p->Pbag;
+  
+  fut->put_strand = f->Sbag;
+  spbag::find(f->Sbag)->set_kind(spbag::bag_kind::P);
 }
 
 } // namespace reach
