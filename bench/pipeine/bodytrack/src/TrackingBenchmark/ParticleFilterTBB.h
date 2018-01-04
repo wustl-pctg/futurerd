@@ -44,20 +44,21 @@ class ParticleFilterTBB : public ParticleFilter<T>, public tbb::filter {
     using ParticleFilter<T>:: mMinParticles;
     using ParticleFilter<T>:: mBins;  
     using ParticleFilter<T>:: mRnd;
-    using ParticleFilter<T>:: mInitialized;
-    using ParticleFilter<T>:: mCdf;
-    using ParticleFilter<T>:: mSamples;
+    using ParticleFilter<T>:: mInitialized; // TBB only
+    using ParticleFilter<T>:: mCdf; // TBB only
+    using ParticleFilter<T>:: mSamples; // TBB only
     typedef typename ParticleFilter<T>::fpType fpType;
     typedef typename ParticleFilter<T>::Vectorf Vectorf;
 
 private:	
     T* getModel() { return mModel; };
 
-    protected:
+protected:
     std::vector<int> mIndex; //list of particles to regenerate
-    std::ofstream mPoseOutFile; //output pose file
-    bool mOutputBMP; //write bitmap output flag
-    unsigned int mFrame; //current frame being processed
+    
+    std::ofstream mPoseOutFile; //output pose file; TBB only
+    bool mOutputBMP; //write bitmap output flag; TBB only
+    unsigned int mFrame; //current frame being processed; TBB only
 
     std::vector<unsigned char> mValid; //storage for valid particle flags
 
@@ -68,7 +69,7 @@ private:
     //New particle generation - threaded version 
     void GenerateNewParticles(int k);
 
-    void WritePose(std::ostream &f, std::vector<float> &pose);
+    void WritePose(std::ostream &f, std::vector<float> &pose); // TBB only
 
     //TBB pipeline stage function
     void *operator()(void *token);
@@ -180,16 +181,22 @@ void ParticleFilterTBB<T>::CalcWeights(std::vector<Vectorf> &particles) {
             valid[i] = valid[valid.size() - 1];
             particles.pop_back(); mWeights.pop_back(); valid.pop_back();
         }
-        else{
-            minWeight = std::min(mWeights[i++], minWeight);				//find minimum weight
+        else
+        {
+            minWeight = std::min(mWeights[i++], minWeight); //find minimum weight
         }
     }
 
     //bail out if not enough valid particles
     if((int)particles.size() < mMinParticles) return;					
+
     mWeights -= minWeight; //shift weights to zero for numerical stability
     if(mModel->StdDevs().size() > 1) 
-        annealingFactor = BetaAnnealingFactor(mWeights, 0.5f);			//calculate annealing factor if more than 1 step
+    {
+        //calculate annealing factor if more than 1 step
+        annealingFactor = BetaAnnealingFactor(mWeights, 0.5f);
+    }
+
     for(i = 0; i < mWeights.size(); i++)
     {	
         double wa = annealingFactor * mWeights[i];

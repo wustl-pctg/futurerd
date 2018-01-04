@@ -1,19 +1,8 @@
 include ../../bench.mk
 
-# CC = $(COMPILER_HOME)/bin/clang
-# CXX = $(COMPILER_HOME)/bin/clang++
-
-# RTS_INCLUDE=$(BUILD_DIR)/include
-# LIBS=-lcilkrts -ldl
-# LIB_PATH=-L$(BUILD_DIR)/lib -Wl,-rpath -Wl,$(BUILD_DIR)/lib
-
 DEFINES = -DOUTPUT # -DRACE_DETECT
-
-# OPT = -O3 -flto
-# INCLUDE=-I$(PROJECT_HOME)/src
-# CFLAGS = -g -Werror -Wall $(DEFINES) -std=c99 $(OPT) -fcilkplus $(INCLUDE)
-CFLAGS += $(DEFINES)
-CXXFLAGS += $(DEFINES)
+CFLAGS += $(APPFLAGS) $(RDFLAGS) $(DEFINES)
+CXXFLAGS += $(APPFLAGS) $(RDFLAGS) $(DEFINES)
 
 all: heartwall
 

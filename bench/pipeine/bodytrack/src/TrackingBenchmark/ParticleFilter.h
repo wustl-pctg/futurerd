@@ -295,7 +295,7 @@ ParticleFilter<T>::Update(fpType timeval)
         std::cout << "Update Error : Particles not initialized" << std::endl; 
         return false;
     }	
-    if(!mModel->GetObservation(timeval))
+    if(timeval != 0 && !mModel->GetObservation(timeval))
     {	
         std::cout << "Update Error : Model observation failed for time : " 
                   << timeval << std::endl;

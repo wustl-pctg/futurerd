@@ -7,7 +7,7 @@
 //                  
 //	  2006, Intel Corporation, licensed under Apache 2.0 
 //
-//  file : TrackingModelOMP.cpp
+//  file : TrackingModelCilk.cpp
 //  author : Scott Ettinger - scott.m.ettinger@intel.com
 //  description : Observation model for kinematic tree body 
 //				  tracking threaded with OpenMP.
@@ -15,20 +15,20 @@
 //  modified : 
 //--------------------------------------------------------------
 
-#include "TrackingModelOMP.h"
+#include <cilk/cilk.h>
 #include <vector>
 #include <string>
-#include <omp.h>
 #include "system.h"
+
+#include "TrackingModelCilk.h"
 
 using namespace std;
 
-
 //------------------------ Threaded versions of image filters --------------------
 
-//OMP threaded - 1D filter Row wise 1 channel any type data or kernel valid pixels only
+// 1D filter Row wise 1 channel any type data or kernel valid pixels only
 template<class T, class T2> bool 
-FlexFilterRowVOMP(FlexImage<T,1> &src, FlexImage<T,1> &dst, T2 *kernel, 
+FlexFilterRowVCilk(FlexImage<T,1> &src, FlexImage<T,1> &dst, T2 *kernel, 
                   int kernelSize, bool allocate = true)
 {
     if(kernelSize % 2 == 0) //enforce odd length kernels
@@ -40,12 +40,12 @@ FlexFilterRowVOMP(FlexImage<T,1> &src, FlexImage<T,1> &dst, T2 *kernel,
 
     int n = kernelSize / 2, h = src.Height();
 
-    #pragma omp parallel for
-    for(int y = 0; y < h; y++)
-    {	
-        T *psrc = &src(n, y), *pdst = &dst(n, y);
-        for(int x = n; x < src.Width() - n; x++)
-        {	
+    #pragma cilk grainsize = 8
+    cilk_for(int y = 0; y < h; y++) {	
+        int local_y = y;
+
+        T *psrc = &src(n, local_y), *pdst = &dst(n, local_y);
+        for(int x = n; x < src.Width() - n; x++) {	
             int k = 0;
             T2 acc = 0;
             for(int i = -n; i <= n; i++) 
@@ -58,9 +58,9 @@ FlexFilterRowVOMP(FlexImage<T,1> &src, FlexImage<T,1> &dst, T2 *kernel,
     return true;
 }
 
-//OMP threaded - 1D filter Column wise 1 channel any type data or kernel valid pixels only
+//1D filter Column wise 1 channel any type data or kernel valid pixels only
 template<class T, class T2> bool 
-FlexFilterColumnVOMP(FlexImage<T,1> &src, FlexImage<T,1> &dst, T2 *kernel, 
+FlexFilterColumnVCilk(FlexImage<T,1> &src, FlexImage<T,1> &dst, T2 *kernel, 
                      int kernelSize, bool allocate = true)
 {
     if(kernelSize % 2 == 0) //enforce odd length kernels
@@ -73,12 +73,13 @@ FlexFilterColumnVOMP(FlexImage<T,1> &src, FlexImage<T,1> &dst, T2 *kernel,
     int n = kernelSize / 2;
     int sb = src.StepBytes(), h = src.Height() - n;
 
-    #pragma omp parallel for
-    for(int y = n; y < h; y++)
-    {	
-        T *psrc = &src(0, y), *pdst = &dst(0, y);
-        for(int x = 0; x < src.Width(); x++)
-        {	
+    
+    #pragma cilk grainsize = 8
+    cilk_for(int y = n; y < h; y++) {	
+        int local_y = y;
+        
+        T *psrc = &src(0, local_y), *pdst = &dst(0, local_y);
+        for(int x = 0; x < src.Width(); x++) {
             int k = 0;
             T2 acc = 0;
             for(int i = -n; i <= n; i++) 
@@ -95,24 +96,23 @@ FlexFilterColumnVOMP(FlexImage<T,1> &src, FlexImage<T,1> &dst, T2 *kernel,
 
 //Generate an edge map from the original camera image
 //Separable 7x7 gaussian filter - threaded
-inline void GaussianBlurOMP(FlexImage8u &src, FlexImage8u &dst)
+inline void GaussianBlurCilk(FlexImage8u &src, FlexImage8u &dst)
 {
     float k[] = {0.12149085090552f, 0.14203719483447f, 0.15599734045770f, 
                  0.16094922760463f, 0.15599734045770f, 0.14203719483447f, 0.12149085090552f};
     FlexImage8u tmp;
-    FlexFilterRowVOMP(src, tmp, k, 7); //separable gaussian convolution using kernel k
-    FlexFilterColumnVOMP(tmp, dst, k, 7);
+    FlexFilterRowVCilk(src, tmp, k, 7); //separable gaussian convolution using kernel k
+    FlexFilterColumnVCilk(tmp, dst, k, 7);
 }
 
 //Calculate gradient magnitude and threshold to binarize - threaded
-inline FlexImage8u GradientMagThresholdOMP(const FlexImage8u &src, float threshold)
+inline FlexImage8u GradientMagThresholdCilk(const FlexImage8u &src, float threshold)
 {
     FlexImage8u r(src.Size());
     ZeroBorder(r);
 
-    #pragma omp parallel for
-    for(int y = 1; y < src.Height() - 1; y++)//for each pixel
-    {	
+    cilk_for(int y = 1; y < src.Height() - 1; y++)//for each pixel
+    {
         Im8u *p = &src(1,y), *ph = &src(1,y - 1), *pl = &src(1,y + 1), *pr = &r(1,y);
         for(int x = 1; x < src.Width() - 1; x++)
         {	
@@ -132,10 +132,11 @@ inline FlexImage8u GradientMagThresholdOMP(const FlexImage8u &src, float thresho
 }
 
 //Generate an edge map from the original camera image
-void TrackingModelOMP::CreateEdgeMap(const FlexImage8u &src, FlexImage8u &dst)
+void TrackingModelCilk::CreateEdgeMap(const FlexImage8u &src, FlexImage8u &dst)
 {
-    FlexImage8u gr = GradientMagThresholdOMP(src, 16.0f); //calc gradient magnitude and threshold
-    GaussianBlurOMP(gr, dst); //Blur to create distance error map
+    //calc gradient magnitude and threshold
+    FlexImage8u gr = GradientMagThresholdCilk(src, 16.0f); 
+    GaussianBlurCilk(gr, dst); //Blur to create distance error map
 }
 
 //templated conversion to string with field width
@@ -149,7 +150,7 @@ inline string str(T n, int width = 0, char pad = '0')
 //load and process all images for new observation at a given time(frame)
 //Overloaded from base class for future threading to overlap disk I/O with 
 //generating the edge maps
-bool TrackingModelOMP::GetObservation(float timeval)
+bool TrackingModelCilk::GetObservation(float timeval)
 {
     int frame = (int)timeval; //generate image filenames
     int n = mCameras.GetCameraCount();
@@ -163,6 +164,7 @@ bool TrackingModelOMP::GetObservation(float timeval)
     }
 
     FlexImage8u im;
+    // NOTE ANGE: this could be a cilk_for, though n is usually small (4)
     for(int i = 0; i < (int)FGfiles.size(); i++)
     {	
         if(!FlexLoadBMP(FGfiles[i].c_str(), im)) //Load foreground maps and raw images

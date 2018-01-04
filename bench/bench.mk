@@ -6,6 +6,7 @@ include $(BENCH_DIR)/../common.mk
 # INC += -I$(PROJECT_HOME)/cilkrts/include
 INC += -I$(PROJECT_HOME)/src    # for future.hpp
 INC += -I$(BUILD_DIR)/include   # for runtime include
+INC += -I$(BENCH_DIR)           # for util stuff
 LIB = $(LIB_DIR)/librd.a
 LIB += $(RUNTIME_LIB) 
 
@@ -18,8 +19,6 @@ APPFLAGS = -fcilkplus -fcilk-no-inline
 # APPFLAGS += -DSTRUCTURED_FUTURES
 BAGFLAGS = -fcilktool
 # Uncomment to enable race detection
-RDFLAGS = -fsanitize=thread -DRACE_DETECT 
+# RDFLAGS = -fsanitize=thread -DRACE_DETECT  $(BAGFLAGS)
 
-CFLAGS += $(APPFLAGS) $(BAGFLAGS) $(RDFLAGS)
-CXXFLAGS += $(APPFLAGS) $(BAGFLAGS) $(RDFLAGS)
 LDFLAGS += $(LIB) -lm -ldl -lpthread -lrt

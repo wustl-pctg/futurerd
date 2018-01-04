@@ -1,5 +1,6 @@
-# target tbb not supported for now
-.PHONEY: all clean serial pthread omp 
+include ../../../../bench.mk		
+
+.PHONEY: all clean serial cilk
  
 # All the *_SOURCES variables are unused; for reference only
 SOURCES = DMatrix.h GeneralUtil.h ParticleFilter.h \
@@ -10,72 +11,52 @@ SOURCES = DMatrix.h GeneralUtil.h ParticleFilter.h \
 	ImageProjection.h ImageProjection.cpp RandomGenerator.h \
 	RandomGenerator.cpp TrackingModel.h TrackingModel.cpp main.cpp \
 
-OMP_SOURCE = ParticleFilterOMP.h  TrackingModelOMP.h TrackingModelOMP.cpp
-PTHREAD_SOURCE = ParticleFilterPthread.h TrackingModelPthread.h \
-	TrackingModelPthread.cpp WorkPoolPthread.h AsyncIO.h AsyncIO.cpp
-TBB_SOURCE = TBBtypes.h ParticleFilterTBB.h TrackingModelTBB.h TrackingModelTBB.cpp
+OBJDIR = clang-obj
+
+CILK_SOURCE = ParticleFilterCilk.h  TrackingModelCilk.h TrackingModelCilk.cpp
 
 # object files for each configuration
-OBJECTS = AnnealingFactor.o BodyGeometry.o BodyPose.o \
-	CameraModel.o CovarianceMatrix.o ImageMeasurements.o \
-	ImageProjection.o RandomGenerator.o TrackingModel.o
+OBJECTS = $(OBJDIR)/AnnealingFactor.o $(OBJDIR)/BodyGeometry.o $(OBJDIR)/BodyPose.o \
+	$(OBJDIR)/CameraModel.o $(OBJDIR)/CovarianceMatrix.o $(OBJDIR)/ImageMeasurements.o \
+	$(OBJDIR)/ImageProjection.o $(OBJDIR)/RandomGenerator.o $(OBJDIR)/TrackingModel.o
 
-OMP_OBJECTS = main-omp.o TrackingModelOMP.o
-PTHREAD_OBJECTS = main-pthread.o TrackingModelPthread.o AsyncIO.o
-# TBB_OBJECTS = main-tbb.o TrackingModelTBB.o
+CILK_OBJECTS = $(OBJDIR)/main-cilk.o $(OBJDIR)/TrackingModelCilk.o
 
-DEPENDENCIES = ../FlexImageLib/libflex.a
-PTHREAD_DEPENDENCIES = threads/libthreads.a
-# TBB_DEPENDENCIES = -ltbb
+DEPENDENCIES = ../FlexImageLib/$(OBJDIR)/libflex.a
 
-CXXFLAGS = -O3 -g -funroll-loops -fprefetch-loop-arrays -fpermissive -fno-exceptions -static-libgcc -Wl,--hash-style=both,--as-needed -fexceptions -Wall -Wno-unknown-pragmas
+# Need to use += since they are partially defined in bench.mk and common.mk
+CXXFLAGS += -O3 -g -funroll-loops -fprefetch-loop-arrays -fpermissive -fexceptions -Wall -Wno-unknown-pragmas # -static-libgcc -Wl,--hash-style=both,--as-needed -fno-exceptions 
+LDFLAGS += ../FlexImageLib/$(OBJDIR)/libflex.a
 
 INCLUDES = -I../FlexImageLib
-LDFLAGS = ../FlexImageLib/libflex.a
 LIBS = -lm
 
-all: serial pthread 
+all: serial cilk
 
-serial: bodytrack-serial 
-pthread: LIBS += -lpthread
-pthread: bodytrack-pthread
-omp: CXXFLAGS += -fopenmp 
-omp: LDFLAGS += -fopenmp 
-omp: bodytrack-omp
-# tbb: INCLUDES += -I$(TBB_INSTALL)/include
-# tbb: LDFLAGS += -L$(TBB_INSTALL)/lib
-# tbb: LIBS += -ltbb -ltbbmalloc_proxy  -ltbbmalloc -ldl -lrt -lpthread 
-# tbb: bodytrack-tbb
+serial: $(OBJDIR) bodytrack-serial 
+cilk: CXXFLAGS += $(APPFLAGS) $(RDFLAGS) 
+cilk: LDFLAGS += $(LIB)
+cilk: INCLUDES += $(INC)
+cilk: $(OBJDIR) bodytrack-cilk
 	
+$(OBJDIR):
+	mkdir -p $(OBJDIR)
+
 # Only the main file is compiled differently 
-main-serial.o: main.cpp
+$(OBJDIR)/main-serial.o: main.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c -o $@ $<
 
-main-pthread.o: main.cpp
-	$(CXX) $(CXXFLAGS) -DUSE_THREADS=1 $(INCLUDES) -c -o $@ $<
+$(OBJDIR)/main-cilk.o: main.cpp
+	$(CXX) $(CXXFLAGS) -DUSE_CILK_FUTURE=1 $(INCLUDES) -c -o $@ $<
 
-main-omp.o: main.cpp
-	$(CXX) $(CXXFLAGS) -DUSE_OPENMP=1 $(INCLUDES) -c -o $@ $<
-
-%.o: %.cpp
+$(OBJDIR)/%.o: %.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c -o $@ $<
 
-bodytrack-serial: main-serial.o $(OBJECTS) $(DEPENDENCIES)
+bodytrack-serial: $(OBJDIR)/main-serial.o $(OBJECTS) $(DEPENDENCIES)
 	$(CXX) -o $@ $^ $(LDFLAGS) $(LIBS)
 
-$(PTHREAD_DEPENDENCIES):
-	$(MAKE) -C threads
-
-bodytrack-pthread: $(OBJECTS) $(PTHREAD_OBJECTS) $(DEPENDENCIES) $(PTHREAD_DEPENDENCIES)
+bodytrack-cilk: $(OBJECTS) $(CILK_OBJECTS) $(DEPENDENCIES)
 	$(CXX) -o $@ $^ $(LDFLAGS) $(LIBS)
-
-bodytrack-omp: $(OBJECTS) $(OMP_OBJECTS) $(DEPENDENCIES)
-	$(CXX) -o $@ $^ $(LDFLAGS) $(LIBS)
-
-# bodytrack-tbb: $(OBJECTS) $(TBB_OBJECTS) $(DEPENDENCIES) $(TBB_DEPENDENCIES)
-# 	$(CXX) -o $@ $^ $(LDFLAGS) $(LIBS)
-
 
 clean:
-	rm -f *.o bodytrack-*
-
+	rm -f $(OBJDIR)/*.o bodytrack-*
