@@ -14,13 +14,7 @@ int main() {
   auto farray = (Fut*) malloc(sizeof(Fut) * n);
   
   for(int i{0}; i < n; ++i) {
-
-    // The second iteration we write to x, race with the read below
     int x = 57;
-
-    // The read of x occurs AFTER the future has been "launched", in
-    // the new strand
-    //reuse_future(int, &farray[i], foo, shared, x);
     reasync_helper<int, int&, int>(&farray[i], foo, shared, x);
   }
 
