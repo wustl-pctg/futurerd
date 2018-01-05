@@ -9,10 +9,12 @@ COMPDIR=$BASE/llvm-cilk/bin
 # Setup runtime system
 mkdir -p build
 
-#git clone https://gitlab.com/wustl-pctg/cilkplus-rts runtime
+git clone -b futurerd https://gitlab.com/wustl-pctg/cilkplus-rts runtime
 cd runtime
-FLAGS="-g -O0 -fcilk-no-inline -fcilktool"
 autoreconf -i
-./configure --prefix=$BASE/build CC=$COMPDIR/clang CXX=$COMPDIR/clang++ CFLAGS=$FLAGS CXXFLAGS=$FLAGS
-make -j
-make install
+# FLAGS="-g -O0 -fcilk-no-inline -fcilktool"
+# ./configure --prefix=$BASE/build CC=$COMPDIR/clang CXX=$COMPDIR/clang++ CFLAGS=$FLAGS CXXFLAGS=$FLAGS
+# make -j
+# make install
+./remake.sh
+cd -
