@@ -19,6 +19,6 @@ APPFLAGS = -fcilkplus -fcilk-no-inline
 # APPFLAGS += -DSTRUCTURED_FUTURES
 BAGFLAGS = -fcilktool
 # Uncomment to enable race detection
-# RDFLAGS = -fsanitize=thread -DRACE_DETECT  $(BAGFLAGS)
+RDFLAGS = -fsanitize=thread -DRACE_DETECT  $(BAGFLAGS) -fno-omit-frame-pointer
 
 LDFLAGS += $(LIB) -lm -ldl -lpthread -lrt
