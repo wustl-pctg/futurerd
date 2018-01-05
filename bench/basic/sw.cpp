@@ -94,8 +94,7 @@ static int wave_sw_with_futures(int *stor, char *a, char *b, int n) {
     int nBlocks = NUM_BLOCKS(n);
 
     // create an array of future objects
-    //cilk::future<int> *farray = new cilk::future<int> [nBlocks * nBlocks];
-    cilk::future<int> *farray = (cilk::future<int>*)
+    auto farray = (cilk::future<int>*)
       malloc(sizeof(cilk::future<int>) * nBlocks * nBlocks);
 
 
@@ -104,13 +103,12 @@ static int wave_sw_with_futures(int *stor, char *a, char *b, int n) {
         for(int jB = 0; jB <= wave_front; jB++) {
             int iB = wave_front - jB;
             if(iB > 0) { // up dependency
-              //farray[(iB-1)*nBlocks + jB].get();
-              cilk_future_get(&farray[(iB-1)*nBlocks + jB]);
+              farray[(iB-1)*nBlocks + jB].get();
             } 
             // since we are walking the wavefront serially, no need to get
             // left dependency --- already gotten by previous square.
-            cilk::future<int> *f = &farray[iB*nBlocks + jB];
-            reuse_future(int, f, process_sw_tile, stor, a, b, n, iB, jB);
+            reasync_helper<int,int*,char*,char*,int,int,int>
+              (&farray[iB*nBlocks+jB], process_sw_tile, stor, a, b, n, iB, jB);
         }
     }
 
@@ -122,21 +120,18 @@ static int wave_sw_with_futures(int *stor, char *a, char *b, int n) {
             // need to get both up and left dependencies for the last row, 
             // but otherwise just the up dependency. 
             if(iB == (nBlocks - 1) && jB > 0) { // left dependency
-              //farray[iB*nBlocks + jB - 1].get();
-              cilk_future_get(&farray[iB*nBlocks + jB - 1]);
+              farray[iB*nBlocks + jB - 1].get();
             } 
             if(iB > 0) { // up dependency
-              //farray[(iB-1)*nBlocks + jB].get();
-              cilk_future_get(&farray[(iB-1)*nBlocks + jB]);
+              farray[(iB-1)*nBlocks + jB].get();
             } 
-            cilk::future<int> *f = &farray[iB*nBlocks + jB];
-            reuse_future(int, f, process_sw_tile, stor, a, b, n, iB, jB);
+            reasync_helper<int,int*,char*,char*,int,int,int>
+              (&farray[iB*nBlocks+jB], process_sw_tile, stor, a, b, n, iB, jB);
+
         }
     }
     // make sure the last square finishes before we move onto returning
-    //farray[nBlocks * nBlocks - 1].get();
-    cilk_future_get(&farray[nBlocks * nBlocks - 1]);
-    //delete[] farray;
+    farray[nBlocks * nBlocks - 1].get();
     free(farray);
 
     return stor[n*(n-1) + n-1];
@@ -150,12 +145,10 @@ static int process_sw_tile_with_get(cilk::future<int> * farray, int *stor,
     int nBlocks = NUM_BLOCKS(n);
     
     if(jB > 0) { // left dependency
-      //farray[iB*nBlocks + jB - 1].get();
-      cilk_future_get(&farray[iB*nBlocks + jB - 1]);
+      farray[iB*nBlocks + jB - 1].get();
     } 
     if(iB > 0) { // up dependency
-      //farray[(iB-1)*nBlocks + jB].get();
-      cilk_future_get(&farray[(iB-1)*nBlocks + jB]);
+      farray[(iB-1)*nBlocks + jB].get();
     } 
     
     process_sw_tile(stor, a, b, n, iB, jB);
@@ -168,23 +161,17 @@ static int wave_sw_with_futures_par(int *stor, char *a, char *b, int n) {
     int nBlocks = NUM_BLOCKS(n);
     int blocks = nBlocks * nBlocks;
     
-    //cilk::future<int> *farray = new cilk::future<int> [blocks];
-    cilk::future<int> *farray = (cilk::future<int>*)
+    auto *farray = (cilk::future<int>*)
       malloc(sizeof(cilk::future<int>) * blocks);
 
-    CILKFOR_BEGIN;
     cilk_for(int i=0; i < blocks; i++) {
-      CILKFOR_ITER_BEGIN;
         int iB = i / nBlocks; // row block index 
         int jB = i % nBlocks; // col block index
-        cilk::future<int> *f = &(farray[i]);
-        reuse_future(int, f, process_sw_tile_with_get, farray, stor, a, b, n, iB, jB);
-        CILKFOR_ITER_END;
-    } CILKFOR_END;
+        reasync_helper<int,decltype(farray),int*,char*,char*,int,int,int>
+          (&farray[i], process_sw_tile_with_get, farray, stor, a, b, n, iB, jB);
+    }
     // make sure the last square finishes before we move onto returning
-    //farray[blocks-1].get();
-    cilk_future_get(&farray[blocks-1]);
-    //delete[] farray;
+    farray[blocks-1].get();
     free(farray);
     
 

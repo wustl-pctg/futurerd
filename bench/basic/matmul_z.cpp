@@ -169,6 +169,7 @@ static int matmul_base_structured(DATA *A, DATA *B, DATA *C,
     DATA *myC = &C[(block_index_C) << (POWER*2)];
     
     DATA tmp[n*n];
+    race_detector::mark_stack_allocate(&tmp);
 
     for(int ii = 0; ii < n; ii++) {
         for(int jj = 0; jj < n; jj++) {
@@ -199,8 +200,7 @@ static void do_matmul_structured(DATA *A, DATA *B, DATA *C, int n) {
 
     int nBlocks = n >> POWER; // number of blocks per dimension
     int num_futures = nBlocks * nBlocks * nBlocks;
-    //cilk::future<int> *fhandles = new cilk::future<int>[num_futures];
-    cilk::future<int> *fhandles = (cilk::future<int>*)
+    auto fhandles = (cilk::future<int>*)
       malloc(sizeof(cilk::future<int>) * num_futures);
 
     cilk_for(int iB = 0; iB < nBlocks; iB++) {
@@ -210,11 +210,10 @@ static void do_matmul_structured(DATA *A, DATA *B, DATA *C, int n) {
             for(int kB = 0; kB < nBlocks; kB++) {
                 prevf = f; // first is NULL
                 f = &(fhandles[fh_index(kB, iB, jB, nBlocks)]);
-                reuse_future(int, f, matmul_base_structured, A, B, C, iB, kB, jB, prevf);
+                reasync_helper<int,DATA*,DATA*,DATA*,int,int,int,decltype(prevf)>
+                  (f, matmul_base_structured, A, B, C, iB, kB, jB, prevf);
             }
-            __end_cilk_for_body();
         }
-        __end_cilk_for_body();
     }
 
     // wait for the very last kB blocks to finish
@@ -224,7 +223,6 @@ static void do_matmul_structured(DATA *A, DATA *B, DATA *C, int n) {
         }
     }
     
-    //delete[] fhandles;
     free(fhandles);
 }
 #endif // STRUCTURED_FUTURES 
@@ -237,8 +235,9 @@ static cilk::future<int> *g_fhandles; // future handles
 static int __attribute__ ((noinline))
 matmul_base(DATA *A, DATA *B, DATA *C, int n, int iB, int kB, int jB) {
     DATA tmp[n*n];
-
-    __set_low_water_mark(&tmp);
+    //__set_low_water_mark(&tmp);
+    race_detector::mark_stack_allocate(&tmp);
+    
     for(int i = 0; i < n; i++) {
         for(int j = 0; j < n; j++) {
             DATA c = 0.0;
@@ -273,8 +272,11 @@ int matmul(DATA *A, DATA *B, DATA *C, int n, int iB, int kB, int jB) {
 
     // Base case uses row-major order; switch to iterative traversal 
     if(n == BASE_CASE) {
-        cilk::future<int> *f = &(g_fhandles[fh_index(kB, iB, jB, g_nBlocks)]);
-        reuse_future(int, f, matmul_base, A, B, C, n, iB, kB, jB);
+      auto f = &(g_fhandles[fh_index(kB, iB, jB, g_nBlocks)]);
+      //reuse_future(int, f, matmul_base, A, B, C, n, iB, kB, jB);
+      reasync_helper<int,DATA*,DATA*,DATA*,int,int,int,int>
+        (f, matmul_base, A, B, C, n, iB, kB, jB);
+
         return 0;
     }
 
@@ -320,7 +322,6 @@ static void do_matmul_unstructured(DATA *A, DATA *B, DATA *C, int n) {
     // initialize the static global vars
     g_nBlocks = n >> POWER; // number of blocks per dimension
     int num_futures = g_nBlocks * g_nBlocks * g_nBlocks;
-    //g_fhandles = new cilk::future<int> [num_futures];
     g_fhandles = (cilk::future<int>*) malloc(sizeof(cilk::future<int>) * num_futures);
 
 
@@ -333,7 +334,6 @@ static void do_matmul_unstructured(DATA *A, DATA *B, DATA *C, int n) {
         g_fhandles[(g_nBlocks-1)*(g_nBlocks * g_nBlocks) + i].get();
     }
 
-    //delete[] g_fhandles;
     free(g_fhandles);
     g_fhandles = NULL;
 }
