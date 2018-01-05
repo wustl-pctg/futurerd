@@ -9,19 +9,23 @@ int main() {
 
   int n = 128;
   int shared = 42;
+
+  // First let's just test a for loop that makes a function call
+#pragma cilk grainsize = 1
+  cilk_for(int i = 0; i < n; ++i) {
+    int x = 57;
+    foo(shared, x); 
+  }
+
+  // Now let's asyncronously launch that function
   auto farray = (cilk::future<int>*)
     malloc(sizeof(cilk::future<int>) * n);
 
-  // #pragma cilk grainsize = 1
-  CILKFOR_BEGIN;
+#pragma cilk grainsize = 1
   cilk_for(int i = 0; i < n; ++i) {
-    CILKFOR_ITER_BEGIN;
     int x = 57;
-    //auto f = &(farray[i]);
-    //reuse_future(int, f, foo, shared, x);
     reasync_helper<int,int&,int>(&farray[i], foo, shared, x);
-    CILKFOR_ITER_END;
-  } CILKFOR_END;
+  }
 
   cilk_for(int i = 0; i < n; ++i)
     farray[i].get();
