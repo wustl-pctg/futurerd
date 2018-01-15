@@ -74,8 +74,6 @@ reasync_helper(cilk::future<ReturnType>* __fut,
   f1->finish(); f2->finish(); __FC;                    \
 
 #define __end_cilk_for_body() __DC; race_detector::t_clear_stack = true; __EC
-#define __set_low_water_mark(addr) \
-  __DC; race_detector::t_stack_low_watermark = (uint64_t)addr; __EC
 
 /** Versions that manually call put(), possibly before the end of the
     function.
