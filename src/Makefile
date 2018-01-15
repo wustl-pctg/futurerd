@@ -19,7 +19,7 @@ SRC += utils/union_find.cpp debug.cpp spbag.cpp
 
 OBJ := $(addprefix $(OBJ_DIR)/, $(SRC:.cpp=.o))
 LIB_DIR = $(BUILD_DIR)/lib
-TARGET = $(LIB_DIR)/librd.a
+TARGET = $(LIB_DIR)/librd-$(ftype).a
 
 # Mostly for cilk/internal includes
 INC += -I$(PROJECT_HOME)/cilkrts/include

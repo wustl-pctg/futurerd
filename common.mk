@@ -9,10 +9,9 @@ CXX = $(COMPILER_HOME)/bin/clang++
 
 OPT_FLAGS = -O3
 DBG_FLAGS = -O0
-PROF_FLAGS = -O2
+PROF_FLAGS = -O2 -ggdb -fno-inline #-pg if you want to use gprof
 INC = -I$(RUNTIME_HOME)/include
 FLAGS = -Wall -Wfatal-errors -g $(INC)
-FLAGS += $(FUTURE_TYPE)
 ARFLAGS = rcs
 
 TOOL_DEBUG ?= 0
@@ -30,13 +29,13 @@ else
 endif
 
 ifeq ($(ftype),structured)
-	FUTURE_TYPE = -DSTRUCTURED_FUTURES
+	FLAGS += -DSTRUCTURED_FUTURES
 else ifeq ($(ftype),nonblock)
-	FUTURE_TYPE = -DNONBLOCKING_FUTURES
+	FLAGS += -DNONBLOCKING_FUTURES
 else ifeq ($(ftype),) # default value
-  FUTURE_TYPE = $(DEFAULT_FUTURE_TYPE)
+  $(error "Please specify a future type. You can put ftype ?= ... in config.mk to set a default.")
 else
-  $(error "Invalid ftype.")
+  $(error "Invalid future type.")
 endif
 
 LTO ?= 1
@@ -57,7 +56,8 @@ $(OBJ_DIR)/%.o: %.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -o $@ -c $<
 
-%.o: %.cpp
+# I don't understand why I have to add these extra stems...
+%.o %-rd.o %-reach.o %-base.o: %.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -o $@ -c $<
 
