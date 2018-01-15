@@ -1,7 +1,7 @@
 THIS_FILE := $(lastword $(MAKEFILE_LIST))
 include ../bench.mk
 
-BENCH = lcs sw matmul_z perf
+BENCH = lcs sw matmul_z #perf
 ALLTARGETS = $(BENCH:=-rd) $(BENCH:=-reach) $(BENCH:=-base)
 TARGETS = $(BENCH:=-$(btype))
 
@@ -19,8 +19,8 @@ CXXFLAGS += $(APPFLAGS)
 
 .SECONDEXPANSION:
 $(BENCH): $$@-$(btype)
-$(ALLTARGETS): $$@.o #../util/getoptions.o $(RDLIB)
-	$(CXX) $^ $(LDFLAGS) -o $@ #$(LIB) -o $@
+$(ALLTARGETS): $$@.o ../util/getoptions.o $(RDLIB)
+	$(CXX) $^ $(LDFLAGS) $(LIB) -o $@
 
 ifeq ($(btype),all)
 clean:

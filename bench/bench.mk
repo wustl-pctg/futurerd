@@ -15,7 +15,7 @@ LIB = $(RDLIB) $(RUNTIME_LIB)
 # XXX: This is no longer necessary. Just use "make ftype=nonblock" (or ftype=structured)
 # APPFLAGS += -DSTRUCTURED_FUTURES
 
-BASEFLAGS = #-fcilkplus -fcilk-no-inline
+BASEFLAGS = -fcilkplus -fcilk-no-inline
 REACHFLAGS = -fcilktool
 RDFLAGS = -fsanitize=thread -DRACE_DETECT  $(BAGFLAGS) -fno-omit-frame-pointer
 
