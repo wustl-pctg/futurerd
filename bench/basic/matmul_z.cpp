@@ -169,7 +169,9 @@ static int matmul_base_structured(DATA *A, DATA *B, DATA *C,
     DATA *myC = &C[(block_index_C) << (POWER*2)];
     
     DATA tmp[n*n];
+#ifdef RACE_DETECT
     race_detector::mark_stack_allocate(&tmp);
+#endif
 
     for(int ii = 0; ii < n; ii++) {
         for(int jj = 0; jj < n; jj++) {
@@ -235,8 +237,9 @@ static cilk::future<int> *g_fhandles; // future handles
 static int __attribute__ ((noinline))
 matmul_base(DATA *A, DATA *B, DATA *C, int n, int iB, int kB, int jB) {
     DATA tmp[n*n];
-    //__set_low_water_mark(&tmp);
+#ifdef RACE_DETECT
     race_detector::mark_stack_allocate(&tmp);
+#endif
     
     for(int i = 0; i < n; i++) {
         for(int j = 0; j < n; j++) {

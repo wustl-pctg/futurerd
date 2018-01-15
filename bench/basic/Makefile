@@ -1,27 +1,31 @@
+THIS_FILE := $(lastword $(MAKEFILE_LIST))
 include ../bench.mk
 
-.PHONY: all clean reallyclean
+BENCH = lcs sw matmul_z perf
+ALLTARGETS = $(BENCH:=-rd) $(BENCH:=-reach) $(BENCH:=-base)
+TARGETS = $(BENCH:=-$(btype))
 
-TARGETS = lcs sw matmul_z
+.PHONY: all clean $(BENCH) $(BENCH:=-all)
+all: $(TARGETS)
 
-all: $(TARGETS) 
+$(BENCH:=-all):
+	$(MAKE) -f $(THIS_FILE) mode=$(mode) ftype=$(ftype) btype=rd $(@:-all=)
+	$(MAKE) mode=$(mode) ftype=$(ftype) btype=reach $(@:-all=)
+	$(MAKE) mode=$(mode) ftype=$(ftype) btype=base $(@:-all=)
 
 INC += -I../util
-CFLAGS += $(APPFLAGS) $(RDFLAGS)
-CXXFLAGS += $(APPFLAGS) $(RDFLAGS)
+CFLAGS += $(APPFLAGS)
+CXXFLAGS += $(APPFLAGS)
 
-lcs: lcs.o ../util/getoptions.o
-	$(CXX) $^ $(LDFLAGS) $(LIB) -o $@
+.SECONDEXPANSION:
+$(BENCH): $$@-$(btype)
+$(ALLTARGETS): $$@.o #../util/getoptions.o $(RDLIB)
+	$(CXX) $^ $(LDFLAGS) -o $@ #$(LIB) -o $@
 
-sw: sw.o ../util/getoptions.o
-	$(CXX) $^ $(LDFLAGS) $(LIB) -o $@
-
-matmul_z: matmul_z.o ../util/getoptions.o
-	$(CXX) $^ $(LDFLAGS) $(LIB) -o $@
-
-# delete all object files
+ifeq ($(btype),all)
 clean:
-	rm -f *.o $(TARGETS) core.*
-
-reallyclean:
-	rm -f ../util/*.o *.o $(TARGETS) core.*
+	rm -rf core.* $(ALLTARGETS) $(ALLTARGETS:=.o)
+else
+clean:
+	rm -f core.* $(TARGETS) $(TARGETS:=.o)
+endif
