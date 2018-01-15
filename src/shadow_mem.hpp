@@ -1,6 +1,6 @@
 #pragma once
 #include <cstdio>
-#include <map>
+#include <unordered_map>
 
 #include "spbag.hpp"
 #include "reach.hpp"
@@ -50,6 +50,8 @@ public:
     addr_info_t() {}
   };
 
+  shadow_mem() { m_shadow_map.reserve(32); }
+  
   addr_info_t* find(addr_t addr);
 
   // return the old value
@@ -59,5 +61,6 @@ public:
   void clear(addr_t start, addr_t end);
 
 private:
-    std::map<addr_t, addr_info_t> m_shadow_map;
+  //std::map<addr_t, addr_info_t> m_shadow_map;
+  std::unordered_map<addr_t, addr_info_t> m_shadow_map;
 };
