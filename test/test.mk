@@ -16,7 +16,6 @@ APPFLAGS += -fsanitize=thread #-fsanitize-blacklist=../../blacklist.txt
 # which we use in __tsan_func_exit to clear the shadow stack memory.
 APPFLAGS += -fno-omit-frame-pointer
 
-
 CFLAGS += $(APPFLAGS)
 CXXFLAGS += $(APPFLAGS)
 LDFLAGS += -ldl -lpthread $(RUNTIME_LIB)
