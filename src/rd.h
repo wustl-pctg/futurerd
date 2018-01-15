@@ -18,5 +18,6 @@ size_t futurerd_num_races();
 void futurerd_enable_checking();
 void futurerd_disable_checking();
 void futurerd_should_check();
+void futurerd_mark_stack_allocate(void* addr);
 
 } // extern C

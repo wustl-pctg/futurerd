@@ -18,6 +18,7 @@ public:
   static bool t_clear_stack;
   static shadow_mem g_smem;
   static reach_ds g_reach;
+  static bool tsan_init;
 
   static enum rd_policy g_policy;
   static size_t g_num_races;
@@ -37,6 +38,7 @@ public:
   static void enable_checking();
   static void disable_checking();
   static inline bool should_check() { return check_disabled == 0; }
+  static void mark_stack_allocate(void* addr);
 
   // @todo{ Read environment variables for setting race-reporting policy.}
   static void set_policy(enum rd_policy p); // not thread-safe

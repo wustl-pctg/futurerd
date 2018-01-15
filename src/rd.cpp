@@ -14,6 +14,7 @@ int race_detector::check_disabled = 1;
 reach_ds race_detector::g_reach;
 shadow_mem race_detector::g_smem;
 shadow_stack<sframe_data> race_detector::t_sstack;
+bool race_detector::tsan_init = false;
 
 // create the race detector (intialize)
 race_detector g_detector;
@@ -54,6 +55,10 @@ void race_detector::report_race(void* addr, uint64_t last_rip, uint64_t this_rip
   g_num_races++;
   if (g_policy == RD_EXIT)
     std::exit(rt);
+}
+
+void race_detector::mark_stack_allocate(void* addr) {
+  race_detector::t_stack_low_watermark = (uint64_t)addr;
 }
 
 smem_data* race_detector::active() { return g_reach.active(t_sstack.head()); }

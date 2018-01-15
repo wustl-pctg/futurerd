@@ -20,6 +20,7 @@ typedef race_detector rd; // convenience
 
 #include <cassert>
 #include <cstdlib> // atexit
+#include <cstdio>
 
 // In lieu of having two types of shadow frames:
 // Note: only works AFTER detach
@@ -36,6 +37,7 @@ size_t futurerd_num_races() { return rd::num_races(); }
 void futurerd_enable_checking() { rd::enable_checking(); }
 void futurerd_disable_checking() { rd::disable_checking(); }
 void futurerd_should_check() { rd::should_check(); }
+void futurerd_mark_stack_allocate(void* addr) { rd::mark_stack_allocate(addr); }
 
 // This is slightly dangerous since the initialization of the loop
 // variable will not be changed. But this should not be a problem b/c
@@ -139,7 +141,7 @@ void cilk_future_helper_leave(sfut_data *fut) {
   sframe_data *p = rd::t_sstack.parent();
   rd::g_reach.at_future_finish(f, p, fut);
   continuation();
-  rd::enable_checking();
+  //rd::enable_checking();
 }
 
 void cilk_leave_begin(__cilkrts_stack_frame* sf) {
@@ -176,14 +178,14 @@ void cilk_leave_end() {
 
 //void __tsan_destroy() {}
 void __tsan_init() {
-  static bool init = false;
+  //static bool init = false;
   // assert(init == false);
-  init = true;
+  //init = true;
+
+  rd::tsan_init = true;
 
   //std::atexit(__tsan_destroy);
 
-  // Originally this was called, but why?
-  //rd::enable_checking();
 }
 
 static inline
@@ -223,7 +225,10 @@ void __tsan_func_entry(void *pc) {
  * stack at cilk_leave_begin, but check the flag and actually do the cleaning
  * in __tsan_func_exit.
  */
-void __tsan_func_exit() {
+// Noinline b/c otherwise it may be inlined into
+// cilk_for_recursive_spawn_continue (below), so
+// __built_frame_address(1) would be wrong
+[[gnu::noinline]] void __tsan_func_exit() {
   uint64_t res = (uint64_t) __builtin_frame_address(0);
   if(rd::t_stack_low_watermark > res)
     rd::t_stack_low_watermark = res;
@@ -232,6 +237,9 @@ void __tsan_func_exit() {
     // the spawn helper that's exiting is calling tsan_func_exit, 
     // so the spawn helper's base pointer is the stack_high_watermark
     // to clear (stack grows downward)
+
+    // It's hard to guarantee this works unless we compile
+    // (everything) with -fno-omit-frame-pointer
     uint64_t stack_high_watermark = (uint64_t)__builtin_frame_address(1);
 
     assert( rd::t_stack_low_watermark != ((uint64_t)-1) );
@@ -241,6 +249,12 @@ void __tsan_func_exit() {
     rd::t_stack_low_watermark = stack_high_watermark;
     rd::t_clear_stack = false;
   }
+}
+
+// The spawns that create the cilk_for loop tree are not compiled with
+// thread sanitizer, to __tsan_func_exit is never called.
+void cilk_for_recursive_spawn_continue(void) {
+  if (rd::tsan_init) __tsan_func_exit();
 }
 
 // Let's hope we don't need to wrap both calloc and realloc...
