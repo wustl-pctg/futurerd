@@ -11,6 +11,7 @@
 #include <cilk/cilk.h>
 #include <cilk/cilk_api.h>
 #include <future.hpp>
+#include <chrono>
 
 #include "../util/getoptions.hpp"
 #include "../util/util.hpp"
@@ -195,7 +196,8 @@ static int matmul_base_structured(DATA *A, DATA *B, DATA *C,
     return 0;
 }
 
-static void do_matmul_structured(DATA *A, DATA *B, DATA *C, int n) {
+// Structured
+static void do_matmul(DATA *A, DATA *B, DATA *C, int n) {
     
     printf("Performing structured matmul with z-layout, %d x %d with base case %d x %d.\n",
            n, n, BASE_CASE, BASE_CASE);
@@ -317,7 +319,8 @@ int matmul(DATA *A, DATA *B, DATA *C, int n, int iB, int kB, int jB) {
     return 0;
 }
 
-static void do_matmul_unstructured(DATA *A, DATA *B, DATA *C, int n) {
+// "unstructured"
+static void do_matmul(DATA *A, DATA *B, DATA *C, int n) {
     
     printf("Performing unstructured matmul with z-layout, %d x %d with base case %d x %d.\n",
            n, n, BASE_CASE, BASE_CASE);
@@ -374,17 +377,15 @@ int main(int argc, char *argv[]) {
         seq_iter_matmul(A, B, I, n);
     }
 
-#ifdef NONBLOCKING_FUTURES
     zero<DATA>(C, n);
-    do_matmul_unstructured(A, B, C, n);
+    auto start = std::chrono::steady_clock::now();
+    do_matmul(A, B, C, n);
+    auto end = std::chrono::steady_clock::now();
+    
     if(check) { do_check_iter(C, I, n); }
-#endif
 
-#ifdef STRUCTURED_FUTURES
-    zero<DATA>(C, n);
-    do_matmul_structured(A, B, C, n);
-    if(check) { do_check_iter(C, I, n); }
-#endif
+    auto time = std::chrono::duration <double, std::milli> (end-start).count();
+    printf("Benchmark time: %f ms\n", time);
 
     // clean up memory
     free(A);

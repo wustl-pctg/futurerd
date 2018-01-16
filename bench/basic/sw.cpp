@@ -5,6 +5,7 @@
 #include <future.hpp>
 #include <cilk/cilk.h>
 #include <cilk/cilk_api.h>
+#include <chrono>
 
 #include "../util/getoptions.hpp"
 #include "../util/util.hpp"
@@ -156,7 +157,7 @@ static int process_sw_tile_with_get(cilk::future<int> * farray, int *stor,
     return 0;
 }
 
-static int wave_sw_with_futures_par(int *stor, char *a, char *b, int n) {
+static int wave_sw_with_futures(int *stor, char *a, char *b, int n) {
 
     int nBlocks = NUM_BLOCKS(n);
     int blocks = nBlocks * nBlocks;
@@ -240,17 +241,20 @@ int main(int argc, char *argv[]) {
 
 #ifdef NONBLOCKING_FUTURES
     printf("Performing SW with non-structured future.\n");
-    result = wave_sw_with_futures_par(stor1, a1, b1, n);
-    if(check) { do_check(stor1, a1, b1, n, result); }
+#else // STRUCTURED_FUTURE
+    printf("Performing SW with structured future.\n");
 #endif
 
-#ifdef STRUCTURED_FUTURES
-    printf("Performing SW with structured future.\n");
+    auto start = std::chrono::steady_clock::now();
     result = wave_sw_with_futures(stor1, a1, b1, n);
+    auto end = std::chrono::steady_clock::now();
+    
     if(check) { do_check(stor1, a1, b1, n, result); }
-#endif
     
     printf("Result: %d\n", result);
+    
+    auto time = std::chrono::duration <double, std::milli> (end-start).count();
+    printf("Benchmark time: %f ms\n", time);
 
     free(a1);
     free(b1);
