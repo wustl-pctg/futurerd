@@ -8,8 +8,8 @@ CC = $(COMPILER_HOME)/bin/clang
 CXX = $(COMPILER_HOME)/bin/clang++
 
 OPT_FLAGS = -O3
-DBG_FLAGS = -O0
-PROF_FLAGS = -O2 -ggdb -fno-inline #-pg if you want to use gprof
+DBG_FLAGS = -O0 -ggdb
+PROF_FLAGS = -O1 -ggdb #-pg if you want to use gprof
 INC = -I$(RUNTIME_HOME)/include
 FLAGS = -Wall -Wfatal-errors -g $(INC)
 ARFLAGS = rcs
@@ -57,7 +57,7 @@ $(OBJ_DIR)/%.o: %.cpp
 	$(CXX) $(CXXFLAGS) -o $@ -c $<
 
 # I don't understand why I have to add these extra stems...
-%.o %-rd.o %-reach.o %-base.o: %.cpp
+%.o %-rd.o %-reach.o %-base.o %-inst.o: %.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -o $@ -c $<
 
