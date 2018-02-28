@@ -13,7 +13,7 @@
 /// @todo{Ideally the race detection functions in the future class
 /// will be split out like the other cilk tool functions.}
 //#define RACE_DETECT
-#ifdef RACE_DETECT
+#ifdef REACH_MAINT
 #include "rd.hpp"
 
 // Convenience
