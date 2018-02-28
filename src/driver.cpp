@@ -36,6 +36,7 @@ size_t futurerd_num_races() { return rd::num_races(); }
 // to protect accesses to the Cilk stack frame.
 void futurerd_enable_checking() { rd::enable_checking(); }
 void futurerd_disable_checking() { rd::disable_checking(); }
+void futurerd_disable_shadowing() { rd::disable_shadowing(); }
 void futurerd_should_check() { rd::should_check(); }
 void futurerd_mark_stack_allocate(void* addr) { rd::mark_stack_allocate(addr); }
 
@@ -191,21 +192,48 @@ void __tsan_init() {
 static inline
 void tsan_access(bool is_read, void *addr, size_t mem_size, void *rip) {
   if (!rd::should_check()) return;
-  
   assert(mem_size <= 16);
-  rd::check_access(is_read, rip, addr, mem_size);
+  rd::check_access(is_read, (addr_t)rip, (addr_t)addr, mem_size);
+}
+
+#define ALIGNED(addr,amt) (((uint64_t)(addr) & (amt-1)) == 0)
+#define PTRADD(addr,amt) ((void*)((uint64_t)(addr)+(amt)))
+
+// Sometimes clang produces unaligned vector code...I am not sure why.
+static inline
+void tsan16_access(bool is_read, void* addr, void *rip) {
+  // it should at least be 8-byte aligned
+  // assert(((uint64_t)addr & 0b111UL) == 0);
+  // if (((uint64_t)addr & 0xfUL) == 0) // 16-byte aligned
+  //   tsan_access(is_read, addr, 16, __builtin_return_address(0));
+  // else
+
+  assert(ALIGNED(addr,4));
+  if (ALIGNED(addr,16))
+    tsan_access(is_read, addr, 16, __builtin_return_address(0));
+  else if (ALIGNED(addr,8)) {
+    tsan_access(is_read, addr, 8, __builtin_return_address(0));
+    tsan_access(is_read, PTRADD(addr,8), 8, __builtin_return_address(0));
+  } else { // 4 byte aligned
+    tsan_access(is_read, addr, 4, __builtin_return_address(0));
+    tsan_access(is_read, PTRADD(addr,4), 4, __builtin_return_address(0));
+    tsan_access(is_read, PTRADD(addr,8), 4, __builtin_return_address(0));
+    tsan_access(is_read, PTRADD(addr,12), 4, __builtin_return_address(0));
+  }
 }
 
 void __tsan_read1(void *addr) { tsan_access(true, addr, 1, __builtin_return_address(0)); }
 void __tsan_read2(void *addr) { tsan_access(true, addr, 2, __builtin_return_address(0)); }
 void __tsan_read4(void *addr) { tsan_access(true, addr, 4, __builtin_return_address(0)); }
 void __tsan_read8(void *addr) { tsan_access(true, addr, 8, __builtin_return_address(0)); }
-void __tsan_read16(void *addr) { tsan_access(true, addr, 16, __builtin_return_address(0)); }
 void __tsan_write1(void *addr) { tsan_access(false, addr, 1, __builtin_return_address(0)); }
 void __tsan_write2(void *addr) { tsan_access(false, addr, 2, __builtin_return_address(0)); }
 void __tsan_write4(void *addr) { tsan_access(false, addr, 4, __builtin_return_address(0)); }
 void __tsan_write8(void *addr) { tsan_access(false, addr, 8, __builtin_return_address(0)); }
-void __tsan_write16(void *addr) { tsan_access(false, addr, 16, __builtin_return_address(0)); }
+
+void __tsan_read16(void *addr) { tsan16_access(true, addr, __builtin_return_address(0)); }
+void __tsan_write16(void *addr) { tsan16_access(false, addr, __builtin_return_address(0)); }
+
 void __tsan_vptr_read(void **vptr_p) {}
 void __tsan_vptr_update(void **vptr_p, void *new_val) {}
 
@@ -232,6 +260,8 @@ void __tsan_func_entry(void *pc) {
   uint64_t res = (uint64_t) __builtin_frame_address(0);
   if(rd::t_stack_low_watermark > res)
     rd::t_stack_low_watermark = res;
+
+  if (!rd::shadow_enabled) return;
 
   if (rd::t_clear_stack) {
     // the spawn helper that's exiting is calling tsan_func_exit, 
@@ -277,9 +307,9 @@ void* malloc(size_t s) {
     return real_malloc(s);
 
   // make it 8-byte aligned; easier to erase from shadow mem
-  uint64_t new_size = ALIGN_BY_NEXT_MAX_GRAIN_SIZE(s);
+  addr_t new_size = ALIGN_BY_NEXT_MAX_GRAIN_SIZE(s);
   void *r = real_malloc(new_size);
-  rd::g_smem.clear((uint64_t)r, (uint64_t)r + new_size);
+  rd::g_smem.clear((addr_t)r, (addr_t)r + new_size);
   return r;
 }
 

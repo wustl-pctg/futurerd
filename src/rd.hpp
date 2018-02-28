@@ -23,8 +23,11 @@ public:
   static enum rd_policy g_policy;
   static size_t g_num_races;
   static int check_disabled;
+  static bool shadow_enabled;
 
   enum race_type { WW = 0, RW, WR};
+
+  using access_t = shadow_mem::access_t;
 
   race_detector();
   ~race_detector();
@@ -37,13 +40,21 @@ public:
   //static inline void disable_checking() { t_checking_disabled = true; }
   static void enable_checking();
   static void disable_checking();
-  static inline bool should_check() { return check_disabled == 0; }
+  static inline void disable_shadowing() { shadow_enabled = false; }
+  static inline bool should_check() { return check_disabled == 0 && shadow_enabled; }
   static void mark_stack_allocate(void* addr);
 
   // @todo{ Read environment variables for setting race-reporting policy.}
   static void set_policy(enum rd_policy p); // not thread-safe
-  static void report_race(void* addr, uint64_t last_rip, uint64_t this_rip,
+  static void report_race(addr_t addr, addr_t last_rip, addr_t this_rip,
                           race_type rt);
-  static void check_access(bool is_read, void* rip, void* addr, size_t mem_size);
+  static void check_access(bool is_read, addr_t rip, addr_t addr, size_t mem_size);
+
   static smem_data* active();
+
+private:
+  static void handle_write(access_t* slot, addr_t rip, addr_t addr,
+                    size_t mem_size, smem_data *current);
+  static void handle_read(access_t* slot, addr_t rip, addr_t addr,
+                    size_t mem_size, smem_data *current);
 }; // struct race_detector

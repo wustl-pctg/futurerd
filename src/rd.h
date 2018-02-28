@@ -17,6 +17,7 @@ void futurerd_set_policy(enum rd_policy p);
 size_t futurerd_num_races();
 void futurerd_enable_checking();
 void futurerd_disable_checking();
+void futurerd_disable_shadowing();
 void futurerd_should_check();
 void futurerd_mark_stack_allocate(void* addr);
 
