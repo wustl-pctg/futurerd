@@ -19,7 +19,8 @@ static void ensure_serial_execution(void) {
   }
 }
 
-static void gen_rand_string(char * s, int s_length, int range) {
+__attribute__((unused)) static
+void gen_rand_string(char * s, int s_length, int range) {
   for(int i = 0; i < s_length; ++i ) {
     s[i] = (char)(rand() % range + 97);
   }
