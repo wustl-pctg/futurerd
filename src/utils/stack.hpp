@@ -8,6 +8,7 @@
 #include <cstdint> // int types like uint32_t, uint64_t, etc.
 #include <cstring> // memset
 #include <cstdlib> // malloc
+#include <new> // placement new
 
 namespace utils {
 

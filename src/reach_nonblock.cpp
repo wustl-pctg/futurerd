@@ -1,4 +1,5 @@
 #include "reach_nonblock.hpp"
+#define NDEBUG 1
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
@@ -67,12 +68,6 @@ void nonblock::begin_strand(sframe_data *f, sframe_data *p) {
   // Future stuff?
 }
 
-/* Commenting out things that doesn't seem to be used at the moment
-void nonblock::create_strand(sframe_data *f) {
-fprintf(stderr, "XXX create_strand called!.\n");
-  m_sp.create_strand(&f->sp);
-}*/
-
 // called at detach; f is the spawning Cilk function and h is the helper
 void nonblock::at_spawn(sframe_data *f, sframe_data *h) {
   m_sp.at_spawn(&f->sp, &h->sp);
@@ -107,7 +102,6 @@ void nonblock::at_spawn(sframe_data *f, sframe_data *h) {
 // We don't have helper frames for futures, so this is actually the
 // new frame created for the new strand
 void nonblock::at_future_create(sframe_data *f) {
-
   // Just create a new Sbag, since this is a new strand.
   m_sp.at_future_create(&f->sp);
 
@@ -151,7 +145,7 @@ void nonblock::at_future_get(sframe_data *f, sfut_data *fut) {
   t_current->sbag = f->sp.Sbag;
 }
 
-node* nonblock::perform_join(sframe_data *f) {
+node* nonblock::perform_join(sframe_data *f) {  
 
   int ind = 0;
   int num_attached = 0; // counting number of attached branch
@@ -199,13 +193,22 @@ node* nonblock::perform_join(sframe_data *f) {
 
   if(num_attached > 0) {
     assert(j->find()->attached());
+    
     // now that the attached set for the join is setup, we can add edges from 
-    // attached parent to it and make it the attached successor for unattached parents
+    // attached parent to it and make it the attached successor for
+    // unattached parents
+
+    reach::general::node attached_parents[num_jparents];
+    int num_edges = 0;
     for(int i=0; i < num_jparents; i++) {
       node *pset = join_parents[i]->find();
       if(!pset->attached()) { pset->att_succ = j->find(); }
-      else { m_R.add_edge(pset->find()->id, j->find()->id); }
+      else {
+        //m_R.add_edge(pset->find()->id, j->find()->id);
+        attached_parents[num_edges++] = pset->find()->id;
+      }
     }
+    m_R.add_edges_from(attached_parents, num_edges, j->find()->id);
   }
 
   assert(j->find()->att_pred);
@@ -261,83 +264,9 @@ void nonblock::handle_binary_fork_at_sync(node *f, // fork node
   }
 }
 
-// Returns the new node j
-node* nonblock::binary_join(node *f, // fork node
-                            node *lfc, node *rfc, // left, right fork children
-                            node *ljp, node *rjp // left, right join children
-                            ) {
-  node *j = new node(); // join node
-  bool ljp_attached = ljp->find()->attached();
-  bool rjp_attached = rjp->find()->attached();
-
-  // No non-SP edges
-  if (!ljp_attached && !rjp_attached) {
-    assert(f->find()->att_pred == ljp->find()->att_pred);
-    assert(f->find()->att_pred == rjp->find()->att_pred);
-    f->merge(ljp);
-    f->merge(rjp);
-    f->merge(j);
-    assert(j->find()->att_pred == f->find()->att_pred);
-
-    // Both sides incident on non-SP edges
-  } else if (ljp_attached && rjp_attached) {
-    //f->attach();
-    attachify(f);
-    assert(f->find()->attached());
-    assert(lfc->find()->attached());
-    assert(rfc->find()->attached());
-
-    m_R.add_edge(f->find()->id, lfc->find()->id);
-    m_R.add_edge(f->find()->id, rfc->find()->id);
-
-    j->id = m_R.add_node();
-    m_R.add_edge(ljp->find()->id, j->id);
-    m_R.add_edge(rjp->find()->id, j->id);
-
-  } else {
-    node *att_pred, *unatt_pred; // attached/unattached join parents
-    node *att_succ, *unatt_succ; // attached/unattached fork children
-    if (ljp_attached) {
-      att_pred = ljp->find(); att_succ = lfc->find();
-      unatt_pred = rjp->find(); unatt_succ = rfc->find();
-    } else {
-      att_pred = rjp->find(); att_succ = rfc->find();
-      unatt_pred = ljp->find(); unatt_succ = lfc->find();
-    }
-    assert(att_pred->attached() && att_succ->attached());
-    assert(!unatt_pred->attached() && !unatt_succ->attached());
-
-    if (!f->find()->attached()) { att_succ->merge(f); }
-    assert(f->find()->attached());
-
-    att_pred->merge(j);
-    // since now the two are merged, the reachability of the two nodes in m_R
-    // need to be merged as well
-    // m_R.merge_nodes(att_pred->find()->id, j->find()->id);
-
-    unatt_pred->find()->att_succ = j->find();
-  }
-  assert(j->find()->att_pred);
-  
-  return j;
-}
-
 // Currently we only support binary join
 void nonblock::at_sync(sframe_data *f) {
 
-  //node *f; // fork
-  // node *s1; // left fork child (s_1)
-  // node *s2; // right fork child (s_2)
-  // node *t1; // left join parent (t_1)
-  //node *t2 = t_current; // right join parent (t_2)
-
-  // while (frame->nodes.pop(&f, &s1, &s2, &t1)) {
-  //   t2 = binary_join(f, s1, s2, t1, t2);
-  // }
-
-  // Set current node
-  //t_current = t2;
-  
   m_sp.at_sync(&f->sp);
 
   assert(f->fork_stack.size() != 0);
@@ -371,8 +300,6 @@ void nonblock::at_spawn_continuation(sframe_data *f, sframe_data *p) {
 // f is the current head and p is the parent
 void nonblock::at_future_continuation(sframe_data *f, sframe_data *p) {
   // Use p because the pop hasn't happened yet
-  // Except we're not really doing anything with the "future helper"
-  // frames...do we even need them?
   assert(f->future_fork);
   node *w = new node(); // right
   assert(w->find() == w);
