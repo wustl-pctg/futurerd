@@ -1,44 +1,72 @@
-#include "shadow_mem.hpp"
 #include <cassert>
+#include <cstdio> // debugging
 
-using addr_t = shadow_mem::addr_t;
+#include "shadow_mem.hpp"
+using access_t = shadow_mem::access_t;
 
-shadow_mem::addr_info_t* shadow_mem::find(addr_t key) {
-  auto it = m_shadow_map.find(key);
-  return (it != m_shadow_map.end()) ? &it->second : nullptr;
-}
+access_t** shadow_mem::find_slot(addr_t key, bool alloc) {
+  /* I think this volatile is necessary and sufficient ... */
+  shadow_tbl *volatile *dest = &(shadow_dir[key>>LOG_TBL_SIZE]);
+  shadow_tbl *tbl = *dest;
 
-shadow_mem::addr_info_t* shadow_mem::insert(bool is_read, addr_t addr,
-                                            rd_info_t strand, addr_t rip) {
-  addr_info_t *old = find(addr);
-  addr_info_t *slot = old;
-  if (slot == nullptr) {
-    auto option = m_shadow_map.insert(std::make_pair(addr, addr_info_t()));
-    assert(option.second); // indicates success of insert operation
-    slot = &option.first->second;
+  if (!alloc && !tbl) return nullptr;
+    
+  if (tbl == nullptr) {
+    struct shadow_tbl *new_tbl = new struct shadow_tbl();
+    do {
+      tbl = __sync_val_compare_and_swap(dest, tbl, new_tbl);
+    } while(tbl == nullptr);
+    assert(tbl != nullptr);
+
+    if(tbl != new_tbl) { // someone got to the allocation first
+      delete new_tbl; 
+    }
   }
-  assert(slot);
-  access_t *access = (is_read) ? &slot->last_reader : &slot->last_writer;
-  *access = access_t(strand, rip);
-  return old;
+  access_t** slot =  &tbl->shadow_entries[key&((1<<LOG_TBL_SIZE) - 1)];
+  return slot;
 }
 
-void shadow_mem::update(addr_info_t *slot, bool is_read,
-            addr_t addr, rd_info_t strand, addr_t rip) {
-  assert(slot != nullptr);
-  access_t *access = (is_read) ? &slot->last_reader : &slot->last_writer;
-  *access = access_t(strand, rip);
+shadow_mem::shadow_mem() {
+  shadow_dir = 
+    new struct shadow_tbl *[1<<(48 - LOG_TBL_SIZE - LOG_KEY_SIZE)]();
 }
+
+access_t* shadow_mem::find(addr_t key) {
+  access_t **slot = find_slot(key, false);
+  if (slot == nullptr)
+    return nullptr;
+  return *slot;
+}
+
+//  return the value at the memory location when insert occurs
+//  If the value returned != val, insertion failed because someone
+//  else got to the slot first.  
+access_t*  shadow_mem::insert(addr_t key, access_t *val) {
+  access_t **slot = find_slot(key, true);
+  access_t *old_val = *slot;
+  *slot = val;
+  return old_val;
+}
+
+void shadow_mem::erase(addr_t key) {
+  access_t **slot = find_slot(key, false);
+  if (slot != nullptr)
+    *slot = nullptr;
+}
+
+// void shadow_mem::update(access_t *slot, bool is_read,
+//                         addr_t addr, rd_info_t strand, addr_t rip) {
+//   assert(slot != nullptr);
+//   access_t *access = (is_read) ? &slot->last_reader : &slot->last_writer;
+//   *access = access_t(strand, rip);
+// }
 
 void shadow_mem::clear(addr_t start, addr_t end) {
-  assert(ALIGN_BY_NEXT_MAX_GRAIN_SIZE(end) == end); 
-  assert(start < end);
-
-  // Not true for large malloc'ed blocks...
-  //assert(end-start < 4096);
+  assert(ALIGN_BY_NEXT_MAX_GRAIN_SIZE(end) == end);
+  assert(start <= end);
 
   while(start != end) {
-    m_shadow_map.erase(start);
+    erase(ADDR_TO_KEY(start));
     start += GRAIN_SIZE;
   }
 }
