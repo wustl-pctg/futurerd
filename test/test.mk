@@ -18,4 +18,5 @@ APPFLAGS += -fno-omit-frame-pointer
 
 CFLAGS += $(APPFLAGS)
 CXXFLAGS += $(APPFLAGS)
-LDFLAGS += -ldl -lpthread $(RUNTIME_LIB)
+RDLIB = $(LIB_DIR)/librd-$(ftype).a
+LDFLAGS += -ldl -lpthread $(RDLIB) $(RUNTIME_LIB)
