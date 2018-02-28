@@ -8,7 +8,8 @@
 #include <chrono>
 
 #include "../util/getoptions.hpp" 
-#include "../util/util.hpp" 
+#include "../util/util.hpp"
+#include "rd.h"
 
 #define SIZE_OF_ALPHABETS 4
 #define BASE_CASE_LOG 3 // base case = 2^3 * 2^3
@@ -253,6 +254,9 @@ static void do_check(int *stor1, char *a1, char *b1, int n, int result) {
 }
 
 int main(int argc, char *argv[]) {
+#ifndef RACE_DETECT    
+    futurerd_disable_shadowing();
+#endif
 
     int n = 1024;
     int check = 0, help = 0;
