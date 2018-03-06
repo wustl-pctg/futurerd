@@ -13,6 +13,8 @@
 #include <future.hpp>
 #include <chrono>
 
+#include <cmath>
+
 #include "../util/getoptions.hpp"
 #include "../util/util.hpp"
 #include "rd.h"
@@ -22,8 +24,14 @@
 #endif
 
 // Don't make base case too large --- tmp matrices allocated on stack
-#define POWER 4 // the base case size = (2*POWER)
-#define BASE_CASE (1 << POWER) // the base case size = (2*POWER)
+// #define POWER 4 // the base case size = (2*POWER)
+// #define BASE_CASE (1 << POWER) // the base case size = (2*POWER)
+static int POWER;
+static int BASE_CASE;
+#define MIN_BASE_CASE 16
+
+static inline int nearpow2(int x) { return 1 << (32 - __builtin_clz (x - 1)); }
+static inline int ilog2(int x) { return 32 - __builtin_clz(x) - 1; }
 
 // The following three should match
 #define DATA float
@@ -346,8 +354,8 @@ static void do_matmul(DATA *A, DATA *B, DATA *C, int n) {
 }
 #endif // NONBLOCKING_FUTURES
 
-const char * specifiers[] = {"-n", "-c", "-h", 0};
-int opt_types[] = {INTARG, BOOLARG, BOOLARG, 0};
+const char * specifiers[] = {"-n", "-c", "-h", "-b", 0};
+int opt_types[] = {INTARG, BOOLARG, BOOLARG, INTARG, 0};
 
 int main(int argc, char *argv[]) {
 #ifndef RACE_DETECT    
@@ -355,16 +363,28 @@ int main(int argc, char *argv[]) {
 #endif
 
   int n = 1024; // default n value
+  int bSize = 0;
   int help = 0;
   int check = 0;
 
-  get_options(argc, argv, specifiers, opt_types, &n, &check, &help);
+  get_options(argc, argv, specifiers, opt_types, &n, &check, &help, &bSize);
   ensure_serial_execution();
 
   if(help) {   
-    fprintf(stderr, "%s [-n <n>|-c|-h]\n", argv[0]);
+    fprintf(stderr, "%s [-n <n>|-b <b>|-c|-h]\n", argv[0]);
     exit(0); 
   }
+
+  if (bSize == 0) {
+    bSize = std::sqrt(n);
+
+    // Minimum base case size, but only if not set explicitly
+    if (bSize < MIN_BASE_CASE) bSize = MIN_BASE_CASE;
+  }
+
+  // Nearest power of 2
+  BASE_CASE = nearpow2(bSize);
+  POWER = ilog2(BASE_CASE);
 
   DATA *A, *B, *C, *I = NULL;
 

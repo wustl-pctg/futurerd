@@ -2,28 +2,32 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <chrono>
+
+#include <cmath>
+
+#if !SERIAL
 #include <future.hpp>
 #include <cilk/cilk.h>
 #include <cilk/cilk_api.h>
-#include <chrono>
+
+#include "rd.h"
+#endif
 
 #include "../util/getoptions.hpp"
 #include "../util/util.hpp"
-#include "rd.h"
 
 #define SIZE_OF_ALPHABETS 4
-#define BASE_CASE_LOG 3 // base case = 2^3 * 2^3
-// make sure n is divisible by base case
-#define BLOCK_ALIGN(n) (((n + (1 << BASE_CASE_LOG)-1) >> BASE_CASE_LOG) << BASE_CASE_LOG)  
-#define NUM_BLOCKS(n) (n >> BASE_CASE_LOG) 
-#define BLOCK_IND_TO_IND(i) (i << BASE_CASE_LOG)
 
-static inline int max(int a, int b) {
-  if( a < b )
-    return b;
-  else
-    return a;
-}
+static int base_case_log;
+#define MIN_BASE_CASE 32
+#define NUM_BLOCKS(n) (n >> base_case_log)
+#define BLOCK_ALIGN(n) (((n + (1 << base_case_log)-1) >> base_case_log) << base_case_log)  
+#define BLOCK_IND_TO_IND(i) (i << base_case_log)
+
+static inline int max(int a, int b) { return (a < b) ? b : a; }
+static inline int nearpow2(int x) { return 1 << (32 - __builtin_clz (x - 1)); }
+static inline int ilog2(int x) { return 32 - __builtin_clz(x) - 1; }
 
 /**
  * stor : the storage for solutions to subproblems, where stor[i,j] stores the 
@@ -62,7 +66,7 @@ static int simple_seq_sw(int* stor, char *a, char *b, int n) {
 static inline int 
 process_sw_tile(int *stor, char *a, char *b, int n, int iB, int jB) {
 
-  int bSize = 1 << BASE_CASE_LOG;
+  int bSize = 1 << base_case_log;
 
   for(int i = 0; i < bSize; i++) {
     for(int j = 0; j < bSize; j++) {
@@ -205,28 +209,41 @@ static void do_check(int *stor1, char *a1, char *b1, int n, int result) {
   free(stor2);
 }
 
-const char* specifiers[] = {"-n", "-c", "-h"};
-int opt_types[] = {INTARG, BOOLARG, BOOLARG};
+const char* specifiers[] = {"-n", "-c", "-h", "-b"};
+int opt_types[] = {INTARG, BOOLARG, BOOLARG, INTARG};
 
 int main(int argc, char *argv[]) {
-#ifndef RACE_DETECT    
+#if (!RACE_DETECT) && (!SERIAL)
     futurerd_disable_shadowing();
 #endif
 
   int n = 1024;
+  int bSize = 0;
   int check = 0, help = 0;
 
-  get_options(argc, argv, specifiers, opt_types, &n, &check, &help);
+  get_options(argc, argv, specifiers, opt_types, &n, &check, &help, &bSize);
 
   if(help) {
     fprintf(stderr, "Usage: sw [-n size] [-c] [-h]\n");
-    fprintf(stderr, "\twhere -n specifies string length - 1");
+    fprintf(stderr, "\twhere -n specifies string length (default: 1024)\n");
+    fprintf(stderr, "\t -b specifies base cast size (default: sqrt(n))\n");
     fprintf(stderr, "\tcheck results if -c is set\n");
     fprintf(stderr, "\toutput this message if -h is set\n");
     exit(1);
   }
 
   ensure_serial_execution();
+
+  if (bSize == 0) {
+    bSize = std::sqrt(n);
+
+    // Minimum base case size, but only if not set explicitly
+    if (bSize < MIN_BASE_CASE) bSize = MIN_BASE_CASE;
+  }
+
+  // Nearest power of 2
+  bSize = nearpow2(bSize);
+  base_case_log = ilog2(bSize);
      
   n = BLOCK_ALIGN(n); // round it to be 64-byte aligned
   printf("Compute SmithWaterman with %d x %d table.\n", n, n);
@@ -243,14 +260,22 @@ int main(int argc, char *argv[]) {
   a1[n-1] = '\0';
   b1[n-1] = '\0';
 
-#ifdef NONBLOCKING_FUTURES
-  printf("Performing SW with non-structured future.\n");
+#if SERIAL
+  printf("Performing SW serially.\n");
+#elif NONBLOCKING_FUTURES
+  printf("Performing SW with non-structured futures and %d x %d base case.\n",
+         bSize, bSize);
 #else // STRUCTURED_FUTURE
-  printf("Performing SW with structured future.\n");
+  printf("Performing SW with structured futures and %d x %d base case.\n",
+         bSize, bSize);
 #endif
 
   auto start = std::chrono::steady_clock::now();
+#if SERIAL
+  result = simple_seq_sw(stor1, a1, b1, n);
+#else
   result = wave_sw_with_futures(stor1, a1, b1, n);
+#endif
   auto end = std::chrono::steady_clock::now();
     
   if(check) { do_check(stor1, a1, b1, n, result); }
@@ -266,4 +291,3 @@ int main(int argc, char *argv[]) {
 
   return 0;
 }
-

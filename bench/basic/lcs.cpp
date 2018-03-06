@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <limits.h> // CHAR_BIT
 #include <chrono>
 #include <cmath>
 
@@ -30,17 +29,8 @@ static int base_case_log;
 #define BLOCK_ALIGN(n) (((n + (1 << base_case_log)-1) >> base_case_log) << base_case_log)  
 #define BLOCK_IND_TO_IND(i) (i << base_case_log)
 
-// Original base case: 2^3
-// #define BASE_CASE_LOG 6 // base case = 2^BASE_CASE_LOG * 2^BASE_CASE_LOG
-// // make sure n is divisible by base case
-// #define BLOCK_ALIGN(n) (((n + (1 << BASE_CASE_LOG)-1) >> BASE_CASE_LOG) << BASE_CASE_LOG)  
-// #define NUM_BLOCKS(n) (n >> BASE_CASE_LOG) 
-//#define BLOCK_IND_TO_IND(i) (i << BASE_CASE_LOG)
-
 static inline int nearpow2(int x) { return 1 << (32 - __builtin_clz (x - 1)); }
-static inline int ilog2(int x) { return sizeof(int) * CHAR_BIT - __builtin_clz(x) - 1; }
-//static inline bool ispow2(int x) { return ((x != 0) && ((x & (~x + 1)) == x)); }
-//static inline bool ispow2(int x) { return __builtin_popcount(x) == 1; }
+static inline int ilog2(int x) { return 32 - __builtin_clz(x) - 1; }
 static inline int max(int a, int b) { return (a < b) ? b : a; }
 
 #ifdef SERIAL
