@@ -587,25 +587,37 @@ void compute_kernel(const public_struct *pub, private_struct *priv) {
         int s1, s2, s3, s4, s5, s6, s7, s8, s9, s10;
         cilk::future<int> f1, f2, f3, f4, f5, f6, f7, f8, f9, f10; 
 
-        reuse_future(int, (&f1), compute_step1, pub, priv);
-        reuse_future(int, (&f2), compute_step2, pub, priv);
-        reuse_future(int, (&f9), compute_step9, pub, priv);
+        reasync_helper<int, const public_struct *, private_struct *>
+          (&f1, compute_step1, pub, priv);
+        reasync_helper<int, const public_struct *, private_struct *>
+          (&f2, compute_step2, pub, priv);
+        reasync_helper<int, const public_struct *, private_struct *>
+          (&f9, compute_step9, pub, priv);
         s2 = f2.get();
-        reuse_future(int, (&f3), compute_step3, pub, priv);
+
+        reasync_helper<int, const public_struct *, private_struct *>
+          (&f3, compute_step3, pub, priv);
         s1 = f1.get();
-        reuse_future(int, (&f4), compute_step4, pub, priv);
-        reuse_future(int, (&f5), compute_step5, pub, priv);
+
+        reasync_helper<int, const public_struct *, private_struct *>
+          (&f4, compute_step4, pub, priv);
+        reasync_helper<int, const public_struct *, private_struct *>
+          (&f5, compute_step5, pub, priv);
         s5 = f5.get();
-        reuse_future(int, (&f7), compute_step7, pub, priv);
+        reasync_helper<int, const public_struct *, private_struct *>
+          (&f7, compute_step7, pub, priv);
         s3 = f3.get();
         s4 = f4.get();
-        reuse_future(int, (&f6), compute_step6, pub, priv);
+        reasync_helper<int, const public_struct *, private_struct *>
+          (&f6, compute_step6, pub, priv);
         s7 = f7.get();
         s6 = f6.get();
-        reuse_future(int, (&f8), compute_step8, pub, priv);
+        reasync_helper<int, const public_struct *, private_struct *>
+          (&f8, compute_step8, pub, priv);
         s9 = f9.get();
         s8 = f8.get();
-        reuse_future(int, (&f10), compute_step10, pub, priv);
+        reasync_helper<int, const public_struct *, private_struct *>
+          (&f10, compute_step10, pub, priv);
         s10 = f10.get();
         
         assert(s1 == frame_no);
@@ -717,13 +729,13 @@ void compute_kernel(const public_struct *pub, private_struct *priv) {
             compute_step9_with_get, compute_step10_with_get };
 
         // spawn off the computation; could be a sequential loop
-        CILKFOR_BEGIN;
         cilk_for(int i=0; i < 10; i++) {
-            CILKFOR_ITER_BEGIN;
             cilk::future<int> *f = &fhandles[i];
-            reuse_future(int, f, func_ptr[i], pub, priv, fhandles, frame_no); 
-            CILKFOR_ITER_END;
-        } CILKFOR_END;
+            // reuse_future(int, f, func_ptr[i], pub, priv, fhandles, frame_no); 
+            reasync_helper<int, const public_struct *, private_struct *, 
+                           cilk::future<int> *, int>
+                (f, func_ptr[i], pub, priv, fhandles, frame_no);
+        }
         s10 = fhandles[9].get(); // make sure we finish the last step before returning
         assert(s10 == frame_no);
     }

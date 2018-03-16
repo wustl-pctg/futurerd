@@ -327,16 +327,24 @@ static int processFrame(int frameNum, cilk::future<int> *prevFrameStageOne,
     // we skip calling GetObservation on the model, since that has been done already 
     if(prevFrameStageOne == nullptr) {
         assert(frameNum == 0);
-        reuse_future(int, &stageTwoFutures[frameNum], processFrameStageTwo, 
-                     frameNum, nullptr, stageTwoFutures, pf, outputFileAvg, OutputBMP);
+        // reuse_future(int, &stageTwoFutures[frameNum], processFrameStageTwo, 
+        //              frameNum, nullptr, stageTwoFutures, pf, outputFileAvg, OutputBMP);
+        reasync_helper<int, int, cilk::future<int> *, cilk::future<int> *, 
+                       ParticleFilterCilk<TrackingModelCilk>&, ofstream &, bool>
+            (&stageTwoFutures[frameNum], processFrameStageTwo, frameNum, 
+             nullptr, stageTwoFutures, pf, outputFileAvg, OutputBMP);
     } else {
         // otherwise, we wait for the first stage of the previous frame to
         // finish before we proceed with this frame
         prevFrameStageOne->get();
         model.GetObservation(frameNum);
-        reuse_future(int, &stageTwoFutures[frameNum], processFrameStageTwo, 
-                     frameNum, &stageTwoFutures[frameNum-1], stageTwoFutures, 
-                     pf, outputFileAvg, OutputBMP); 
+        // reuse_future(int, &stageTwoFutures[frameNum], processFrameStageTwo, 
+        //              frameNum, &stageTwoFutures[frameNum-1], stageTwoFutures, 
+        //              pf, outputFileAvg, OutputBMP); 
+        reasync_helper<int, int, cilk::future<int> *, cilk::future<int> *, 
+                       ParticleFilterCilk<TrackingModelCilk>&, ofstream &, bool>
+            (&stageTwoFutures[frameNum], processFrameStageTwo, frameNum, 
+             &stageTwoFutures[frameNum-1], stageTwoFutures, pf, outputFileAvg, OutputBMP);
     }
 
     return 1;
@@ -382,12 +390,22 @@ int mainCilkFuture(string path, int cameras, int frames, int particles,
     // Create the pipeline - one stage for image processing, one for particle filter update
     for(int i = 0; i < frames; i++) {//process each set of frames
         if(i == 0) {
-            reuse_future(int, &stageOneFutures[i], processFrame, 
-                         i, nullptr, stageTwoFutures, model, pf, outputFileAvg, OutputBMP);
+            // reuse_future(int, &stageOneFutures[i], processFrame, 
+            //              i, nullptr, stageTwoFutures, model, pf, outputFileAvg, OutputBMP);
+            reasync_helper<int, int, cilk::future<int> *, cilk::future<int> *,
+                        TrackingModelCilk &, ParticleFilterCilk<TrackingModelCilk> &,
+                        ofstream &, bool>
+                (&stageOneFutures[i], processFrame, i, nullptr, 
+                 stageTwoFutures, model, pf, outputFileAvg, OutputBMP);
         } else {
-            reuse_future(int, &stageOneFutures[i], processFrame, 
-                         i, &stageOneFutures[i-1], stageTwoFutures, 
-                         model, pf, outputFileAvg, OutputBMP);
+            // reuse_future(int, &stageOneFutures[i], processFrame, 
+            //              i, &stageOneFutures[i-1], stageTwoFutures, 
+            //              model, pf, outputFileAvg, OutputBMP);
+            reasync_helper<int, int, cilk::future<int> *, cilk::future<int> *,
+                        TrackingModelCilk &, ParticleFilterCilk<TrackingModelCilk> &,
+                        ofstream &, bool>
+                (&stageOneFutures[i], processFrame, i, &stageOneFutures[i-1], 
+                 stageTwoFutures, model, pf, outputFileAvg, OutputBMP);
         }
     }
     stageTwoFutures[frames-1].get(); // wait for last frame's stage two to complete

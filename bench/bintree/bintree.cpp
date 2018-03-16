@@ -136,15 +136,17 @@ node * bintree::merge(node *this_root, node *that_root) {
     SET_FUTPTR(&split_left, split_left);
   }
 
-  cilk::future<node *> *merged_left, *merged_right;
   REPLACE(&this_root->left); REPLACE(&this_root->right);
   REPLACE((node **)&split_left); REPLACE((node **)&split_right);
 
   //create_future(node *, merged_left, merge, this_root->left, (node *)split_left);
-  async_helper<node*,node*,node*>(merged_left, merge, this_root->left, (node*)split_left);
+  cilk::future<node *> *merged_left = new cilk::future<node *>();
+  cilk::future<node *> *merged_right = new cilk::future<node *>();
+
+  reasync_helper<node*,node*,node*>(merged_left, merge, this_root->left, (node*)split_left);
   SET_FUTPTR(&this_root->fut_left, merged_left);
   //create_future(node *, merged_right, merge, this_root->right, (node *)split_right);
-  async_helper<node*,node*,node*>(merged_right, merge, this_root->right, (node*)split_right);
+  reasync_helper<node*,node*,node*>(merged_right, merge, this_root->right, (node*)split_right);
   SET_FUTPTR(&this_root->fut_right, merged_right);
 
   return this_root;

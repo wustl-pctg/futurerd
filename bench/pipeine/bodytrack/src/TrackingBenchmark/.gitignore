@@ -1,0 +1,3 @@
+clang-obj/*.o
+bodytrack-cilk
+bodytrack-serial
