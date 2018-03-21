@@ -32,12 +32,12 @@ race_detector::race_detector() {
   init = true;
 
   enable_checking();
-  
+
   t_sstack.push();
   // not really, but need to initialize
   //g_reach.at_spawn(t_sstack.head());
   g_reach.init(t_sstack.head());
-  
+
   __cilkrts_set_param("nworkers", "1");
 }
 
@@ -53,7 +53,7 @@ void race_detector::set_policy(enum rd_policy p) {
 void race_detector::report_race(addr_t addr, addr_t last_rip, addr_t this_rip,
                                 race_type rt) {
   if (! (g_policy == RD_SILENT) )
-    fprintf(stderr, "Race detected at %lx, last rip %lx, this rip %lx\n", addr, 
+    fprintf(stderr, "Race detected at %lx, last rip %lx, this rip %lx\n", addr,
             last_rip, this_rip);
   g_num_races++;
   if (g_policy == RD_EXIT)
@@ -70,27 +70,27 @@ smem_data* race_detector::active() { return g_reach.active(t_sstack.head()); }
 //                                  addr_t addr, size_t mem_size) {
 //   shadow_mem::addr_info_t *slot = g_smem.find(addr);
 //   // fprintf(stderr, "Checking %d, rip %p, addr %p, active %p.\n", is_read, rip, addr, active());
-    
+
 //   // no previous accesses
 //   if (slot == nullptr) {
 //     g_smem.insert(is_read, addr, active(), rip);
 //     return;
 //   }
-  
+
 //   // check race with last writer
 //   if (slot->last_writer.access != nullptr // if last writer exists
 //       && !g_reach.precedes_now(t_sstack.head(), slot->last_writer.access)) {
 //     race_type rt = (is_read) ? race_type::WR : race_type::WW;
 //     report_race(addr, slot->last_writer.rip, rip, rt);
 //   }
-  
+
 //   // if write, check race with last read
 //   if (!is_read // if a write
 //       && slot->last_reader.access != nullptr // and last reader exists
 //       && !g_reach.precedes_now(t_sstack.head(), slot->last_reader.access)) {
 //     report_race(addr, slot->last_reader.rip, rip, race_type::RW);
 //   }
-  
+
 //   // update shadow mem
 //   g_smem.update(slot, is_read, addr, active(), rip);
 // }
@@ -114,7 +114,7 @@ void race_detector::handle_read(access_t* slot, addr_t rip, addr_t addr,
       report_race(addr, writer->rip, rip, race_type::WR);
     }
   }
-  
+
   // update readers
   for (int i{start}; i < (start + grains); ++i) {
     MemAccess_t *reader = slot->readers[i];
@@ -152,7 +152,7 @@ void race_detector::handle_write(access_t* slot, addr_t rip, addr_t addr,
     else
       slot->writers[i] = new MemAccess_t{current, rip};
   }
-  
+
   for (int i{start}; i < (start + grains); ++i) {
     MemAccess_t *reader = slot->readers[i];
     if (reader && !g_reach.precedes_now(t_sstack.head(), reader->rd)) {
