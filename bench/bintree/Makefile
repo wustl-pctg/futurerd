@@ -7,8 +7,8 @@ TARGETS = merge
 all: $(TARGETS) 
 
 INC += -I../util
-CFLAGS += $(APPFLAGS) $(RDFLAGS)
-CXXFLAGS += $(APPFLAGS) $(RDFLAGS)
+CFLAGS += $(APPFLAGS) #$(RDFLAGS)
+CXXFLAGS += $(APPFLAGS) #$(RDFLAGS)
 
 merge: merge.o bintree.o ../util/getoptions.o
 	$(CXX) $^ $(LDFLAGS) $(LIB) -o $@
