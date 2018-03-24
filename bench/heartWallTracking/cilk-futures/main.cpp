@@ -17,6 +17,8 @@
 #include "define.hpp"
 
 #include "../../util/util.hpp"
+#include <future.hpp>
+#include <rd.h>
 
 using namespace std;
 
@@ -494,7 +496,10 @@ static void cleanup(public_struct *pub, private_struct *priv) {
 //==============================================================================
 //==============================================================================
 int main(int argc, char *argv []) {
-
+#if (!RACE_DETECT) && REACH_MAINT
+  futurerd_disable_shadowing();
+#endif
+  
     //=====================
     //	VARIABLES
     //=====================

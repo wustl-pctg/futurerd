@@ -3,4 +3,10 @@
 # second is num of omp threads
 # original input: 20 4
 # full input: 104 1
-time ./heartwall ../data/test.avi 10 1
+
+N=10
+if [ "$1" != "" ]; then N=$1; fi
+time ./hw-base ../data/test.avi $N 1
+time ./hw-reach ../data/test.avi $N 1
+time ./hw-inst ../data/test.avi $N 1
+time ./hw-rd ../data/test.avi $N 1

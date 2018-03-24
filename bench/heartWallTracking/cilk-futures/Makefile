@@ -1,25 +1,35 @@
 include ../../bench.mk
 
-DEFINES = -DOUTPUT # -DRACE_DETECT
-CFLAGS += $(APPFLAGS) $(RDFLAGS) $(DEFINES)
-CXXFLAGS += $(APPFLAGS) $(RDFLAGS) $(DEFINES)
+DEFINES = -DOUTPUT
+CFLAGS += $(APPFLAGS) $(DEFINES) $(INC) -I./AVI
+CXXFLAGS += $(APPFLAGS) $(DEFINES) $(INC) -I./AVI
 
-all: heartwall
+TARGETS = hw-$(btype)
 
-compute-steps.o: compute-steps.cpp
-	$(CXX) $< -I./AVI $(INC) -c $(CXXFLAGS) -o $@
+.PHONY: all clean hw-all
+all: $(TARGETS)
 
-# link objects(binaries) together
-heartwall: main.o compute-steps.o ./AVI/avilib.o ./AVI/avimod.o
-	$(CXX) $^ $(LDFLAGS) $(LIB) -o heartwall
+hw-all:
+	$(MAKE) mode=$(mode) ftype=$(ftype) btype=rd
+	$(MAKE) mode=$(mode) ftype=$(ftype) btype=inst
+	$(MAKE) mode=$(mode) ftype=$(ftype) btype=reach
+	$(MAKE) mode=$(mode) ftype=$(ftype) btype=base
 
-# compile main function file into object (binary)
-main.o: main.cpp define.hpp
-	$(CXX) $< -I./AVI $(INC) -c $(CXXFLAGS) -o $@
+hw-%: main-%.o compute-steps-%.o ./AVI/avilib.o ./AVI/avimod.o
+	$(CXX) $^ $(LDFLAGS) $(LIB) -o $@
+
+.SECONDARY: main-$(btype).o compute-steps-$(btype).o
+
+main-%.o: main.cpp define.hpp
+	$(CXX) $(CXXFLAGS) -I./AVI $(INC) -o $@ -c $<
+
+compute-steps-%.o: compute-steps.cpp
+	$(CXX) $(CXXFLAGS) -I./AVI $(INC) -o $@ -c $<
 
 ./AVI/avilib.o ./AVI/avimod.o:
 	cd AVI; make;
 
 # delete all object files
 clean:
-	rm -f *.o AVI/*.o heartwall result.txt
+	rm -f *.o AVI/*.o result.txt
+	rm -f hw-base hw-reach hw-inst hw-rd
