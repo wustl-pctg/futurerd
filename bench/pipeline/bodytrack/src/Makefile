@@ -1,6 +1,9 @@
-.PHONY: all clean serial pthread omp cilk
+include ../../../bench.mk
 
-all: bodytrack-serial bodytrack-pthread bodytrack-omp bodytrack-cilk
+.PHONY: all clean serial pthread omp cilk future
+
+#all: bodytrack-serial bodytrack-pthread bodytrack-omp bodytrack-cilk
+all: future
 
 ../build: 
 	mkdir ../build
@@ -10,6 +13,7 @@ serial-gcc: bodytrack-serial-gcc
 pthread: bodytrack-pthread
 omp: bodytrack-omp
 cilk: bodytrack-cilk
+future: $(addprefix bt-,base reach inst rd)
 
 bodytrack-serial: ../build
 	$(MAKE) -C FlexImageLib 
@@ -34,6 +38,11 @@ bodytrack-omp: ../build
 bodytrack-cilk: ../build
 	$(MAKE) -C FlexImageLib 
 	$(MAKE) -C TrackingBenchmark cilk
+	mv TrackingBenchmark/$@ ../build/
+
+bt-%: ../build
+	$(MAKE) -C FlexImageLib
+	$(MAKE) -C TrackingBenchmark mode=$(mode) ftype=$(ftype) btype=all -j
 	mv TrackingBenchmark/$@ ../build/
 
 clean:

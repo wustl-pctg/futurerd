@@ -9,22 +9,43 @@ FlexIO.h FlexLib.h FlexOperators.h FlexThreshold.h FlexTransform.h \
 FlexImage.cpp FlexIO.cpp
 
 OBJDIR = clang-obj
-OBJECTS = $(OBJDIR)/FlexImage.o $(OBJDIR)/FlexIO.o
+OBJ = $(OBJDIR)/FlexImage.o $(OBJDIR)/FlexIO.o
 
-CXXFLAGS += -O3 -g -funroll-loops -fprefetch-loop-arrays -fpermissive -fno-exceptions -fexceptions -Wall -Wno-unknown-pragmas # -static-libgcc -Wl,--hash-style=both,--as-needed
+INST = no
+ifeq ($(btype),inst)
+  INST = yes
+endif
+ifeq ($(btype),rd)
+  INST = yes
+endif
+ifeq ($(INST),yes)
+  OBJECTS = $(OBJ:.o=-inst.o)
+  TARGETS = $(OBJDIR)/libflex-inst.a
+else
+  OBJECTS = $(OBJ:.o=-noinst.o)
+  TARGETS = $(OBJDIR)/libflex-noinst.a
+endif
 
+ifeq ($(btype),all)
+all: $(OBJDIR)
+	$(MAKE) mode=$(mode) btype=base
+	$(MAKE) mode=$(mode) btype=inst
+else
+all: $(OBJDIR) $(TARGETS)
+endif
+
+# -O3 -g
+CXXFLAGS += $(APPFLAGS) -funroll-loops -fprefetch-loop-arrays -fpermissive
+CXXFLAGS += -fno-exceptions -fexceptions -Wall -Wno-unknown-pragmas # -static-libgcc -Wl,--hash-style=both,--as-needed
 AR = ar
-LIBRARY = $(OBJDIR)/libflex.a
 
-all: $(OBJDIR) $(LIBRARY)
-
-$(OBJDIR): 
+$(OBJDIR):
 	mkdir -p $(OBJDIR)
 
-$(OBJDIR)/%.o: %.cpp
+$(OBJDIR)/%-inst.o $(OBJDIR)/%-noinst.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
-$(LIBRARY): $(OBJECTS)
+$(TARGETS): $(OBJECTS)
 	$(AR) $(ARFLAGS) $@ $^
 
 clean:
