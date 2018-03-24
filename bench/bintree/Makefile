@@ -2,15 +2,24 @@ include ../bench.mk
 
 .PHONY: all clean reallyclean
 
-TARGETS = merge
+TARGETS = merge-$(btype)
 
-all: $(TARGETS) 
+all: $(TARGETS)
 
 INC += -I../util
 CFLAGS += $(APPFLAGS) #$(RDFLAGS)
 CXXFLAGS += $(APPFLAGS) #$(RDFLAGS)
 
-merge: merge.o bintree.o ../util/getoptions.o
+merge-all:
+	$(MAKE) mode=$(mode) ftype=$(ftype) btype=base
+	$(MAKE) mode=$(mode) ftype=$(ftype) btype=reach
+	$(MAKE) mode=$(mode) ftype=$(ftype) btype=inst
+	$(MAKE) mode=$(mode) ftype=$(ftype) btype=rd
+
+merge-%.o: merge.cpp
+bintree-%.o: bintree.cpp
+
+merge-%: merge-%.o bintree-%.o ../util/getoptions.o
 	$(CXX) $^ $(LDFLAGS) $(LIB) -o $@
 
 # delete all object files
@@ -18,4 +27,4 @@ clean:
 	rm -f *.o $(TARGETS) core.*
 
 reallyclean:
-	rm -f *.o $(TARGETS) ../util/*.o core.*
+	rm -f *.o merge-base merge-reach merge-inst merge-rd ../util/*.o core.*
