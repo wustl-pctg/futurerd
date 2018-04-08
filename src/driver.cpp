@@ -120,7 +120,11 @@ void continuation() {
 // We don't support separate "put" operations right now. We assume the
 // finish() call also put's the result.
 void cilk_future_put_begin(sfut_data *fut) { rd::disable_checking(); }
-void cilk_future_put_end(sfut_data *fut) { rd::enable_checking(); }
+void cilk_future_put_end(sfut_data *fut) {
+  rd::enable_checking();
+  // set put strand here? (maybe by calling
+  // rd::g_reach.at_future_put(f, p, fut) or similar...
+}
 
 // XXX: should be different if using put/get futures!
 void cilk_future_finish_begin(sfut_data *fut) { rd::disable_checking(); }
@@ -172,7 +176,13 @@ void cilk_leave_end() {
   // If rd::t_sstack.size() == 1, we just popped (in cilk_leave_begin())
   // the second-to-last frame. We're leaving a parallel section, so we don't
   // need to do any race detection.
-  if (rd::t_sstack.size() > 1) rd::enable_checking();
+  //if (rd::t_sstack.size() > 1) rd::enable_checking();
+
+  // The above is not true, since we may later enter another parallel
+  // section. If we don't enable it here, it will never be correctly
+  // enabled later.
+  // TODO: I think I can fix this at one of the enter functions...
+  rd::enable_checking();
 }
 
 // tsan functions
@@ -243,6 +253,15 @@ void __tsan_func_entry(void *pc) {
     rd::t_stack_low_watermark = res;
 }
 
+// Normally, the spawn helper calls this, which calls the below
+// function with depth=2 since we want to clear memory at the spawn
+// helper.
+// But we need modifications to support cilk_for loops, since the code
+// will not be instrumented with -fsanitize.
+// [[gnu::noinline]] void __tsan_func_exit() {
+//   __tsan_func_exit_depth(2);
+// }
+
 /* We would like to clear the shadow memory correponding to the cactus
  * stack whenever we leave a Cilk function.  Unfortunately, variables are 
  * still being read after cilk_leave_frame_begin (such as return value 
@@ -256,7 +275,7 @@ void __tsan_func_entry(void *pc) {
 // Noinline b/c otherwise it may be inlined into
 // cilk_for_recursive_spawn_continue (below), so
 // __built_frame_address(1) would be wrong
-[[gnu::noinline]] void __tsan_func_exit() {
+[[gnu::noinline]] void __tsan_func_exit() { //_depth(int depth) {
   uint64_t res = (uint64_t) __builtin_frame_address(0);
   if(rd::t_stack_low_watermark > res)
     rd::t_stack_low_watermark = res;
@@ -264,7 +283,7 @@ void __tsan_func_entry(void *pc) {
   if (!rd::shadow_enabled) return;
 
   if (rd::t_clear_stack) {
-    // the spawn helper that's exiting is calling tsan_func_exit, 
+    // the spawn helper that's exiting is calling tsan_func_exit,
     // so the spawn helper's base pointer is the stack_high_watermark
     // to clear (stack grows downward)
 
@@ -283,7 +302,7 @@ void __tsan_func_entry(void *pc) {
 
 // The spawns that create the cilk_for loop tree are not compiled with
 // thread sanitizer, to __tsan_func_exit is never called.
-void cilk_for_recursive_spawn_continue(void) {
+[[gnu::noinline]] void cilk_for_recursive_spawn_continue(void) {
   if (rd::tsan_init) __tsan_func_exit();
 }
 

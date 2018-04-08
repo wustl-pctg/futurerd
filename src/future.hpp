@@ -1,3 +1,4 @@
+#pragma once
 // Template class for futures
 /* In an ideal world, this file would not get instrumented by thread
    sanitizer. Unfortunately this is not an ideal world, so this file
@@ -10,10 +11,7 @@
 
 #include <cassert>
 
-/// @todo{Ideally the race detection functions in the future class
-/// will be split out like the other cilk tool functions.}
-//#define RACE_DETECT
-#ifdef REACH_MAINT
+#if REACH_MAINT == 1 || RACE_DETECT == 1
 #include "rd.hpp"
 
 // Convenience
@@ -53,7 +51,8 @@ __attribute__((weak)) void cilk_future_helper_leave(sfut_data *) {}
 __attribute__((weak)) void cilk_future_put_begin(struct sfut_data *) {}
 __attribute__((weak)) void cilk_future_put_end(struct sfut_data *) {}
 #define NOSANITIZE
-#endif // RACE_DETECT
+
+#endif // RACE_MAINT || RACE_DETECT
 
 // Without this, there are sometimes races on future handles. These
 // are not real races, but due to the fact that checking is not
@@ -66,10 +65,11 @@ namespace cilk {
 template<typename T>
 class future {
 private:
-  enum class status { CREATED, // memory allocated, initialized
-                      PUT, // value is ready
-                      DONE, // strand has finished execution
-  };
+       enum class status { CREATED,  // memory allocated, initialized
+                           //STARTED,
+                           PUT,      // value is ready
+                           DONE,     // strand has finished execution
+                           };
 
   status m_stat;
   T m_val;
@@ -79,12 +79,17 @@ public:
 
   NOSANITIZE future() : m_stat(status::CREATED)
   { __DC; cilk_future_create(); __EC; }
-  
-  NOSANITIZE void put(T val) {
+
+  // NOSANITIZE void start()
+  // { __DC; m_stat = status::STARTED; cilk_future_create(); __EC; }
+
+    NOSANITIZE void put(T val) {
     __DC;
     cilk_future_put_begin(&m_rd_data);
     m_val = val;
     m_stat = status::PUT;
+
+    // Make sure we make a new strand here.
     cilk_future_put_end(&m_rd_data);
     __EC;
   }
@@ -105,7 +110,7 @@ public:
      * the functions in this file get instrumented. In other words,
      * the stack would get cleared at the end of finish(), instead of
      * the end of this finish(val). */
-    
+
     __DC;
     //cilk_future_finish_begin(&m_rd_data); // disables checking
     m_val = val;
@@ -113,7 +118,7 @@ public:
     //cilk_future_finish_end(&m_rd_data); // enables checking
     __EC;
   }
-  
+
   NOSANITIZE bool ready() { __DC; bool res = m_stat >= status::PUT; __EC; return res; }
   NOSANITIZE T get() {
     __DC;

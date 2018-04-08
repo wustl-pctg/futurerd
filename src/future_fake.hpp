@@ -4,6 +4,15 @@
 #define FUTURE_PROLOG()
 #define FUTURE_EPILOG()
 
+/** The syntax I'd really like to have is:
+ * (1) Normal future "spawning":
+ *     future<int>* f = async foo(arg1, arg2);
+ * (2) Reusing a future for a new task: (think placement new)
+ *     async(f) foo(arg1, arg2);
+ *
+ * I don't see how to do these without compiler support.
+ */
+
 // Helper function versions
 // I think there are better ways of doing this, but they have so far
 // bested my C++11/14/17 knowledge. Probably some fancy template
@@ -17,6 +26,7 @@ async_helper(ReturnType (*func)(Args...), Args... args)
 {
   __DC;
   auto __fut = new cilk::future<ReturnType>();
+  // __fut->start();
   __FS;
   __EC;
   __fut->finish(func(args...));
@@ -29,8 +39,8 @@ template<typename ReturnType, typename... Args>
 reasync_helper(cilk::future<ReturnType>* __fut,
                ReturnType (*func)(Args...), Args... args) {
   __DC;
-  
   new(__fut) cilk::future<ReturnType>();
+  // __fut->start();
   __FS; // "start" the future
   __EC;
   __fut->finish(func(args...));
@@ -108,7 +118,7 @@ reasync_helper(cilk::future<ReturnType>* __fut,
 
 // Some details on how the cilk fake macros implement spawn. Will be
 // useful when implementing parallel futures.
-/** 
+/**
 CILK_FAKE_SPAWN_R(a, fib(n-1)) -> a = spawn fib(n-1);
  CILK_FAKE_CALL_SPAWN_HELPER(CILK_FAKE_SPAWN_HELPER(expr, args), sf);
  
