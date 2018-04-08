@@ -1,9 +1,7 @@
-#include "bitset.hpp"
+#include "bitvector.hpp"
 #include <cstdint> // uint64_t
 #include <cstdlib> // malloc
-
-// Getting or setting a particular bit in a block
-#define MASK(index) (1 << ((index) % sizeof(block_t)))
+#include <cstdio>
 
 __attribute__ ((const))
 static inline uint64_t p2(uint64_t x)
@@ -11,13 +9,13 @@ static inline uint64_t p2(uint64_t x)
   return uint64_t(1) << (64 - __builtin_clzl(x - 1));
 }
 
-bitset::bitset(const bitset& that) {
+bitvector::bitvector(const bitvector& that) {
   num_blocks = 0; // ensure resize really happens
   unsafe_resize(that.num_blocks);
   std::memcpy(data, that.data, num_blocks * sizeof(block_t));
 }
 
-void bitset::unsafe_resize(size_t new_size) {
+void bitvector::unsafe_resize(size_t new_size) {
   block_t* new_data = (block_t*) malloc(sizeof(block_t) * new_size);
   assert(new_data);
   std::memcpy(new_data, data, sizeof(block_t) * num_blocks);
@@ -25,8 +23,8 @@ void bitset::unsafe_resize(size_t new_size) {
   data = new_data;
   num_blocks = new_size;
 }
-    
-void bitset::resize(size_t new_size) {
+
+void bitvector::resize(size_t new_size) {
   if (new_size <= num_blocks) return;
   size_t old_size = num_blocks;
   unsafe_resize(new_size);
@@ -34,7 +32,7 @@ void bitset::resize(size_t new_size) {
               (new_size - old_size) * sizeof(block_t));
 }
 
-void bitset::set(size_t y) {
+void bitvector::set(size_t y) {
   uint64_t block = y / BITS_PER_BLOCK;
   if (block >= num_blocks) {
     size_t new_size = p2(block+1);
@@ -51,8 +49,21 @@ void bitset::set(size_t y) {
   data[block] |= mask;
 }
 
-bool bitset::get(size_t y) const {
+bool bitvector::get(size_t y) const {
   size_t block = y / BITS_PER_BLOCK;
   if (block >= num_blocks) return false;
   return data[block] & MASK(y);
 }
+
+// void bitvector::check(size_t y, bool expected) const {
+//   size_t block = y / BITS_PER_BLOCK;
+//   if (block >= num_blocks) return;
+
+//   bool result = (data[block] & MASK(y));
+//   if (result != expected) {
+//     printf("Expected %d but got %d\n", expected, !expected);
+//     printf("Block %u of %zu\n", block, num_blocks);
+//     printf("Block: %lu, mask %zu\n", data[block], MASK(y));
+//     assert(false);
+//   }
+// }

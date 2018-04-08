@@ -3,12 +3,17 @@
 
 //#define STATS 1
 
-struct bitset {
+struct bitvector {
 
   using block_t = unsigned int;
   static constexpr size_t BITS_PER_BLOCK = sizeof(block_t) * 8;
   static constexpr size_t DEFAULT_SIZE = 0;
-    
+
+  // Getting or setting a particular bit in a block
+  //#define MASK(index) (1 << ((index) % sizeof(block_t)))
+  static inline const size_t MASK(size_t index)
+  { return (1 << (index % BITS_PER_BLOCK)); }
+
   size_t num_blocks = 0;
   block_t* data = nullptr;
   // node in = 0;
@@ -18,11 +23,11 @@ struct bitset {
   size_t in_count = 0;
   size_t reach_count = 0;
 #endif
-    
-  bitset() { resize(DEFAULT_SIZE); }
-  bitset(const bitset& that);
-  bitset(bitset&& that) = default;
-  bitset& operator=(const bitset& src) = default;
+
+  bitvector() { resize(DEFAULT_SIZE); }
+  bitvector(const bitvector& that);
+  bitvector(bitvector&& that) = default;
+  bitvector& operator=(const bitvector& src) = default;
 
   // Doesn't initialize newly allocated blocks
   void unsafe_resize(size_t new_size);
@@ -32,5 +37,7 @@ struct bitset {
   // Normal operations
   void set(size_t y);
   bool get(size_t y) const;
+
+  //void check(size_t y, bool expected) const;
 
 };
