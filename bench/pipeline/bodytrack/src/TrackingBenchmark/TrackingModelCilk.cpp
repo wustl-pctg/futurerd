@@ -150,13 +150,21 @@ inline string str(T n, int width = 0, char pad = '0')
 //load and process all images for new observation at a given time(frame)
 //Overloaded from base class for future threading to overlap disk I/O with 
 //generating the edge maps
-bool TrackingModelCilk::GetObservation(float timeval)
+bool TrackingModelCilk::GetObservationCilk(float timeval,
+                                           vector<BinaryImage> &iter_mFGMaps,
+                                           vector<FlexImage8u> &iter_mEdgeMaps)
 {
     int frame = (int)timeval; //generate image filenames
     int n = mCameras.GetCameraCount();
+
     vector<string> FGfiles(n), ImageFiles(n);
-    for(int i = 0; i < n; i++)
-    {	
+    iter_mFGMaps.resize(n);
+    iter_mEdgeMaps.resize(n);
+
+    // prevFrameStageOne would be null for the very first frame, 
+    // in which case we skip calling GetObservation on the model, 
+    // since that has been done already
+    for(int i = 0; i < n; i++) {
         FGfiles[i] = mPath + "FG" + str(i + 1) + DIR_SEPARATOR + 
                      "image" + str(frame, 4) + ".bmp";
         ImageFiles[i] = mPath + "CAM" + str(i + 1) + DIR_SEPARATOR + 
@@ -165,20 +173,19 @@ bool TrackingModelCilk::GetObservation(float timeval)
 
     FlexImage8u im;
     // NOTE ANGE: this could be a cilk_for, though n is usually small (4)
-    for(int i = 0; i < (int)FGfiles.size(); i++)
-    {	
-        if(!FlexLoadBMP(FGfiles[i].c_str(), im)) //Load foreground maps and raw images
-        {	
+    for(int i = 0; i < (int)FGfiles.size(); i++) {
+        //Load foreground maps and raw images
+        if(!FlexLoadBMP(FGfiles[i].c_str(), im)) {
             cout << "Unable to load image: " << FGfiles[i].c_str() << endl;
             return false;
-        }	
-        mFGMaps[i].ConvertToBinary(im); //binarize foreground maps to 0 and 1
-        if(!FlexLoadBMP(ImageFiles[i].c_str(), im))
-        {	
+        }
+        //binarize foreground maps to 0 and 1
+        iter_mFGMaps[i].ConvertToBinary(im); 
+        if(!FlexLoadBMP(ImageFiles[i].c_str(), im)) {
             cout << "Unable to load image: " << ImageFiles[i].c_str() << endl;
             return false;
         }
-        CreateEdgeMap(im, mEdgeMaps[i]); //Create edge maps
+        CreateEdgeMap(im, iter_mEdgeMaps[i]); //Create edge maps
     }
 
     return true;
