@@ -287,15 +287,43 @@ int mainPthreads(string path, int cameras, int frames,
 #endif
 
 #if defined(USE_CILK_FUTURE)
-// this function process the second (last) stage of the pipeline
-static int processFrameStageTwo(int frameNum, cilk::future<int> *prevFrameStageTwo,
+// this function process the second (last) stage of the pipeline 
+// for iteration 0 only
+static int processFrameStageTwoIter0(int frameNum, 
                                 cilk::future<int> *stageTwoFutures,
-                                ParticleFilterCilk<TrackingModelCilk> &pf,
+                                ParticleFilterCilk<TrackingModelCilk> &pf, 
                                 ofstream &outputFileAvg, bool OutputBMP) {
+    
+    if(!pf.Update((float)frameNum)) { //Run particle filter step
+        cout << "Error loading observation data" << endl;
+        return 0;
+    }
 
-    // if this is not the first frame, wait for prev frame to complete stage two
+    vector<float> estimate; //expected pose from particle distribution
+
+    pf.Estimate(estimate); //get average pose of the particle distribution
+    WritePose(outputFileAvg, estimate);
+    if(OutputBMP) {
+        pf.Model().OutputBMP(estimate, frameNum);//save output bitmap file
+    }
+
+    return 1;
+}
+
+static int processFrameStageTwo(int frameNum, 
+                                cilk::future<int> *prevFrameStageTwo, 
+                                cilk::future<int> *stageTwoFutures,
+                                TrackingModelCilk &model,
+                                ParticleFilterCilk<TrackingModelCilk> &pf, 
+                                ofstream &outputFileAvg, bool OutputBMP,
+                                vector<BinaryImage> &iter_mFGMaps, 
+                                vector<FlexImage8u> &iter_mEdgeMaps) {
+    
+    // if this is not the first frame, wait for prev frame to 
+    // complete stage two then reset the model mFGMaps and mEdgeMaps fields
     if(prevFrameStageTwo) {
         prevFrameStageTwo->get();
+        model.SetObservation(iter_mFGMaps, iter_mEdgeMaps); 
     }
 
     if(!pf.Update((float)frameNum)) { //Run particle filter step
@@ -314,6 +342,7 @@ static int processFrameStageTwo(int frameNum, cilk::future<int> *prevFrameStageT
     return 1;
 }
 
+
 // this function process the first stage of the pipeline and spawn off the
 // second stage with future (but does not wait for it to return)
 static int processFrame(int frameNum, cilk::future<int> *prevFrameStageOne,
@@ -324,28 +353,36 @@ static int processFrame(int frameNum, cilk::future<int> *prevFrameStageOne,
 
     cout << "Processing frame " << frameNum << endl;
 
-    // prevFrameStageOne would be null for the very first frame, in which case
-    // we skip calling GetObservation on the model, since that has been done already
     if(prevFrameStageOne == nullptr) {
         assert(frameNum == 0);
-        // reuse_future(int, &stageTwoFutures[frameNum], processFrameStageTwo,
-        //              frameNum, nullptr, stageTwoFutures, pf, outputFileAvg, OutputBMP);
-        reasync_helper<int, int, cilk::future<int> *, cilk::future<int> *,
+        // calling 2nd stage, ret val, the future to use, function, its args 
+        reasync_helper<int, int, cilk::future<int> *, 
                        ParticleFilterCilk<TrackingModelCilk>&, ofstream &, bool>
-            (&stageTwoFutures[frameNum], processFrameStageTwo, frameNum,
-             nullptr, stageTwoFutures, pf, outputFileAvg, OutputBMP);
+            (&stageTwoFutures[frameNum], processFrameStageTwoIter0, frameNum, 
+             stageTwoFutures, pf, outputFileAvg, OutputBMP);
     } else {
+
+        // same type as the member fields used by this iteration;
+        // we will set it back into the member field in the 2nd stage.
+        // each iter needs its own local copy, and we simply use the member 
+        // field to pass them around functions so that we don't have to 
+        // rewrite all the sequential code; not great but works for now
+        vector<BinaryImage> iter_mFGMaps;
+        vector<FlexImage8u> iter_mEdgeMaps;
+
         // otherwise, we wait for the first stage of the previous frame to
         // finish before we proceed with this frame
         prevFrameStageOne->get();
-        model.GetObservation(frameNum);
-        // reuse_future(int, &stageTwoFutures[frameNum], processFrameStageTwo,
-        //              frameNum, &stageTwoFutures[frameNum-1], stageTwoFutures,
-        //              pf, outputFileAvg, OutputBMP);
-        reasync_helper<int, int, cilk::future<int> *, cilk::future<int> *,
-                       ParticleFilterCilk<TrackingModelCilk>&, ofstream &, bool>
-            (&stageTwoFutures[frameNum], processFrameStageTwo, frameNum,
-             &stageTwoFutures[frameNum-1], stageTwoFutures, pf, outputFileAvg, OutputBMP);
+        model.GetObservationCilk(frameNum, iter_mFGMaps, iter_mEdgeMaps);
+
+        // could have done this at the beginning of second stage
+        reasync_helper<int, int, cilk::future<int> *, cilk::future<int> *, 
+                       TrackingModelCilk&,
+                       ParticleFilterCilk<TrackingModelCilk>&, ofstream &, 
+                       bool, vector<BinaryImage>&, vector<FlexImage8u>& >
+            (&stageTwoFutures[frameNum], processFrameStageTwo, frameNum, 
+             &stageTwoFutures[frameNum-1], stageTwoFutures, model, pf,
+             outputFileAvg, OutputBMP, iter_mFGMaps, iter_mEdgeMaps);
     }
 
     return 1;
@@ -372,8 +409,8 @@ int mainCilkFuture(string path, int cameras, int frames, int particles,
     }
 
     model.SetNumThreads(particles);
-    //model.SetNumThreads(threads);
-    model.GetObservation(0); //load data for first frame
+    // load data for first frame
+    model.GetObservation(0); 
 
     //particle filter (with Cilk) instantiated with body tracking model type
     ParticleFilterCilk<TrackingModelCilk> pf;

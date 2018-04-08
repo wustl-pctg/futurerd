@@ -29,7 +29,16 @@ class TrackingModelCilk : public TrackingModel {
 
 public:
 	//load and process images - overloaded for future threading
-	bool GetObservation(float timeval);
+	bool GetObservationCilk(float timeval,
+                            std::vector<BinaryImage> &iter_mFGMaps,
+                            std::vector<FlexImage8u> &iter_mEdgeMaps);
+
+	//give the model object the processed images
+	void SetObservation(std::vector<BinaryImage> &iter_mFGMaps,
+                            std::vector<FlexImage8u> &iter_mEdgeMaps) {
+            mFGMaps = std::move(iter_mFGMaps);
+            mEdgeMaps = std::move(iter_mEdgeMaps);
+        }
 };
 
 #endif
