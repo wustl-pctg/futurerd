@@ -5,7 +5,7 @@ include ../../../bench.mk
 #all: bodytrack-serial bodytrack-pthread bodytrack-omp bodytrack-cilk
 all: future
 
-../build: 
+../build:
 	mkdir ../build
 
 serial: bodytrack-serial
@@ -16,14 +16,15 @@ cilk: bodytrack-cilk
 future: $(addprefix bt-,base reach inst rd)
 
 bodytrack-serial: ../build
-	$(MAKE) -C FlexImageLib 
+	$(MAKE) -C FlexImageLib
 	$(MAKE) -C TrackingBenchmark serial
 	mv TrackingBenchmark/$@ ../build/
 
 bodytrack-serial-gcc: ../build
-	$(MAKE) -f Makefile.gcc -C FlexImageLib 
+	$(MAKE) -f Makefile.gcc -C FlexImageLib
 	$(MAKE) -f Makefile.gcc -C TrackingBenchmark serial
 	mv TrackingBenchmark/$@ ../build/
+
 
 bodytrack-pthread: ../build
 	$(MAKE) -f Makefile.gcc -C FlexImageLib

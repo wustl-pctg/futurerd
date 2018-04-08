@@ -35,8 +35,9 @@ all: $(OBJDIR) $(TARGETS)
 endif
 
 # -O3 -g
-CXXFLAGS += $(APPFLAGS) -funroll-loops -fprefetch-loop-arrays -fpermissive
-CXXFLAGS += -fno-exceptions -fexceptions -Wall -Wno-unknown-pragmas # -static-libgcc -Wl,--hash-style=both,--as-needed
+# Originally this had both -fno-exceptions and -fexceptions... 
+CXXFLAGS += $(APPFLAGS) #-funroll-loops -fprefetch-loop-arrays -fpermissive -fexceptions
+CXXFLAGS += -Wall -Wno-unknown-pragmas # -static-libgcc -Wl,--hash-style=both,--as-needed
 AR = ar
 
 $(OBJDIR):
@@ -49,4 +50,4 @@ $(TARGETS): $(OBJECTS)
 	$(AR) $(ARFLAGS) $@ $^
 
 clean:
-	rm -f $(OBJDIR)/*.o $(LIBRARY)
+	rm -f $(OBJDIR)/*.o $(OBJDIR)/*.a

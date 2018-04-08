@@ -45,7 +45,7 @@ DEPENDENCIES = $(FLEXLIB)
 # common.mk
 # -O3 -g
 CXXFLAGS += $(APPFLAGS) $(INC)
-CXXFLAGS += -funroll-loops -fprefetch-loop-arrays -fpermissive -fexceptions
+CXXFLAGS += #-funroll-loops -fprefetch-loop-arrays -fpermissive -fexceptions
 CXXFLAGS += -Wall -Wno-unknown-pragmas # -static-libgcc -Wl,--hash-style=both,--as-needed -fno-exceptions 
 LDFLAGS += $(FLEXLIB)
 
