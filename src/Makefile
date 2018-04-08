@@ -2,7 +2,7 @@ include ../common.mk
 
 # Need this flag or the race detector won't do anything
 CFLAGS += -DRACE_DETECT
-CXXFLAGS += -DRACE_DETECT
+CXXFLAGS += -DRACE_DETECT -fno-exceptions -fno-rtti
 
 # Basic tool functionality
 SRC := driver.cpp rd.cpp
@@ -15,7 +15,8 @@ SRC += reach_gen.cpp reach_nonblock.cpp # Don't need for structured
 SRC += reach_structured.cpp # Even nonblocking needs this
 
 # Other helpers
-SRC += utils/union_find.cpp utils/bitset.cpp debug.cpp spbag.cpp
+SRC += $(addprefix utils/,union_find.cpp bitvector.cpp bitsums.cpp)
+SRC += debug.cpp spbag.cpp
 
 OBJ := $(addprefix $(OBJ_DIR)/, $(SRC:.cpp=.o))
 LIB_DIR = $(BUILD_DIR)/lib
