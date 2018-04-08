@@ -4,8 +4,8 @@
 //    | |   / ___| | | |  _  \/ ___|  _  \| |
 //    | |___| |  | |_| | | | | |___| | | ||_|
 //     \____|_|  \_____|_| |_|\____|_| |_|(_) Media benchmarks
-//                         
-//	  2006, Intel Corporation, licensed under Apache 2.0 
+//
+//	  2006, Intel Corporation, licensed under Apache 2.0
 //
 //  file : main.cpp
 //  author : Scott Ettinger - scott.m.ettinger@intel.com
@@ -17,15 +17,16 @@
 //				  Single threaded, OpenMP, and Posix threads.
 //				  They are kept separate for readability.
 //
-//				  Thread methods supported are selected by the 
-//				  #defines USE_OPENMP, USE_THREADS or USE_TBB. 
+//				  Thread methods supported are selected by the
+//				  #defines USE_OPENMP, USE_THREADS or USE_TBB.
 //
-//  modified : 
+//  modified :
 //--------------------------------------------------------------
 
 #include <vector>
 #include <sstream>
 #include <fstream>
+#include <chrono>
 #include <iomanip>
 
 //Add defines USE_OPENMP, USE_THREADS or USE_TBB for threaded versions if not using config file (Windows).
@@ -53,7 +54,7 @@
 #include <util/util.hpp>
 #include "ParticleFilterCilk.h"
 #include "TrackingModelCilk.h"
-#endif 
+#endif
 
 #if defined(USE_TBB)
 #include "tbb/task_scheduler_init.h"
@@ -124,18 +125,18 @@ bool ProcessCmdLine(int argc, char **argv, string &path, int &cameras, int &fram
     if(path[path.size() - 1] != DIR_SEPARATOR[0])
         path.push_back(DIR_SEPARATOR[0]);
     if(!num(string(argv[2]), cameras))//parse each argument
-    {	cout << errmsg << "number of cameras" << endl << usage << endl; 
-        return false; 
+    {	cout << errmsg << "number of cameras" << endl << usage << endl;
+        return false;
     }
-    if(!num(string(argv[3]), frames))													
-    {	cout << errmsg << "number of frames" << endl << usage << endl; 
-        return false; 
+    if(!num(string(argv[3]), frames))
+    {	cout << errmsg << "number of frames" << endl << usage << endl;
+        return false;
     }
-    if(!num(string(argv[4]), particles))												
+    if(!num(string(argv[4]), particles))
     {	cout << errmsg << "number of particles" << endl << usage << endl;
         return false;
     }
-    if(!num(string(argv[5]), layers))													
+    if(!num(string(argv[5]), layers))
     {	cout << errmsg << "number of annealing layers" << endl << usage << endl;
         return false;
     }
@@ -144,11 +145,11 @@ bool ProcessCmdLine(int argc, char **argv, string &path, int &cameras, int &fram
     if(argc < 7)//use default single thread mode if no threading arguments present
         return true;
     if(!num(string(argv[6]), threadModel))
-    {	
+    {
         cout << errmsg << "Thread Model" << endl << usage << endl;
         return false;
     }
-    if(argc > 7) 
+    if(argc > 7)
     {
         if(!num(string(argv[7]), threads))
         {	cout << errmsg << "number of threads" << endl << usage << endl;
@@ -159,9 +160,9 @@ bool ProcessCmdLine(int argc, char **argv, string &path, int &cameras, int &fram
     int n;
     OutputBMP = true; // do not output bmp results by default
     if(argc > 8)
-    {	
+    {
         if(!num(string(argv[8]), n))
-        {	
+        {
             cout << errmsg << "Output BMP flag" << endl << usage << endl;
             return false;
         }
@@ -183,17 +184,17 @@ int mainOMP(string path, int cameras, int frames, int particles, int layers, int
 
     TrackingModelOMP model;
     if(!model.Initialize(path, cameras, layers)) //Initialize model parameters
-    {	
+    {
         cout << endl << "Error loading initialization data." << endl;
         return 0;
     }
     model.SetNumThreads(threads);
     model.GetObservation(0); //load data for first frame
     //particle filter (OMP threaded) instantiated with body tracking model type
-    ParticleFilterOMP<TrackingModel> pf; 
+    ParticleFilterOMP<TrackingModel> pf;
     pf.SetModel(model); //set the particle filter model
     //generate initial set of particles and evaluate the log-likelihoods
-    pf.InitializeParticles(particles); 
+    pf.InitializeParticles(particles);
 
     cout << "Using dataset : " << path << endl;
     cout << particles << " particles with " << layers << " annealing layers" << endl << endl;
@@ -203,18 +204,18 @@ int mainOMP(string path, int cameras, int frames, int particles, int layers, int
 
     // this is where timing should start
     for(int i = 0; i < frames; i++)//process each set of frames
-    {	
+    {
         cout << "Processing frame " << i << endl;
         if(!pf.Update((float)i)) //Run particle filter step
         {	cout << "Error loading observation data" << endl;
             return 0;
-        }		
+        }
         pf.Estimate(estimate); //get average pose of the particle distribution
         WritePose(outputFileAvg, estimate);
         if(OutputBMP)
             pf.Model().OutputBMP(estimate, i);//save output bitmap file
     }
-    // this is where timing should end 
+    // this is where timing should end
 
     return 1;
 }
@@ -222,7 +223,7 @@ int mainOMP(string path, int cameras, int frames, int particles, int layers, int
 
 #if defined(USE_THREADS)
 //Body tracking threaded with explicit Posix threads
-int mainPthreads(string path, int cameras, int frames, 
+int mainPthreads(string path, int cameras, int frames,
                  int particles, int layers, int threads, bool OutputBMP)
 {
     cout << "Threading with Posix Threads" << endl;
@@ -247,12 +248,12 @@ int mainPthreads(string path, int cameras, int frames,
     model.SetNumFrames(frames);
     model.GetObservation(-1); //load data for first frame
     //particle filter instantiated with body tracking model type
-    ParticleFilterPthread<TrackingModel> pf(workers); 
+    ParticleFilterPthread<TrackingModel> pf(workers);
     pf.SetModel(model);	//set the particle filter model
 
     //register particle filter commands
-    workers.RegisterCmd(workers.THREADS_CMD_PARTICLEWEIGHTS, pf); 
-    workers.RegisterCmd(workers.THREADS_CMD_NEWPARTICLES, pf);//register 
+    workers.RegisterCmd(workers.THREADS_CMD_PARTICLEWEIGHTS, pf);
+    workers.RegisterCmd(workers.THREADS_CMD_NEWPARTICLES, pf);//register
     //generate initial set of particles and evaluate the log-likelihoods
     pf.InitializeParticles(particles);
 
@@ -264,14 +265,14 @@ int mainPthreads(string path, int cameras, int frames,
 
     // this is where timing should start
     for(int i = 0; i < frames; i++) //process each set of frames
-    { 
+    {
      	cout << "Processing frame " << i << endl;
 
         if(!pf.Update((float)i)) //Run particle filter step
         {	cout << "Error loading observation data" << endl;
             workers.JoinAll();
             return 0;
-        }		
+        }
         pf.Estimate(estimate); //get average pose of the particle distribution
         WritePose(outputFileAvg, estimate);
         if(OutputBMP)
@@ -279,24 +280,24 @@ int mainPthreads(string path, int cameras, int frames,
     }
     model.close();
     workers.JoinAll();
-    // this is where timing should end 
+    // this is where timing should end
 
     return 1;
 }
 #endif
 
 #if defined(USE_CILK_FUTURE)
-// this function process the second (last) stage of the pipeline 
-static int processFrameStageTwo(int frameNum, cilk::future<int> *prevFrameStageTwo, 
+// this function process the second (last) stage of the pipeline
+static int processFrameStageTwo(int frameNum, cilk::future<int> *prevFrameStageTwo,
                                 cilk::future<int> *stageTwoFutures,
-                                ParticleFilterCilk<TrackingModelCilk> &pf, 
-                                ofstream &outputFileAvg, bool OutputBMP) { 
-    
+                                ParticleFilterCilk<TrackingModelCilk> &pf,
+                                ofstream &outputFileAvg, bool OutputBMP) {
+
     // if this is not the first frame, wait for prev frame to complete stage two
-    if(prevFrameStageTwo) { 
+    if(prevFrameStageTwo) {
         prevFrameStageTwo->get();
     }
-    
+
     if(!pf.Update((float)frameNum)) { //Run particle filter step
         cout << "Error loading observation data" << endl;
         return 0;
@@ -324,33 +325,33 @@ static int processFrame(int frameNum, cilk::future<int> *prevFrameStageOne,
     cout << "Processing frame " << frameNum << endl;
 
     // prevFrameStageOne would be null for the very first frame, in which case
-    // we skip calling GetObservation on the model, since that has been done already 
+    // we skip calling GetObservation on the model, since that has been done already
     if(prevFrameStageOne == nullptr) {
         assert(frameNum == 0);
-        // reuse_future(int, &stageTwoFutures[frameNum], processFrameStageTwo, 
+        // reuse_future(int, &stageTwoFutures[frameNum], processFrameStageTwo,
         //              frameNum, nullptr, stageTwoFutures, pf, outputFileAvg, OutputBMP);
-        reasync_helper<int, int, cilk::future<int> *, cilk::future<int> *, 
+        reasync_helper<int, int, cilk::future<int> *, cilk::future<int> *,
                        ParticleFilterCilk<TrackingModelCilk>&, ofstream &, bool>
-            (&stageTwoFutures[frameNum], processFrameStageTwo, frameNum, 
+            (&stageTwoFutures[frameNum], processFrameStageTwo, frameNum,
              nullptr, stageTwoFutures, pf, outputFileAvg, OutputBMP);
     } else {
         // otherwise, we wait for the first stage of the previous frame to
         // finish before we proceed with this frame
         prevFrameStageOne->get();
         model.GetObservation(frameNum);
-        // reuse_future(int, &stageTwoFutures[frameNum], processFrameStageTwo, 
-        //              frameNum, &stageTwoFutures[frameNum-1], stageTwoFutures, 
-        //              pf, outputFileAvg, OutputBMP); 
-        reasync_helper<int, int, cilk::future<int> *, cilk::future<int> *, 
+        // reuse_future(int, &stageTwoFutures[frameNum], processFrameStageTwo,
+        //              frameNum, &stageTwoFutures[frameNum-1], stageTwoFutures,
+        //              pf, outputFileAvg, OutputBMP);
+        reasync_helper<int, int, cilk::future<int> *, cilk::future<int> *,
                        ParticleFilterCilk<TrackingModelCilk>&, ofstream &, bool>
-            (&stageTwoFutures[frameNum], processFrameStageTwo, frameNum, 
+            (&stageTwoFutures[frameNum], processFrameStageTwo, frameNum,
              &stageTwoFutures[frameNum-1], stageTwoFutures, pf, outputFileAvg, OutputBMP);
     }
 
     return 1;
 }
 
-int mainCilkFuture(string path, int cameras, int frames, int particles, 
+int mainCilkFuture(string path, int cameras, int frames, int particles,
                    int layers, int threads, bool OutputBMP) {
 
     cout << "Running with Cilk with future" << endl;
@@ -358,7 +359,11 @@ int mainCilkFuture(string path, int cameras, int frames, int particles,
     if(threads > 1) {
         cout << "Currently Cilk with futures can only run with single thread.\n" << endl;
     }
-    ensure_serial_execution(); 
+    ensure_serial_execution();
+
+#if (!RACE_DETECT) && REACH_MAINT
+  futurerd_disable_shadowing();
+#endif
 
     TrackingModelCilk model;
     if(!model.Initialize(path, cameras, layers)) { //Initialize model parameters
@@ -367,6 +372,7 @@ int mainCilkFuture(string path, int cameras, int frames, int particles,
     }
 
     model.SetNumThreads(particles);
+    //model.SetNumThreads(threads);
     model.GetObservation(0); //load data for first frame
 
     //particle filter (with Cilk) instantiated with body tracking model type
@@ -381,46 +387,51 @@ int mainCilkFuture(string path, int cameras, int frames, int particles,
     ofstream outputFileAvg((path + "poses.txt").c_str());
 
     // this is where timing should start
-    
-    cilk::future<int> *stageOneFutures = 
+    auto start = std::chrono::steady_clock::now();
+
+    cilk::future<int> *stageOneFutures =
         (cilk::future<int>*) malloc(sizeof(cilk::future<int>) * frames);
-    cilk::future<int> *stageTwoFutures = 
+    cilk::future<int> *stageTwoFutures =
         (cilk::future<int>*) malloc(sizeof(cilk::future<int>) * frames);
 
     // Create the pipeline - one stage for image processing, one for particle filter update
     for(int i = 0; i < frames; i++) {//process each set of frames
         if(i == 0) {
-            // reuse_future(int, &stageOneFutures[i], processFrame, 
+            // reuse_future(int, &stageOneFutures[i], processFrame,
             //              i, nullptr, stageTwoFutures, model, pf, outputFileAvg, OutputBMP);
             reasync_helper<int, int, cilk::future<int> *, cilk::future<int> *,
                         TrackingModelCilk &, ParticleFilterCilk<TrackingModelCilk> &,
                         ofstream &, bool>
-                (&stageOneFutures[i], processFrame, i, nullptr, 
+                (&stageOneFutures[i], processFrame, i, nullptr,
                  stageTwoFutures, model, pf, outputFileAvg, OutputBMP);
         } else {
-            // reuse_future(int, &stageOneFutures[i], processFrame, 
-            //              i, &stageOneFutures[i-1], stageTwoFutures, 
+            // reuse_future(int, &stageOneFutures[i], processFrame,
+            //              i, &stageOneFutures[i-1], stageTwoFutures,
             //              model, pf, outputFileAvg, OutputBMP);
             reasync_helper<int, int, cilk::future<int> *, cilk::future<int> *,
                         TrackingModelCilk &, ParticleFilterCilk<TrackingModelCilk> &,
                         ofstream &, bool>
-                (&stageOneFutures[i], processFrame, i, &stageOneFutures[i-1], 
+                (&stageOneFutures[i], processFrame, i, &stageOneFutures[i-1],
                  stageTwoFutures, model, pf, outputFileAvg, OutputBMP);
         }
     }
     stageTwoFutures[frames-1].get(); // wait for last frame's stage two to complete
-    
+
     free(stageOneFutures);
     free(stageTwoFutures);
-    // this is where timing should end 
+
+    // this is where timing should end
+    auto end = std::chrono::steady_clock::now();
+    auto time = std::chrono::duration <double, std::milli> (end-start).count();
+    std::cout << "Benchmark time: " << time << " ms" << std::endl;
 
     return 1;
 }
-#endif 
+#endif
 
 #if defined(USE_TBB)
 //Body tracking threaded with Intel TBB
-int mainTBB(string path, int cameras, int frames, int particles, 
+int mainTBB(string path, int cameras, int frames, int particles,
             int layers, int threads, bool OutputBMP)
 {
     tbb::task_scheduler_init init(task_scheduler_init::deferred);
@@ -431,14 +442,14 @@ int mainTBB(string path, int cameras, int frames, int particles,
         cout << "Number of Threads configured by task scheduler" << endl;
     }
     else
-    {	
-        init.initialize(threads); 
+    {
+        init.initialize(threads);
         cout << "Number of Threads : " << threads << endl;
     }
 
     TrackingModelTBB model;
     if(!model.Initialize(path, cameras, layers)) //Initialize model parameters
-    {	
+    {
         cout << endl << "Error loading initialization data." << endl;
         return 0;
     }
@@ -470,11 +481,11 @@ int mainTBB(string path, int cameras, int frames, int particles,
 
     return 1;
 }
-#endif 
+#endif
 
 
 //Body tracking Single Threaded
-int mainSingleThread(string path, int cameras, int frames, int particles, 
+int mainSingleThread(string path, int cameras, int frames, int particles,
                      int layers, bool OutputBMP)
 {
     cout << endl << "Running Single Threaded" << endl << endl;
@@ -489,7 +500,7 @@ int mainSingleThread(string path, int cameras, int frames, int particles,
     ParticleFilter<TrackingModel> pf;
     pf.SetModel(model); //set the particle filter model
     //generate initial set of particles and evaluate the log-likelihoods
-    pf.InitializeParticles(particles); 
+    pf.InitializeParticles(particles);
 
     cout << "Using dataset : " << path << endl;
     cout << particles << " particles with " << layers << " annealing layers" << endl << endl;
@@ -499,13 +510,13 @@ int mainSingleThread(string path, int cameras, int frames, int particles,
 
     // this is where timing should start
     for(int i = 0; i < frames; i++) //process each set of frames
-    {	
+    {
         cout << "Processing frame " << i << endl;
         if(!pf.Update((float)i)) //Run particle filter step
-        {	
+        {
             cout << "Error loading observation data" << endl;
             return 0;
-        }		
+        }
         pf.Estimate(estimate); //get average pose of the particle distribution
         WritePose(outputFileAvg, estimate);
         if(OutputBMP)
@@ -523,7 +534,7 @@ int main(int argc, char **argv)
     //process command line parameters to get path, cameras, and frames
     int cameras, frames, particles, layers, threads, threadModel;
 
-    if(!ProcessCmdLine(argc, argv, path, cameras, frames, particles, 
+    if(!ProcessCmdLine(argc, argv, path, cameras, frames, particles,
                        layers, threads, threadModel, OutputBMP))
         return 0;
 
@@ -555,7 +566,7 @@ int main(int argc, char **argv)
             cout << "If the environment supports it, rebuild with USE_TBB #defined."
                  << endl;
 #endif
-            break;  
+            break;
 
         case 2 :
 #if defined(USE_THREADS)
@@ -568,20 +579,20 @@ int main(int argc, char **argv)
 #endif
             break;
 
-        case 3 : 
+        case 3 :
 #if defined(USE_OPENMP)
             //OpenMP threaded tracking
             mainOMP(path, cameras, frames, particles, layers, threads, OutputBMP);
 #else
             cout << "Not compiled with OpenMP support. " << endl;
-            cout << "If the environment supports OpenMP, rebuild with USE_OPENMP #defined." 
+            cout << "If the environment supports OpenMP, rebuild with USE_OPENMP #defined."
                  << endl;
 #endif
             break;
 
         case 4 :
 #if defined(USE_CILK_FUTURE)
-            //Cilk with futures 
+            //Cilk with futures
             threads = 1; // have to run single threaded
             mainCilkFuture(path, cameras, frames, particles, layers, threads, OutputBMP);
 #else
@@ -589,7 +600,7 @@ int main(int argc, char **argv)
 #endif
             break;
 
-        default : 
+        default :
             cout << "Invalid thread model argument. " << endl;
             cout << "Thread model : 0 = Serial" << endl;
             cout << "               1 = Intel TBB" << endl;
