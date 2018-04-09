@@ -1,6 +1,7 @@
 #include "reach_structured.hpp"
 #include <cassert>
 #include <iostream>
+
 //#define LOG fprintf(stderr, "In %s\n", __PRETTY_FUNCTION__);
 #define LOG
 
@@ -42,11 +43,16 @@ void structured::at_sync(sframe_data *f) { LOG;
   if (!f->Pbag) return;
 
   f->Sbag->merge(f->Pbag);
+  spbag::find(f->Sbag)->set_kind(spbag::bag_kind::S);
   f->Pbag = nullptr;
 }
 
 bool structured::precedes_now(sframe_data *curr, smem_data *last_access) {
-    return last_access->precedes_now();
+  //return last_access->precedes_now();
+  bool res = last_access->precedes_now();
+  if (!res)
+    std::cerr << "Race between " << last_access->id << " and " << curr->Sbag->id << std::endl;
+  return res;
 }
 
 /********** Continuations **********/

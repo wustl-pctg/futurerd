@@ -133,7 +133,9 @@ void race_detector::handle_write(access_t* slot, addr_t rip, addr_t addr,
   assert(start >= 0);
   assert(start < NUM_SLOTS);
 
-  // As far as I can tell, this may not be true, e.g. when start == 1...
+  // TODO: As far as I can tell, this may not be true, e.g. when start == 1...
+  // Update: have not seen this in a while, I think something else was
+  // wrong at the time.
   if ((start + grains) > NUM_SLOTS) {
     fprintf(stderr, "start=%i, grains=%i, NUM_SLOTS=%i, size=%zu\n",
             start, grains, NUM_SLOTS, mem_size);

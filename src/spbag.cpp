@@ -15,6 +15,8 @@ void* spbag::operator new(std::size_t sz) {
 //   y->kind = tmp;
 // }
 
+// If we do merging by rank in union-find, I think we'll need to set
+// the result to be the right kind - Sbag or Pbag.
 void spbag::merge(spbag *that) {
   spbag *root = static_cast<spbag*>(utils::uf::merge(this,that));
   if (root != this) {
