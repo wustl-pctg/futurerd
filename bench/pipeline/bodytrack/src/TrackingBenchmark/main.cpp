@@ -316,8 +316,8 @@ static int processFrameStageTwo(int frameNum,
                                 TrackingModelCilk &model,
                                 ParticleFilterCilk<TrackingModelCilk> &pf, 
                                 ofstream &outputFileAvg, bool OutputBMP,
-                                vector<BinaryImage> &iter_mFGMaps, 
-                                vector<FlexImage8u> &iter_mEdgeMaps) {
+                                vector<BinaryImage> *iter_mFGMaps, 
+                                vector<FlexImage8u> *iter_mEdgeMaps) {
     
     // if this is not the first frame, wait for prev frame to 
     // complete stage two then reset the model mFGMaps and mEdgeMaps fields
@@ -367,8 +367,8 @@ static int processFrame(int frameNum, cilk::future<int> *prevFrameStageOne,
         // each iter needs its own local copy, and we simply use the member 
         // field to pass them around functions so that we don't have to 
         // rewrite all the sequential code; not great but works for now
-        vector<BinaryImage> iter_mFGMaps;
-        vector<FlexImage8u> iter_mEdgeMaps;
+        vector<BinaryImage> *iter_mFGMaps = new vector<BinaryImage>();
+        vector<FlexImage8u> *iter_mEdgeMaps = new vector<FlexImage8u>();
 
         // otherwise, we wait for the first stage of the previous frame to
         // finish before we proceed with this frame
@@ -379,10 +379,13 @@ static int processFrame(int frameNum, cilk::future<int> *prevFrameStageOne,
         reasync_helper<int, int, cilk::future<int> *, cilk::future<int> *, 
                        TrackingModelCilk&,
                        ParticleFilterCilk<TrackingModelCilk>&, ofstream &, 
-                       bool, vector<BinaryImage>&, vector<FlexImage8u>& >
+                       bool, vector<BinaryImage> *, vector<FlexImage8u> * >
             (&stageTwoFutures[frameNum], processFrameStageTwo, frameNum, 
              &stageTwoFutures[frameNum-1], stageTwoFutures, model, pf,
              outputFileAvg, OutputBMP, iter_mFGMaps, iter_mEdgeMaps);
+
+        delete iter_mFGMaps;
+        delete iter_mFGMaps;
     }
 
     return 1;

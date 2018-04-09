@@ -151,15 +151,15 @@ inline string str(T n, int width = 0, char pad = '0')
 //Overloaded from base class for future threading to overlap disk I/O with 
 //generating the edge maps
 bool TrackingModelCilk::GetObservationCilk(float timeval,
-                                           vector<BinaryImage> &iter_mFGMaps,
-                                           vector<FlexImage8u> &iter_mEdgeMaps)
+                                           vector<BinaryImage> *iter_mFGMaps,
+                                           vector<FlexImage8u> *iter_mEdgeMaps)
 {
     int frame = (int)timeval; //generate image filenames
     int n = mCameras.GetCameraCount();
 
     vector<string> FGfiles(n), ImageFiles(n);
-    iter_mFGMaps.resize(n);
-    iter_mEdgeMaps.resize(n);
+    iter_mFGMaps->resize(n);
+    iter_mEdgeMaps->resize(n);
 
     // prevFrameStageOne would be null for the very first frame, 
     // in which case we skip calling GetObservation on the model, 
@@ -180,12 +180,12 @@ bool TrackingModelCilk::GetObservationCilk(float timeval,
             return false;
         }
         //binarize foreground maps to 0 and 1
-        iter_mFGMaps[i].ConvertToBinary(im); 
+        (*iter_mFGMaps)[i].ConvertToBinary(im); 
         if(!FlexLoadBMP(ImageFiles[i].c_str(), im)) {
             cout << "Unable to load image: " << ImageFiles[i].c_str() << endl;
             return false;
         }
-        CreateEdgeMap(im, iter_mEdgeMaps[i]); //Create edge maps
+        CreateEdgeMap(im, (*iter_mEdgeMaps)[i]); //Create edge maps
     }
 
     return true;
