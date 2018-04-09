@@ -22,7 +22,7 @@ general::~general() {
   size_t max_block_count = 0UL, min_block_count = -1UL, sum_block_count = 0;
   for (int i = 1; i < data.size(); ++i) {
     bitset& ba = data[i];
-    
+
     if (ba.in_count > max_in_count) max_in_count = ba.in_count;
     if (ba.in_count < min_in_count) min_in_count = ba.in_count;
     sum_in_count += ba.in_count;
@@ -51,7 +51,7 @@ general::~general() {
 }
 
 node general::add_node() {
-  node id = data.size();;
+  node id = data.size();
   data.push_back(bitset());
   return id;
 }
@@ -63,61 +63,60 @@ bool general::precedes(node x, node y) {
   assert(data.size() > y);
 
   return data[y].get(x);
-
 }
 
-void general::add_edges_from(node* from_nodes, int num_from, node to) {
+// void general::add_edges_from(node* from_nodes, int num_from, node to) {
 
-  assert(data[to].data == nullptr);
+//   assert(data[to].data == nullptr);
   
-  size_t max_size = 0;
-  for (auto i = 0; i < num_from; ++i) {
-    size_t s = data[from_nodes[i]].num_blocks;
-    if (s > max_size) max_size = s;
-  }
-  data[to].unsafe_resize(max_size);
+//   size_t max_size = 0;
+//   for (auto i = 0; i < num_from; ++i) {
+//     size_t s = data[from_nodes[i]].num_blocks;
+//     if (s > max_size) max_size = s;
+//   }
+//   data[to].unsafe_resize(max_size);
 
-  for (auto i = 0; i < max_size; ++i) {
-    bitset::block_t b = 0;
-    for (auto j = 0; j < num_from; ++j) {
-      node from = from_nodes[j];
-      if (i < data[from].num_blocks) b |= data[from].data[i];
-    }
-    data[to].data[i] = b;
-  }
+//   for (auto i = 0; i < max_size; ++i) {
+//     bitset::block_t b = 0;
+//     for (auto j = 0; j < num_from; ++j) {
+//       node from = from_nodes[j];
+//       if (i < data[from].num_blocks) b |= data[from].data[i];
+//     }
+//     data[to].data[i] = b;
+//   }
 
-}
+// }
 
 
 // Assumes to has no out edges yet.
 void general::add_edge(node from, node to) {
   if (from == to) return;
 
-  // -----my bitset-----
-
-  //assert(data[to].data == nullptr);
-
   if (data[to].data != nullptr) {
     data[to].resize(data[from].num_blocks);
-    
-    // for (node i{1}; i < data.size(); ++i)
-    //   if (data[from].get(i)) data[to].set(i);
 
     for (auto i = 0; i < data[from].num_blocks; ++i)
       data[to].data[i] |= data[from].data[i];
-    
-  } else { // fast case, no other incoming edges
 
-    // Don't resize, this memset's to 0
-    // data[to].resize(data[from].num_blocks);
-    // std::memcpy(data[to].data, data[from].data,
-    //             data[from].num_blocks * sizeof(bitset::block_t));
+  } else { // fast case, no other incoming edges
 
     data[to] = bitset(data[from]);
   }
   data[to].set(from);
+
+  // In the current implementation, this is slow b/c the set requires
+  // a merge also, meaning we need two separate merges.
+  // TODO: make R[i,i] always true in the bitsums DS
+  // Doing so allows us to only do one merge.
+  // data[to].set(from);
+  // if (data[to].data == nullptr)
+  //   data[to] = data[from];
+  // else
+    // data[to].merge(data[from]);
+
 #ifdef STATS
   data[to].in_count++;
 #endif
+
 
 }
