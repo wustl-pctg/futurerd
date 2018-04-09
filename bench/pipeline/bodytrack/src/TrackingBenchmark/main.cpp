@@ -385,7 +385,7 @@ static int processFrame(int frameNum, cilk::future<int> *prevFrameStageOne,
              outputFileAvg, OutputBMP, iter_mFGMaps, iter_mEdgeMaps);
 
         delete iter_mFGMaps;
-        delete iter_mFGMaps;
+        delete iter_mEdgeMaps;
     }
 
     return 1;
