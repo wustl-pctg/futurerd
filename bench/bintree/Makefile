@@ -24,7 +24,7 @@ merge-%: merge-%.o bintree-%.o ../util/getoptions.o
 
 # delete all object files
 clean:
-	rm -f *.o $(TARGETS) core.*
+	rm -f *.o $(TARGETS) core.* merge-*
 
 reallyclean:
 	rm -f *.o merge-base merge-reach merge-inst merge-rd ../util/*.o core.*

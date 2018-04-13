@@ -1,83 +1,78 @@
-// An simple binary tree with key only; no data.
-#ifndef __BINTREE_HPP__
-#define __BINTREE_HPP__
+#pragma once
+// Binary search tree, duplicates allowed
 
 #include <cstdio>
-#include <future.hpp>
+#include <utility> // pair
 
-using namespace std;
+#include <future.hpp>
+//#include <futptr.hpp>
 
 class bintree {
 public:
-    // key_t has to be something that can be used as array index 
-    using key_t = int;
-    struct node {
-        key_t key;
-        union {
-            node *left = nullptr;
-            cilk::future<node*> *fut_left = nullptr;
-        };
-        union {
-            node *right = nullptr;
-            cilk::future<node *> *fut_right = nullptr;
-        };
-        node() = delete; 
-        node(key_t k) : key(k), left(nullptr), right(nullptr) {}
-    }; // struct node
+  static constexpr int DEPTH_LIMIT = 0;
+  using key_t = int;
+  struct node {
+    key_t key;
+    node *left = nullptr;
+    node *right = nullptr;
 
-    ~bintree() {
-        if(m_root) {
-            cleanup(m_root);
-        }
-    }
+    node() = delete;
+    node(key_t k) : key(k) {}
+    ~node() { delete left; delete right; }
+  };
+  using fut_t = cilk::future<node*>;
+  using futpair_t = std::pair<fut_t*, fut_t*>;
 
-    void merge(bintree *that);
-    
-    // Utility
-    inline size_t size() const { return m_size; }
+  ~bintree() { delete m_root; }
 
-    inline void insert(key_t k) {
-        if(m_root == nullptr) { m_root = new node(k);
-        } else { insert(m_root, k); }
-        m_size++; // insert always succeeds barring out of memory
-    }
+  node* insert(node* n, const key_t k);
+  inline void insert(key_t k) {
+    m_size++; // We allow duplicates
+    m_root = insert(m_root, k);
+  }
+  void merge(bintree* that);
+  inline void replace_all() { replace_all(m_root); }
 
-    inline int validate() const {
-        size_t size = validate(m_root);
-        assert(size == m_size);
-        return 0; // always return 0 at root if successful
-    }
+  // Utility
+  inline std::size_t size() const { return m_size; }
+  inline bool validate() const {
+    std::size_t size = validate(m_root);
+    assert(size == m_size);
+    return true; // always return true at root if successful
+  }
 
-    inline int get_key_counts(int *counts, key_t max_key) {
-        get_key_counts(m_root, counts, max_key); 
-        return 0; // always return 0 at root if successful
-    }
+  inline int get_key_counts(int *counts, key_t max_key) {
+    get_key_counts(m_root, counts, max_key);
+    return 0; // always return 0 at root if successful
+  }
 
-    inline void print_keys() {
-        fprintf(stderr, "size: %lu.\n", m_size);
-        print_keys(m_root);
-        fprintf(stderr, "\n\n");
-    }
+  inline void print_keys() {
+    fprintf(stderr, "size: %lu.\n", m_size);
+    print_keys(m_root);
+    fprintf(stderr, "\n\n");
+  }
+
 
 private:
-    node* m_root = nullptr;
-    size_t m_size = 0;
+  node* m_root = nullptr;
 
-    // Technically part of node class, but defined as static methods in bintree class
-    static node * merge(node *this_root, node *that_root); 
-    static node * split(key_t s, node *n, // structured; the default one
-                    cilk::future<node *> **res_left,
-                    cilk::future<node *> **res_right);
-    static void split_unstructured(key_t s, node *n, // unstructured
-                    cilk::future<node *> **res_left,
-                    cilk::future<node *> **res_right);
-    static void insert(node* n, key_t k);
-    static size_t validate(node* n);
-    static void get_key_counts(node* n, int *counts, key_t max_key);
-    static void cleanup(node* n);
-    static void replace_all(node *n);
-    static void print_keys(node* n);
+  // Size is a bit harder to maintain if you want to get rid of
+  // duplicates. Would need to make splitL and splitR non-static
+  // methods (so they can change m_size, when they find a duplicate
+  // while merging), but then they become harder to call in the "future"
+  // helper.
+  std::size_t m_size = 0;
+
+  static std::pair<node*,node*> seqsplit(node* n, key_t s);
+  static node* split(node* n, key_t s, fut_t* res_left, fut_t* res_right, int depth);
+  futpair_t split2(node* n, key_t s);
+  node* merge(node* lr, cilk::future<node*>* rr, int depth);
+  node* merge(node* lr, node* rr, int depth);
+
+  static std::size_t validate(node* n);
+  static void get_key_counts(node* n, int *counts, key_t max_key);
+  static void replace_all(node *n);
+  static void print_keys(node* n);
+
 
 }; // class bintree
-
-#endif // __BINTREE_HPP__

@@ -1,20 +1,30 @@
 #include <cassert>
-#include <cstdint>
-#include <cstdio>
+#include <cstdlib> // malloc
+#include <cstdint> // uintptr_t
 
 #include "bintree.hpp"
+
+#include <cilk/cilk.h>
+#define spawn cilk_spawn
+#define sync cilk_sync
+
 using key_t = bintree::key_t;
 using node = bintree::node;
+using fut_t = bintree::fut_t;
+using futpair_t = bintree::futpair_t;
 
+#define IS_FUTPTR(f)                                            \
+  (((void*) (((uintptr_t)(f)) & ((uintptr_t)0x1))) != nullptr)
 
-// check whether f is marked as a future pointer
-#define IS_FUTPTR(f) (((void*) (((uintptr_t)(f)) & ((uintptr_t)0x1))) != nullptr)
 // get the underlying future pointer
-#define GET_FUTPTR(f) ((cilk::future<node*>*) ( ((uintptr_t)(f)) & ((uintptr_t)~0x1) ))
+#define GET_FUTPTR(f)                                               \
+  ((cilk::future<node*>*) ( ((uintptr_t)(f)) & ((uintptr_t)~0x1) ))
+
 // mark the underlying future pointer
 // SET_FUTPTR expects loc to be an address to future pointer, so future **
 #define SET_FUTPTR(loc,f)                                               \
-  (*(loc) = ((cilk::future<node*>*)(((uintptr_t)(f)) | ((uintptr_t)0x1))))
+  (*(loc) = ((node*)(((uintptr_t)(f)) | ((uintptr_t)0x1))))
+
 // set loc to point to the real value gotten from the future pointer
 // REPLACE expects address to future pointer, so future **
 #define REPLACE(loc)                            \
@@ -24,147 +34,36 @@ using node = bintree::node;
     delete f;                                   \
   }
 
-// only used for base case; SET_FUTPTR and REPLACE in one.
-// we are setting the future pointer to point to nullptr
-// and recast it back to node
-#define SET_AND_REPLACE(loc, v) {               \
-    auto f = *loc;                              \
-    SET_FUTPTR(loc, f);                         \
-    f->finish(v);                               \
-  }
+// We don't actually support put/get style, but this makes things clearer.
+static node* immediate(node *n) { return n; }
+#define put(fut,res) reasync_helper<node*,node*>((fut), immediate, (res))
 
 void bintree::merge(bintree *that) {
-  m_root = merge(this->m_root, that->m_root);
-  replace_all(m_root); // have to do this to "touch" every node
   this->m_size += that->m_size;
+  m_root = merge(this->m_root, that->m_root, 0);
+
+  // NB: some child pointers will actually be future pointers. The
+  // results are all ready, but may not have been touched.  This can
+  // happen, e.g. when an empty node (nullptr) is merged with a
+  // subtree, in which case there was no need to descend down the
+  // subtree and touch its descendants.
+  // replace_all(m_root); // have to do this to "touch" every node
+
   that->m_root = nullptr;
   that->m_size = 0;
+  delete that;
 }
 
-/* technically member functions of a node */
-
-// use this as default --- structured use of futures
-// one of the res_left / res_right should correspond to the spawning of this computation
-using result_t = cilk::future<node*>**;
-node * bintree::split(key_t s, node *n,
-                      cilk::future<node *> **res_left,
-                      cilk::future<node *> **res_right) {
-
-  assert(!IS_FUTPTR(n));
-  assert(n != nullptr);
-
-  if(s < n->key) {
-    REPLACE(&n->left); // go to left; need the pointer now
-    node *left = n->left;
-
-    if(left == nullptr) {
-      assert(!IS_FUTPTR(*res_left) && !IS_FUTPTR(*res_right));
-      SET_AND_REPLACE(res_left, nullptr);
-      SET_AND_REPLACE(res_right, nullptr);
-      n->left = nullptr; // set up node(v, R1, R)
-    } else {
-      // need a new res_right, since we are resolving the res_right at this level
-      cilk::future<node *> *new_res_right = new cilk::future<node *>();
-      if(s < left->key) { // we would go to left at the next level
-        //reuse_future(node *, new_res_right, split, s, left, res_left, &new_res_right);
-        reasync_helper<node*,key_t,node*,result_t,result_t>
-          (new_res_right, split, s, left, res_left, &new_res_right);
-      } else { // we would go to right at the next level
-        //reuse_future(node *, (*res_left), split, s, left, res_left, &new_res_right);
-        reasync_helper<node*,key_t,node*,result_t,result_t>
-          ((*res_left), split, s, left, res_left, &new_res_right);
-        SET_FUTPTR(res_left, *res_left);
-      }
-      SET_FUTPTR(&n->fut_left, new_res_right); // set up node(v, R1, R)
-    }
-
-  } else {
-    REPLACE(&n->right); // go to right; need the pointer now
-    node *right = n->right;
-
-    if(right == nullptr) {
-      assert(!IS_FUTPTR(*res_left) && !IS_FUTPTR(*res_right));
-      SET_AND_REPLACE(res_left, nullptr);
-      SET_AND_REPLACE(res_right, nullptr);
-      n->right = nullptr; // set up node(v, L, nullptr)
-    } else {
-      // need a new res_left, since we are resolving the res_left at this level
-      cilk::future<node *> *new_res_left = new cilk::future<node *>();
-      if(s < right->key) { // we would go to left at the next level
-        //reuse_future(node *, (*res_right), split, s, right, &new_res_left, res_right);
-        reasync_helper<node*,key_t,node*,result_t,result_t>
-          ((*res_right), split, s, right, &new_res_left, res_right);
-        SET_FUTPTR(res_right, *res_right);
-      } else { // we would go to right at the next level
-        //reuse_future(node *, new_res_left, split, s, right, &new_res_left, res_right);
-        reasync_helper<node*,key_t,node*,result_t,result_t>
-          (new_res_left, split, s, right, &new_res_left, res_right);
-      }
-      SET_FUTPTR(&n->fut_right, new_res_left); // set up node(v, L, L1)
-    }
-  }
+node* bintree::insert(node* n, const key_t k) {
+  if (!n) return new node(k);
+  if (k < n->key)
+    n->left = insert(n->left, k);
+  else
+    n->right = insert(n->right, k);
   return n;
 }
 
-node * bintree::merge(node *this_root, node *that_root) {
-
-  assert(!IS_FUTPTR(this_root)); assert(!IS_FUTPTR(that_root));
-
-  if(that_root == nullptr) {
-    if(this_root) { REPLACE(&this_root->left); REPLACE(&this_root->right); }
-    return this_root;
-  }
-  if(this_root == nullptr) {
-    if(that_root) { REPLACE(&that_root->left); REPLACE(&that_root->right); }
-    return that_root;
-  }
-
-  key_t s = this_root->key;
-  cilk::future<node *> *split_left = new cilk::future<node*>();
-  cilk::future<node *> *split_right = new cilk::future<node *>();
-
-  if(s < that_root->key) { // going left on the split; that_root will be split_right
-    //reuse_future(node *, split_right, split, s, that_root, &split_left, &split_right);
-    reasync_helper<node*,key_t,node*,result_t,result_t>
-      (split_right, split, s, that_root, &split_left, &split_right);
-    SET_FUTPTR(&split_right, split_right);
-  } else { // going right on the split; that_root will be split_left
-    //reuse_future(node *, split_left, split, s, that_root, &split_left, &split_right);
-    reasync_helper<node*,key_t,node*,result_t,result_t>
-      (split_left, split, s, that_root, &split_left, &split_right);
-
-    SET_FUTPTR(&split_left, split_left);
-  }
-
-  REPLACE(&this_root->left); REPLACE(&this_root->right);
-  REPLACE((node **)&split_left); REPLACE((node **)&split_right);
-
-  //create_future(node *, merged_left, merge, this_root->left, (node *)split_left);
-  cilk::future<node *> *merged_left = new cilk::future<node *>();
-  cilk::future<node *> *merged_right = new cilk::future<node *>();
-
-  reasync_helper<node*,node*,node*>(merged_left, merge, this_root->left, (node*)split_left);
-  SET_FUTPTR(&this_root->fut_left, merged_left);
-  //create_future(node *, merged_right, merge, this_root->right, (node *)split_right);
-  reasync_helper<node*,node*,node*>(merged_right, merge, this_root->right, (node*)split_right);
-  SET_FUTPTR(&this_root->fut_right, merged_right);
-
-  return this_root;
-}
-
-void bintree::insert(node *n, key_t k) {
-  assert(n != nullptr);
-
-  if(k < n->key) { // insert into left
-    if(n->left) { insert(n->left, k); }
-    else { n->left = new node(k); }
-  } else { // otherwise insert into right
-    if(n->right) { insert(n->right, k); }
-    else { n->right = new node(k); }
-  }
-}
-
-size_t bintree::validate(node *n) {
+std::size_t bintree::validate(node *n) {
   if (n == nullptr) return 0;
   assert(n->key >= 0);
   assert(!n->left || n->left->key <= n->key);
@@ -181,76 +80,167 @@ void bintree::get_key_counts(node* n, int *counts, key_t max_key) {
   counts[n->key]++;
 }
 
-void bintree::cleanup(node* n) {
-  if (n == nullptr) return;
-  if (n->left) cleanup(n->left);
-  if (n->right) cleanup(n->right);
-  delete n;
-}
-
 void bintree::replace_all(node *n) {
   if(!n) return;
-  if(IS_FUTPTR(n->left)) { REPLACE(&n->left); }
-  if(IS_FUTPTR(n->right)) { REPLACE(&n->right); }
+  //assert(!IS_FUTPTR(n->left));
+  //assert(!IS_FUTPTR(n->right));
+   if(IS_FUTPTR(n->left)) { REPLACE(&n->left); }
+   if(IS_FUTPTR(n->right)) { REPLACE(&n->right); }
   replace_all(n->left);
   replace_all(n->right);
 }
 
 void bintree::print_keys(node *n) {
   if(!n) return;
-  assert(!IS_FUTPTR(n));
+  fprintf(stderr, "%i", n->key);
+
+  fprintf(stderr, " (");
+  if (IS_FUTPTR(n->left)) {
+    fprintf(stderr, "f");
+    REPLACE(&n->left);
+  }
   print_keys(n->left);
-  fprintf(stderr, "%p: %i, ", n, n->key);
-  // fprintf(stderr, "%p: %i ->left %p: %i, ->right %p: %i\n", n, n->key,
-  //         n->left, n->left ? n->left->key : -1, n->right, n->right ? n->right->key : -1);
+  fprintf(stderr, ")");
+
+  fprintf(stderr, " (");
+  if (IS_FUTPTR(n->right)) {
+    fprintf(stderr, "f");
+    REPLACE(&n->right);
+  }
   print_keys(n->right);
+  fprintf(stderr, ")");
+
+  // print_keys(n->left);
+  // fprintf(stderr, "%p: %i, ", n, n->key);
+  // print_keys(n->right);
 }
 
-#if 0 // DO NOT USE; have not tested yet
-#ifdef NONBLOCKING_FUTURES
-// conceptually split returns a pair of cilk::future<node *>
-// but it's easier this way so we don't create extraneous futures
-void bintree::split_unstructured(key_t s, node *n,
-                                 cilk::future<node *> **res_left,
-                                 cilk::future<node *> **res_right) {
+#define async_split(fut, args...) \
+  reasync_helper<node*,node*,key_t,fut_t*,fut_t*>((fut), split, args)
 
+node* bintree::split(node* n, key_t s,
+                     fut_t* res_left, fut_t* res_right,
+                     int depth) {
   assert(!IS_FUTPTR(n));
+  assert(n);
 
-  if(n == nullptr) {
-    assert(!IS_FUTPTR(*res_left) && !IS_FUTPTR(*res_right));
-    SET_AND_REPLACE(res_left, nullptr);
-    SET_AND_REPLACE(res_right, nullptr);
-    return;
+  if (s < n->key) { // go left
+    REPLACE(&n->left); // make it ready, if it wasn't already
+    auto next = n->left;
+
+    if (!next) {
+      put(res_left, nullptr);
+    } else { // lookahead
+
+      if (depth >= DEPTH_LIMIT) {
+        auto res = seqsplit(next, s);
+        put(res_left, res.first);
+        n->left = res.second;
+        return n;
+      }
+
+      auto next_res_right = (fut_t*) malloc(sizeof(fut_t));
+      SET_FUTPTR(&n->left, next_res_right);
+
+      if (s < next->key) { // left-left case
+        async_split(next_res_right, next, s, res_left, next_res_right, depth+1);
+      } else { // left-right case
+        async_split(res_left, next, s, res_left, next_res_right, depth+1);
+      }
+    }
+  } else { // go right
+    REPLACE(&n->right);
+    auto next = n->right;
+
+    if (!next) {
+      put(res_right, nullptr);
+    } else { // lookahead
+
+      if (depth >= DEPTH_LIMIT) {
+        auto res = seqsplit(next, s);
+        n->right = res.first;
+        put(res_right, res.second);
+        return n;
+      }
+
+      auto next_res_left = (fut_t*) malloc(sizeof(fut_t));
+      SET_FUTPTR(&n->right, next_res_left);
+
+      if (s < next->key) { // right-left case
+        async_split(res_right, next, s, next_res_left, res_right, depth+1);
+      } else { // right-right case
+        async_split(next_res_left, next, s, next_res_left, res_right, depth+1);
+      }
+    }
   }
-
-  if(s < n->key) {
-    REPLACE(&n->left); // go to left; need the pointer now
-    node *left = n->left;
-
-    // need to return (L1, node(v, R1, R))
-    // since we are going left, this n is the caller's res_right, and
-    // we need a new future to pass down as the new res_right
-    cilk::future<node *> *new_res_right = new cilk::future<node *>();
-    SET_FUTPTR(&n->fut_left, new_res_right); // set v->left = R1
-    spawn_proc_future_unknown(split, s, left, res_left, &new_res_right); // reuse res_left
-    SET_FUTPTR(res_right, n);
-    (*res_right)->finish(); // this future is done
-
-  } else {
-    REPLACE(&n->right); // go to right; need the pointer now
-    node *right = n->right;
-
-    // need to return (node(v, L, L1), R1)
-    // since we are going right, this n is the caller's res_left, and
-    // we need a new future to pass down as the new res_left
-    cilk::future<node *> *new_res_left = new cilk::future<node *>();
-    SET_FUTPTR(&n->fut_right, new_res_left); // set v->right = L1
-    spawn_proc_future_unknown(split, s, right, &new_res_left, res_right); // reuse res_right
-    SET_FUTPTR(res_left, n);
-    (*res_left)->finish(); // this future is done
-  }
-
-  return;
+  return n;
 }
-#endif // NONBLOCKING_FUTURES
-#endif
+
+std::pair<node*,node*> bintree::seqsplit(node* n, key_t s) {
+  if (!n) return {nullptr, nullptr};
+  assert(!IS_FUTPTR(n));
+  node *left, *right;
+  if (s < n->key) { // go left
+    right = n;
+    auto next = seqsplit(n->left, s);
+    left = next.first;
+    n->left = next.second;
+  } else { // go right
+    left = n;
+    auto next = seqsplit(n->right, s);
+    n->right = next.first;
+    right = next.second;
+  }
+
+  return {left, right};
+}
+
+futpair_t bintree::split2(node* n, key_t s) {
+  auto left = (fut_t*) malloc(sizeof(fut_t));
+  auto right = (fut_t*) malloc(sizeof(fut_t));
+
+  // lookahead
+  if (s < n->key)
+    async_split(right, n, s, left, right, 0);
+  else
+    async_split(left, n, s, left, right, 0);
+
+  return {left, right};
+}
+
+
+node* bintree::merge(node* lr, fut_t* rr, int depth) {
+  auto res = merge(lr, rr->get(), depth);
+  free(rr);
+  return res;
+}
+
+
+node* bintree::merge(node* lr, node* rr, int depth) {
+  // printf("Merge at %i and %i: ", lr->key, rr->key);
+  if (!lr) return rr;
+  if (!rr) return lr;
+
+  if (depth >= DEPTH_LIMIT) {
+    auto res = seqsplit(rr, lr->key);
+    lr->left  = merge(lr->left, res.first, depth+1);
+    lr->right = merge(lr->right, res.second, depth+1);
+    return lr;
+  }
+
+  auto res = split2(rr, lr->key);
+  auto left = res.first;
+  auto right = res.second;
+
+  // printf("After split at %i:\n", lr->key);
+  // print_keys(left->get()); printf("\n");
+  // print_keys(right->get()); printf("\n");
+
+  // Is it okay to just spawn here?
+    lr->left  = spawn merge(lr->left, left, depth+1);
+    lr->right =       merge(lr->right, right, depth+1);
+    sync;
+
+  //printf("End split at %i\n", lr->key);
+  return lr;
+}
