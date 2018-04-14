@@ -43,8 +43,8 @@ void bitvector::set(size_t y) {
 
   // Debugging
   block_t mask = MASK(y);
-#ifdef STATS
-  if (data[block] & mask) reach_count++;
+#if STATS == 1
+  if (!(data[block] & mask)) reach_count++;
 #endif
   data[block] |= mask;
 }

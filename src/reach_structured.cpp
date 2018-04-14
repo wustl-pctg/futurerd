@@ -1,9 +1,15 @@
 #include "reach_structured.hpp"
 #include <cassert>
-#include <iostream>
+#include <cstdio>
 
 //#define LOG fprintf(stderr, "In %s\n", __PRETTY_FUNCTION__);
 #define LOG
+
+#if STATS == 1
+#define STAT(stmt) stmt
+#else
+#define STAT(stmt)
+#endif
 
 namespace reach {
 
@@ -21,6 +27,7 @@ void structured::begin_strand(sframe_data *f, sframe_data *p) {
 }
 
 void structured::create_strand(sframe_data *f) {
+  STAT(bags++);
   f->Sbag = new spbag(spbag::bag_kind::S);
   f->Pbag = nullptr; // will create this lazily when we need it
 }
@@ -33,6 +40,7 @@ void structured::at_spawn(sframe_data *f, sframe_data *helper)
 /********** Parallelism Deletion **********/
 void structured::at_future_get(sframe_data *f, sfut_data *fut) {
   assert(fut->put_strand);
+  STAT(merges++);
   f->Sbag->merge(fut->put_strand);
 }
 
@@ -42,6 +50,7 @@ void structured::at_sync(sframe_data *f) { LOG;
   // make sure it's a real sync (XXX: ???)
   if (!f->Pbag) return;
 
+  STAT(merges++);
   f->Sbag->merge(f->Pbag);
   spbag::find(f->Sbag)->set_kind(spbag::bag_kind::S);
   f->Pbag = nullptr;
@@ -50,8 +59,8 @@ void structured::at_sync(sframe_data *f) { LOG;
 bool structured::precedes_now(sframe_data *curr, smem_data *last_access) {
   //return last_access->precedes_now();
   bool res = last_access->precedes_now();
-  if (!res)
-    std::cerr << "Race between " << last_access->id << " and " << curr->Sbag->id << std::endl;
+  // if (!res)
+  //   std::cerr << "Race between " << last_access->id << " and " << curr->Sbag->id << std::endl;
   return res;
 }
 
@@ -61,10 +70,13 @@ bool structured::precedes_now(sframe_data *curr, smem_data *last_access) {
 void structured::continuation(sframe_data *f, sframe_data *p) {
   assert(f->Sbag);
 
-  if (!p->Pbag)
+  if (!p->Pbag) {
+    STAT(nullmerges++);
     p->Pbag = f->Sbag;
-  else
+  } else {
+    STAT(merges++);
     p->Pbag->merge(f->Sbag);
+  }
   // sometimes this bag may have been merged with an S-bag, so it
   // think it's an Sbag. But now it must be a Pbag. See basic/test6.
   // XXX: is there a cleaner way to do this?
@@ -77,11 +89,19 @@ void structured::at_spawn_continuation(sframe_data *f, sframe_data *p)
 { LOG; continuation(f,p); }
 
 void structured::at_future_finish(sframe_data *f, sframe_data *p, sfut_data *fut) {
-  //continuation(f, p);
-  //fut->put_strand = p->Pbag;
-  
   fut->put_strand = f->Sbag;
   spbag::find(f->Sbag)->set_kind(spbag::bag_kind::P);
+}
+
+structured::~structured() {
+#if STATS == 1
+  fprintf(stderr, "---------- Structured Stats ----------\n");
+#define FMT_STR ">>>%20.20s =\t%lu\n"
+  fprintf(stderr, FMT_STR, "bags created", bags);
+  fprintf(stderr, FMT_STR, "merges", merges);
+  fprintf(stderr, FMT_STR, "'null' merges", nullmerges);
+  fprintf(stderr, "-------------------------\n");
+#endif
 }
 
 } // namespace reach

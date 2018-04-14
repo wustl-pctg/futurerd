@@ -1,10 +1,7 @@
 #include "reach_gen.hpp"
 #include <cassert>
 #include <cstdlib>
-
-#ifdef STATS
-#include <iostream>
-#endif
+#include <cstdio>
 
 using namespace reach;
 using node = general::node;
@@ -14,39 +11,28 @@ general::general() { add_node(); }
 
 general::~general() {
   // Stats
-#ifdef STATS
-  std::cerr << data.size() << " nodes total." << std::endl;
+#if STATS == 1
+  fprintf(stderr, "---------- Reachability stats ----------\n");
+#define FMT_STR ">>>%20.20s =\t%lu\n"
+  fprintf(stderr, FMT_STR, "R nodes", data.size());
+  fprintf(stderr, FMT_STR, "R edges (non-SP)", edges);
 
-  size_t max_in_count = 0UL, min_in_count = -1UL, sum_in_count = 0;
+  //size_t max_in_count = 0UL, min_in_count = -1UL, sum_in_count = 0;
   size_t max_reach_count = 0UL, min_reach_count = -1UL, sum_reach_count = 0;
-  size_t max_block_count = 0UL, min_block_count = -1UL, sum_block_count = 0;
+  //size_t max_block_count = 0UL, min_block_count = -1UL, sum_block_count = 0;
   for (int i = 1; i < data.size(); ++i) {
     bitset& ba = data[i];
-
-    if (ba.in_count > max_in_count) max_in_count = ba.in_count;
-    if (ba.in_count < min_in_count) min_in_count = ba.in_count;
-    sum_in_count += ba.in_count;
-
     if (ba.reach_count > max_reach_count) max_reach_count = ba.reach_count;
     if (ba.reach_count < min_reach_count) min_reach_count = ba.reach_count;
     sum_reach_count += ba.reach_count;
-
-    if (ba.num_blocks > max_block_count) max_block_count = ba.num_blocks;
-    if (ba.num_blocks < min_block_count) min_block_count = ba.num_blocks;
-    sum_block_count += ba.num_blocks;
   }
 
-  std::cerr << "max in count:\t" << max_in_count << std::endl;
-  std::cerr << "min in count:\t" << min_in_count << std::endl;
-  std::cerr << "avg in count:\t" << ((double)sum_in_count) / (double)data.size()  << std::endl;
+  fprintf(stderr, FMT_STR, "max reach count", max_reach_count);
+  fprintf(stderr, FMT_STR, "min reach count", min_reach_count);
+  fprintf(stderr, ">>>%20.20s =\t%lf\n", "avg reach count",
+          ((double)sum_reach_count) / (double)data.size());
+  fprintf(stderr, "-------------------------\n");
 
-  std::cerr << "max reach count:\t" << max_reach_count << std::endl;
-  std::cerr << "min reach count:\t" << min_reach_count << std::endl;
-  std::cerr << "avg reach count:\t" << ((double)sum_reach_count) / (double)data.size()  << std::endl;
-
-  std::cerr << "max block count:\t" << max_block_count << std::endl;
-  std::cerr << "min block count:\t" << min_block_count << std::endl;
-  std::cerr << "avg block count:\t" << ((double)sum_block_count) / (double)data.size()  << std::endl;
 #endif
 }
 
@@ -114,8 +100,8 @@ void general::add_edge(node from, node to) {
   // else
     // data[to].merge(data[from]);
 
-#ifdef STATS
-  data[to].in_count++;
+#if STATS
+  edges++;
 #endif
 
 

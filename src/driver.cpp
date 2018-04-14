@@ -28,6 +28,31 @@ typedef race_detector rd; // convenience
 
 extern "C" {
 
+#if STATS == 1
+#define STAT(stmt) stmt
+uint64_t g_spawns = 0;
+uint64_t g_syncs = 0;
+uint64_t g_create_futures = 0;
+uint64_t g_get_futures = 0;
+uint64_t g_reads = 0;
+uint64_t g_writes = 0;
+
+__attribute__((destructor)) static void driver_stats(void) {
+  fprintf(stderr, "---------- RD stats ----------\n");
+#define FMT_STR ">>>%20.20s =\t%lu\n"
+  fprintf(stderr, FMT_STR, "spawns", g_spawns);
+  fprintf(stderr, FMT_STR, "syncs", g_syncs);
+  fprintf(stderr, FMT_STR, "create futures", g_create_futures);
+  fprintf(stderr, FMT_STR, "get futures", g_get_futures);
+  fprintf(stderr, FMT_STR, "reads", g_reads);
+  fprintf(stderr, FMT_STR, "writes", g_writes);
+  fprintf(stderr, "-------------------------\n");
+}
+
+#else
+#define STAT(stmt)
+#endif
+
 // Public C API
 void futurerd_set_policy(rd_policy p) { rd::set_policy(p); }
 size_t futurerd_num_races() { return rd::num_races(); }
@@ -79,6 +104,7 @@ void cilk_enter_end(__cilkrts_stack_frame *sf, void *rsp)
 { rd::enable_checking(); }
 
 void cilk_detach_begin(__cilkrts_stack_frame *parent_sf) {
+  STAT(g_spawns++);
   rd::g_reach.at_spawn(rd::t_sstack.head(), rd::t_sstack.do_spawn());
   //rd::g_reach.at_spawn(rd::t_sstack.push_helper());
   rd::disable_checking();
@@ -90,6 +116,8 @@ void cilk_detach_end() { rd::enable_checking(); }
 void cilk_future_create() {
   assert(!rd::t_sstack.empty());
 
+  STAT(g_create_futures++);
+
   // @TODO{Do we actually need a frame here?}
   // ANGE: Yes we do because we need a separate Sbags for the future frame and
   // its parent function that created the future.
@@ -98,6 +126,7 @@ void cilk_future_create() {
 
 void cilk_future_get_begin(sfut_data *fut) { rd::disable_checking(); }
 void cilk_future_get_end(sfut_data *fut) {
+  STAT(g_get_futures++);
   rd::g_reach.at_future_get(rd::t_sstack.head(), fut);
   rd::enable_checking();
 }
@@ -107,8 +136,10 @@ void cilk_sync_begin() { rd::disable_checking(); }
 void cilk_sync_end(__cilkrts_stack_frame *sf) {
   // At the end of every Cilk function there is an implicit sync, even
   // if we're already synced...
-  if (!rd::t_sstack.do_sync())
+  if (!rd::t_sstack.do_sync()) {
+    STAT(g_syncs++);
     rd::g_reach.at_sync(rd::t_sstack.head());
+  }
   rd::enable_checking();
 }
 
@@ -201,6 +232,10 @@ void __tsan_init() {
 
 static inline
 void tsan_access(bool is_read, void *addr, size_t mem_size, void *rip) {
+#if STATS == 1
+  if (is_read) g_reads++;
+  else g_writes++;
+#endif
   if (!rd::should_check()) return;
   assert(mem_size <= 16);
   rd::check_access(is_read, (addr_t)rip, (addr_t)addr, mem_size);

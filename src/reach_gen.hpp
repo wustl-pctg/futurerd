@@ -39,6 +39,10 @@ private:
   // from j. (i <- j) This is for better cache usage in add_edge.
   // std::vector< std::vector<bool> > data;
   std::vector<bitset> data;
+
+#if STATS == 1
+  uint64_t edges = 0;
+#endif
 }; // class reachability
 
 } // namespace reach

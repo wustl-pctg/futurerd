@@ -1,5 +1,6 @@
 // Should be a reachability data structure ONLY
 #pragma once
+#include <cstdint>
 
 #include "spbag.hpp"
 
@@ -22,7 +23,7 @@ public:
   //structured() = delete;
   structured(sframe_data *initial);
   void init(sframe_data *initial);
-  //~structured();
+  ~structured();
   smem_data* active(sframe_data *f);
 
   // Parallelism creation
@@ -30,7 +31,6 @@ public:
   void at_spawn(sframe_data *f, sframe_data *helper);
 
   // Parallelism deletion
-  // void at_future_put(sfut_data*);
   void at_future_get(sframe_data *f, sfut_data*);
   void at_sync(sframe_data *f);
 
@@ -47,9 +47,17 @@ private:
   // Public for use by nonblock (should be friend class...)
   // ANGE: Actually no, create_strand was never called in nonblock, so it
   // never calls back to the structured one, either
+  // ROB: create_strand is called from at_spawn and
+  // at_future_create. These are called from nonblock.
   void create_strand(sframe_data *f);
   // Helper function for continuations
   void continuation(sframe_data *f, sframe_data *p);
+
+#if STATS == 1
+  uint64_t bags = 0;
+  uint64_t merges = 0;
+  uint64_t nullmerges = 0;
+#endif
 
 }; // class structured
 } // namespace reach

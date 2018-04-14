@@ -1,7 +1,6 @@
 #include <cstring> // memcpy, memset
 #include <cassert>
-
-//#define STATS 1
+#include <cstdint>
 
 struct bitvector {
 
@@ -19,9 +18,8 @@ struct bitvector {
   // node in = 0;
 
   // Debugging
-#ifdef STATS
-  size_t in_count = 0;
-  size_t reach_count = 0;
+#if STATS == 1
+  uint64_t reach_count = 0;
 #endif
 
   bitvector() { resize(DEFAULT_SIZE); }
