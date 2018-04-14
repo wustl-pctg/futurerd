@@ -34,6 +34,21 @@ async_helper(ReturnType (*func)(Args...), Args... args)
   return __fut;
 }
 
+// This c++14 version is a big better because you don't need to
+// explicitly use the template arguments unless "func" is overloaded.
+// #define _RT std::result_of_t<std::decay_t<Function>(std::decay_t<Args>...)>
+// template< class Function, class... Args>
+// [[gnu::noinline]] cilk::future<_RT>*
+// reasync_helper(cilk::future<_RT>* __fut, Function&& func, Args&&... args) {
+//   __DC;
+//   new(__fut) = cilk::future<_RT>();
+//   __FS; // "start" the future
+//   __EC;
+//   __fut->finish(func(std::forward<Args>(args)...));
+//   cilK_future_helper_leave(&__fut->m_rd_data);
+//   return __fut;
+// }
+
 template<typename ReturnType, typename... Args>
 [[gnu::noinline]] void
 reasync_helper(cilk::future<ReturnType>* __fut,
