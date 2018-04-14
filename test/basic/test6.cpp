@@ -16,9 +16,9 @@ int main(int argc, char* argv[])
 {
   FUTURE_PROLOG();
   TEST_SETUP();
-  
+
   int shared = 0;
-  
+
   //cilk_async(int, f, foo);
   auto f = async_helper<int>(foo);
   //cilk_async(int, g, bar, f, shared);

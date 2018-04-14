@@ -8,7 +8,6 @@ all: $(TARGETS)
 
 .SECONDEXPANSION:
 $(TARGETS): $$@.o
-	@echo $(TARGETS)
 	$(CXX) $< $(LDFLAGS) -o $@
 
 .PHONY: all clean check $(TARGETS)

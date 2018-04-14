@@ -34,17 +34,12 @@ int main() {
   auto g = bar(s2);
   sync;
 
-  // Detecting an extra race here, somehow? Haven't actually convinced
-  // myself that there isn't some extra race I'm missing...
-  // int x = f->get();
-  int x; 
-  cilk_future_get_result(x, f);
+  int x = f->get();
   assert(x == 89);
   assert(s1 == 57 || s1 == 42);
   s2 = 42;
-  
-  //x = g->get();
-  cilk_future_get_result(x, g);
+
+  x = g->get();
   assert(s2 == 42 || s2 == 57);
 
   assert_detected(2);
