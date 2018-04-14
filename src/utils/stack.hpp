@@ -29,14 +29,16 @@ protected:
   void resize(index_t new_cap)
   {
     T* old_stack = m_stack;
-    m_stack = new T[new_cap];
+    //m_stack = new T[new_cap];
+    m_stack = (T*) malloc(sizeof(T) * new_cap);
     
     index_t copy_end = m_cap > new_cap ? new_cap : m_cap;
     for (int i = 0; i < copy_end; ++i)
       m_stack[i] = old_stack[i];
     m_cap = new_cap;
 
-    delete[] old_stack;
+    //delete[] old_stack;
+    free(old_stack);
   }
 
   void double_cap() { resize(m_cap * 2); }
