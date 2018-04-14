@@ -35,7 +35,7 @@ void bitvector::resize(size_t new_size) {
 void bitvector::set(size_t y) {
   uint64_t block = y / BITS_PER_BLOCK;
   if (block >= num_blocks) {
-    size_t new_size = p2(block+1);
+    size_t new_size = (block) ? p2(block+1) : 1;
     assert(block < new_size);
     resize(new_size);
   }
