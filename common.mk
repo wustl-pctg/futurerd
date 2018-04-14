@@ -34,7 +34,7 @@ else ifeq ($(ftype),nonblock)
 	FLAGS += -DNONBLOCKING_FUTURES
 else ifeq ($(ftype),) # default value
   $(error "Please specify a future type. You can put ftype ?= ... in config.mk to set a default.")
-else
+else ifneq ($(ftype),all) # all should only be used for the tool itself, not the benchmarks
   $(error "Invalid future type.")
 endif
 
