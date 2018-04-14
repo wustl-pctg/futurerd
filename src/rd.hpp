@@ -25,7 +25,9 @@ public:
   static int check_disabled;
   static bool shadow_enabled;
 
-  enum race_type { WW = 0, RW, WR};
+  // I use these as a return type as a simple way of knowing what kind
+  // of race was found, so I start at 1.
+  enum race_type { WW = 1, RW, WR};
 
   using access_t = shadow_mem::access_t;
 
