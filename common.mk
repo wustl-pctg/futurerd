@@ -8,10 +8,10 @@ CC = $(COMPILER_HOME)/bin/clang
 CXX = $(COMPILER_HOME)/bin/clang++
 
 OPT_FLAGS = -O3
-DBG_FLAGS = -O0 -ggdb
-PROF_FLAGS = -O1 -ggdb #-pg if you want to use gprof
+DBG_FLAGS = -O0 -ggdb3
+PROF_FLAGS = -O1 #-pg if you want to use gprof
 INC = -I$(RUNTIME_HOME)/include
-FLAGS = -Wall -Wfatal-errors -g $(INC)
+FLAGS = -Wall -Wfatal-errors -ggdb3 $(INC)
 ARFLAGS = rcs
 
 TOOL_DEBUG ?= 0
@@ -46,7 +46,7 @@ ifeq ($(LTO),1)
 endif
 
 CFLAGS ?= $(FLAGS) -std=c99
-CXXFLAGS ?= $(FLAGS) -std=c++11 -fno-exceptions -fno-rtti
+CXXFLAGS ?= $(FLAGS) -std=c++11 #-fno-exceptions -fno-rtti
 
 $(OBJ_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
@@ -57,7 +57,7 @@ $(OBJ_DIR)/%.o: %.cpp
 	$(CXX) $(CXXFLAGS) -o $@ -c $<
 
 # I don't understand why I have to add these extra stems...
-%.o %-rd.o %-reach.o %-base.o %-inst.o: %.cpp
+%.o %-rd.o %-reach.o %-base.o %-inst.o %-serial.o: %.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -o $@ -c $<
 
