@@ -9,7 +9,7 @@ SEP=","
 
 SIZES=([lcs]="32"
       [sw]="32"
-      [matmul_z]="2048"
+      [matmul_z]="512"
       )
 
 function basecases {
@@ -19,8 +19,8 @@ function basecases {
         for bc in ${BCASES[@]}; do
             for btype in ${BTYPES[@]}; do
                 total=0
-                for i in $ITER; do
-                    run="./${bench}-${btype} 2>&1 -n ${SIZES[$bench]} -b ${bc}"
+                for i in $(seq $ITER); do
+                    run="./${bench}-${btype} 2>&1 -n ${SIZES[$bench]} -r ${bc}"
                     echo "$run"
                     tmp=$(eval $run)
                     echo "$tmp" >> bc.out.log
@@ -35,7 +35,7 @@ function basecases {
                     result=$(eval "echo \"$tmp\" | $gather")
                     total=$(echo "scale=2; $total + $result" | bc)
                 done
-                avg=$(echo "scale=2; $total / 5.0" | bc)
+                avg=$(echo "scale=2; $total / $ITER" | bc)
                 outstr="${bench}${SEP}${SIZES[$bench]}${SEP}"
                 outstr="${outstr}${bc}${SEP}${btype}${SEP}%.2f${SEP}\n"
                 printf "$outstr" ${avg} >> bc.times.csv # Use %.2f in outstr
@@ -55,6 +55,11 @@ basic release structured structured
 basecases
 mv basic/bc.times.csv ./bc.struct.log
 
-basic release structured nonblock
+basic release nonblock structured
 basecases
 mv basic/bc.times.csv ./bc.nonblock.log
+
+printf -- "----- Structured -----"
+cat bc.struct.log
+printf -- "----- Nonblock -----"
+cat bc.nonblock.log
