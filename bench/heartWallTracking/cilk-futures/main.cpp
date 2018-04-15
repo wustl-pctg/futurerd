@@ -10,6 +10,7 @@
 #include <math.h>
 #include <string.h>
 #include <time.h>
+#include <chrono>
 #include <cilk/cilk.h>
 
 #include "avilib.hpp"
@@ -563,6 +564,7 @@ int main(int argc, char *argv []) {
     //=====================
     //	KERNEL
     //=====================
+    auto start = std::chrono::steady_clock::now();
     for(pub.frame_no=0; pub.frame_no<frames_processed; pub.frame_no++) {
         //====================================================================================================
         //	GETTING FRAME
@@ -578,9 +580,8 @@ int main(int argc, char *argv []) {
         //====================================================================================================
         //	PROCESSING
         //====================================================================================================
-
         cilk_for(int i=0; i<pub.allPoints; i++) {
-            compute_kernel(&pub, &(priv[i]));
+          compute_kernel(&pub, &(priv[i]));
         }
 
         //====================================================================================================
@@ -602,6 +603,10 @@ int main(int argc, char *argv []) {
     //=====================
     printf("\n");
     fflush(NULL);
+
+    auto end = std::chrono::steady_clock::now();
+    auto time = std::chrono::duration <double, std::milli> (end-start).count();
+    printf("Benchmark time: %f ms\n", time);
 
     //=====================
     //	DEALLOCATION
