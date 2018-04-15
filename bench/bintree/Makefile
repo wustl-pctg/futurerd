@@ -11,10 +11,10 @@ CFLAGS += $(APPFLAGS) #$(RDFLAGS)
 CXXFLAGS += $(APPFLAGS) #$(RDFLAGS)
 
 merge-all:
-	$(MAKE) mode=$(mode) ftype=$(ftype) btype=base
-	$(MAKE) mode=$(mode) ftype=$(ftype) btype=reach
-	$(MAKE) mode=$(mode) ftype=$(ftype) btype=inst
-	$(MAKE) mode=$(mode) ftype=$(ftype) btype=rd
+	$(MAKE) mode=$(mode) rdalg=$(rdalg) ftype=$(ftype) btype=base
+	$(MAKE) mode=$(mode) rdalg=$(rdalg) ftype=$(ftype) btype=reach
+	$(MAKE) mode=$(mode) rdalg=$(rdalg) ftype=$(ftype) btype=inst
+	$(MAKE) mode=$(mode) rdalg=$(rdalg) ftype=$(ftype) btype=rd
 
 merge-%.o: merge.cpp
 bintree-%.o: bintree.cpp

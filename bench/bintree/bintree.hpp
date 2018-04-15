@@ -9,7 +9,7 @@
 
 class bintree {
 public:
-  static constexpr int DEPTH_LIMIT = 0;
+  static constexpr int DEPTH_LIMIT = 5;
   using key_t = int;
   struct node {
     key_t key;

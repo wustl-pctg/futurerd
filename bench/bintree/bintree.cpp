@@ -182,11 +182,13 @@ std::pair<node*,node*> bintree::seqsplit(node* n, key_t s) {
   node *left, *right;
   if (s < n->key) { // go left
     right = n;
+    REPLACE(&n->left);
     auto next = seqsplit(n->left, s);
     left = next.first;
     n->left = next.second;
   } else { // go right
     left = n;
+    REPLACE(&n->right);
     auto next = seqsplit(n->right, s);
     n->right = next.first;
     right = next.second;
@@ -220,6 +222,8 @@ node* bintree::merge(node* lr, node* rr, int depth) {
   // printf("Merge at %i and %i: ", lr->key, rr->key);
   if (!lr) return rr;
   if (!rr) return lr;
+
+  assert(!IS_FUTPTR(rr));
 
   if (depth >= DEPTH_LIMIT) {
     auto res = seqsplit(rr, lr->key);
