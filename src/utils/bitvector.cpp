@@ -16,7 +16,9 @@ bitvector::bitvector(const bitvector& that) {
 }
 
 void bitvector::unsafe_resize(size_t new_size) {
-  block_t* new_data = (block_t*) malloc(sizeof(block_t) * new_size);
+  size_t s = sizeof(block_t) * new_size;
+  block_t* new_data = (block_t*) malloc(s);
+  if (!new_data) printf("Failed on alloc of size %zu\n", s),
   assert(new_data);
   std::memcpy(new_data, data, sizeof(block_t) * num_blocks);
   free(data);
@@ -34,6 +36,9 @@ void bitvector::resize(size_t new_size) {
 
 void bitvector::set(size_t y) {
   uint64_t block = y / BITS_PER_BLOCK;
+  // size_t new_size = num_blocks;
+  // while (block >= new_size) new_size *= 2;
+  // resize(new_size);
   if (block >= num_blocks) {
     size_t new_size = (block) ? p2(block+1) : 1;
     assert(block < new_size);

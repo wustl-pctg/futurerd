@@ -15,7 +15,6 @@ struct bitvector {
 
   size_t num_blocks = 0;
   block_t* data = nullptr;
-  // node in = 0;
 
   // Debugging
 #if STATS == 1

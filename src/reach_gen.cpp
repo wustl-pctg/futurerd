@@ -31,6 +31,22 @@ general::~general() {
   fprintf(stderr, FMT_STR, "min reach count", min_reach_count);
   fprintf(stderr, ">>>%20.20s =\t%lf\n", "avg reach count",
           ((double)sum_reach_count) / (double)data.size());
+
+  size_t nb = 0;
+  size_t maxnb = 0;
+  size_t minnb = 0;
+  for (int i = 0; i < data.size(); ++i) {
+    size_t n = data[i].num_blocks;
+    if (n > maxnb) maxnb = n;
+    if (n < minnb) minnb = n;
+    nb += n;
+  }
+  fprintf(stderr, ">>>%zu blocks = %zu bytes for Rmat\n",
+          nb, nb * bitvector::BITS_PER_BLOCK);
+  fprintf(stderr, ">>>min=%zu, max=%zu, avg=%lf, row=%zu\n",
+          minnb, maxnb,
+          ((double)nb)/((double)data.size()),
+          data.size());
   fprintf(stderr, "-------------------------\n");
 
 #endif
