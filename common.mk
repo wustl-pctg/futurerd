@@ -28,14 +28,8 @@ else
   $(error "Invalid mode.")
 endif
 
-ifeq ($(ftype),structured)
-	FLAGS += -DSTRUCTURED_FUTURES
-else ifeq ($(ftype),nonblock)
-	FLAGS += -DNONBLOCKING_FUTURES
-else ifeq ($(ftype),) # default value
-  $(error "Please specify a future type. You can put ftype ?= ... in config.mk to set a default.")
-else ifneq ($(ftype),all) # all should only be used for the tool itself, not the benchmarks
-  $(error "Invalid future type.")
+ifeq ($(rdalg),)
+  $(error "Please specify a valid race detection algorithm.")
 endif
 
 LTO ?= 1
