@@ -4,11 +4,12 @@ set -e
 PROGS=(matmul_z)
 BTYPES=(base reach)
 BCASES=(32 64 128)
-ITER=1
+ITER=3
+SEP=","
 
 SIZES=([lcs]="32"
       [sw]="32"
-      [matmul_z]="256"
+      [matmul_z]="2048"
       )
 
 function basecases {
