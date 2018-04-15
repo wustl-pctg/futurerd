@@ -1,13 +1,14 @@
 #!/bin/bash
 # Requires bash 4+
+# Requires GNU datamash 1.3+
 set -e
 
-default_progs=(lcs sw matmul_z hw bt dedup)
+default_progs=(lcs sw matmul_z hw dedup) #bt
 PROGS=( "${PROGS[@]:-"${default_progs[@]}"}" )
 default_btypes=(base reach inst rd)
 BTYPES=( "${BTYPES[@]:-"${default_btypes[@]}"}" )
 
-ITER=1
+ITER=3
 TIMELOG=$(pwd)/times.csv
 OUTPUTLOG=$(pwd)/out.log
 
@@ -46,7 +47,7 @@ DIRS=([lcs]="basic/" [sw]="basic/" [matmul_z]="basic/"
 
 # Log setup
 SEP=","
-HEADERS=(Benchmark Type Iter MS)
+HEADERS=(Benchmark Args Type Mean Sstdev)
 rm -f $TIMELOG $OUTPUTLOG
 for h in ${HEADERS[@]}; do
     printf "${h}${SEP}" >> $TIMELOG
@@ -59,7 +60,7 @@ for bench in ${PROGS[@]}; do
         printf "Running $bench-$btype ${ARGS[$bench]} $ITER times\n"
         pushd ${DIRS[$bench]} >/dev/null
 
-        total=0
+        results=""
         for i in $(seq 1 $ITER); do
             run="./${bench}-${btype} 2>&1 ${ARGS[$bench]}"
             echo "$run"
@@ -73,13 +74,15 @@ for bench in ${PROGS[@]}; do
             fi
 
             gather="grep 'Benchmark time' | cut -d ':' -f 2 | cut -d ' ' -f 2"
-            result=$(eval "echo \"$tmp\" | $gather")
-            total=$(echo "scale=2; $total + $result" | bc)
+            results+=$(eval "echo \"$tmp\" | $gather")
+            results+="\n"
         done
-        avg=$(echo "scale=2; $total / 5.0" | bc)
+        stats=$(printf "$results" | datamash -R 2 mean 1 sstdev 1)
+        avg=$(echo "$stats" | cut -f 1)
+        stdev=$(echo "$stats" | cut -f 2)
         outstr="${bench}${SEP}${ARGS[$bench]}${SEP}"
-        outstr="${outstr}${btype}${SEP}${i}${SEP}%.2f${SEP}\n"
-        printf "$outstr" ${avg} >> $TIMELOG # Use %.2f in outstr
+        outstr="${outstr}${btype}${SEP}%.2f${SEP}%.2f${SEP}\n"
+        printf "$outstr" ${avg} ${stdev} >> $TIMELOG # Use %.2f in outstr
         popd >/dev/null
     done
 done

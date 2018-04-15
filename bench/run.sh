@@ -1,23 +1,19 @@
 #!/bin/bash
 set -e
 
-# remake structured
-# basecases
-# mv basic/bc.out.log ./bc.structured.log
-# mv basic/bc.times.csv ./bc.structured.csv
-# printf -- "structured--------------------------------------------------------\n"
-# cat bc.structured.csv
-
-#remake nonblock
-# basecases
-# mv basic/bc.out.log ./bc.nonblock.log
-# mv basic/bc.times.csv ./bc.nonblock.csv
-# printf -- "nonblock----------------------------------------------------------\n"
-# cat bc.nonblock.csv
-
-PROGS=(dedup)
+PROGS=(lcs sw matmul_z hw dedup)
 source remake.sh
+system release
 
-#system release nonblock
-#basic release nonblock structured
+allbench release structured structured
 source ./time.sh
+mv times.csv times.ss.csv
+
+allbench release nonblock structured
+source ./time.sh
+mv times.csv times.ns.csv
+
+PROGS=(lcs sw matmul_z hw dedup merge)
+allbench release nonblock nonblock
+source ./time.sh
+mv times.csv times.nn.csv

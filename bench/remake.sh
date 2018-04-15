@@ -68,14 +68,14 @@ function dedup {
 }
 
 function allbench {
-    basic $1 $2
-    bintree $1 $2
-    heartwall $1 $2
-    dedup $1 $2
+    basic $1 $2 $3
+    bintree $1 $2 $3
+    heartwall $1 $2 $3
+    dedup $1 $2 $3
     #bodytrack $1 $2
 }
 
 function all {
-    system $1 $2
-    allbench $1 $2
+    system $1
+    allbench $1 $2 $3
 }
