@@ -26,6 +26,8 @@ void gen_rand_string(char * s, int s_length, int range) {
   }
 }
 
+
+// @deprecated:
 extern "C" {
 void cilk_for_iteration_begin();
 void cilk_for_iteration_end();
