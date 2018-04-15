@@ -65,14 +65,6 @@ void futurerd_disable_shadowing() { rd::disable_shadowing(); }
 void futurerd_should_check() { rd::should_check(); }
 void futurerd_mark_stack_allocate(void* addr) { rd::mark_stack_allocate(addr); }
 
-// This is slightly dangerous since the initialization of the loop
-// variable will not be changed. But this should not be a problem b/c
-// the compiler already makes sure that the loop variable must be
-// declared in the loop; it cannot be a shared local variable.
-void cilk_for_begin() { rd::disable_checking(); }
-void cilk_for_end() { rd::enable_checking(); }
-void cilk_for_iteration_begin() { rd::enable_checking(); }
-
 // We need to clear the stack immediately, since local variables are
 // shared amonst logically-parallel iterations
 void cilk_for_iteration_end() {
