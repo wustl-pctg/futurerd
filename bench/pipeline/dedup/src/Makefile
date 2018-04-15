@@ -22,11 +22,11 @@ ifeq ($(btype),rd)
   INST = yes
 endif
 ifeq ($(INST),yes)
-  OBJECTS += $(OBJ:%=$(OBJDIR)/%-inst.o) 
-  OBJECTS += $(UTIL_OBJ:%=$(UTIL_OBJDIR)/%-inst.o) 
-else 
-  OBJECTS += $(OBJ:%=$(OBJDIR)/%.o) 
-  OBJECTS += $(UTIL_OBJ:%=$(UTIL_OBJDIR)/%.o) 
+  OBJECTS = $(OBJ:%=$(OBJDIR)/%-inst.o)
+  OBJECTS += $(UTIL_OBJ:%=$(UTIL_OBJDIR)/%-inst.o)
+else
+  OBJECTS = $(OBJ:%=$(OBJDIR)/%.o)
+  OBJECTS += $(UTIL_OBJ:%=$(UTIL_OBJDIR)/%.o)
 endif
 
 # Uncomment the following to enable gzip compression
@@ -43,20 +43,20 @@ CILK_OBJECTS = $(OBJDIR)/encoder-cilk-$(btype).o
 
 CXXFLAGS += $(BASIC_FLAGS) $(APPFLAGS) $(INC)
 
-TARGETS = bt-$(btype)
+TARGETS = dedup-$(btype)
 all: $(OBJDIR) $(UTIL_OBJDIR) $(TARGETS)
 
-serial: $(BUILDDIR) $(OBJDIR) $(UTIL_OBJDIR) dedup-serial 
+serial: $(BUILDDIR) $(OBJDIR) $(UTIL_OBJDIR) dedup-serial
 
-bt-all: $(BUILDDIR) $(OBJDIR) $(UTIL_OBJDIR)
-	$(MAKE) mode=$(mode) ftype=$(ftype) btype=rd
-	$(MAKE) mode=$(mode) ftype=$(ftype) btype=inst
-	$(MAKE) mode=$(mode) ftype=$(ftype) btype=reach
-	$(MAKE) mode=$(mode) ftype=$(ftype) btype=base
+dedup-all: $(BUILDDIR) $(OBJDIR) $(UTIL_OBJDIR)
+	$(MAKE) mode=$(mode) rdalg=$(rdalg) ftype=$(ftype) btype=rd
+	$(MAKE) mode=$(mode) rdalg=$(rdalg) ftype=$(ftype) btype=inst
+	$(MAKE) mode=$(mode) rdalg=$(rdalg) ftype=$(ftype) btype=reach
+	$(MAKE) mode=$(mode) rdalg=$(rdalg) ftype=$(ftype) btype=base
 
-bt-%: $(CILK_OBJECTS) $(OBJECTS)
+dedup-%: $(CILK_OBJECTS) $(OBJECTS)
 	$(CXX) -o $@ $^ $(LDFLAGS) $(LIB)
-	mv $@ $(BUILDDIR) 
+	mv $@ $(BUILDDIR)
 
 $(OBJDIR):
 	mkdir -p $(OBJDIR)
@@ -81,7 +81,7 @@ $(OBJDIR)/encoder-cilk-%.o: encoder-cilk.cpp
 
 dedup-serial: $(OBJDIR)/encoder-serial.o $(OBJECTS)
 	$(CXX) -o $@ $^ $(LIB)
-	mv $@ $(BUILDDIR) 
+	mv $@ $(BUILDDIR)
 
 clean:
 	rm -rf *.o *~ $(OBJDIR)/*.o $(UTIL_OBJDIR)/*.o $(PROG)

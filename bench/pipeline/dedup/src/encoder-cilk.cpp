@@ -28,6 +28,8 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <chrono>
+#include <iostream>
 
 #include "config.h"
 #include "debug.h"
@@ -542,9 +544,9 @@ void Encode(config_t * _conf) {
     struct stat filestat;
 
     // timing stuff
-    float preload_time = 0.0f;
-    float process_time = 0.0f;
-    clockmark_t begin, end, preload_end; 
+    //    float preload_time = 0.0f;
+    //float process_time = 0.0f;
+    //clockmark_t begin, end, preload_end; 
 
     /*
     int res = fib(40); 
@@ -588,7 +590,7 @@ void Encode(config_t * _conf) {
                    strerror(errno));
     }
 
-    begin = ktiming_getmark();
+    //begin = ktiming_getmark();
     // Sanity check
     if(MAXBUF < 8 * ANCHOR_JUMP) {
         printf("WARNING: I/O buffer size is small. Performance degraded.\n");
@@ -617,8 +619,8 @@ void Encode(config_t * _conf) {
         args.bytes_left = filestat.st_size;
         args.buffer = file_buffer;
 
-        preload_end = ktiming_getmark();
-        preload_time = ktiming_diff_usec(&begin, &preload_end);
+        //preload_end = ktiming_getmark();
+        //preload_time = ktiming_diff_usec(&begin, &preload_end);
     
     } else {
         args.buffer = (unsigned char *) malloc(MAXBUF);
@@ -626,13 +628,18 @@ void Encode(config_t * _conf) {
     args.buf_seek = 0;
 
     // XXX This is where the old ROI timing begin
+    auto start = std::chrono::steady_clock::now();
 
     // Do the processing
     SerialIntegratedPipeline(&args);
 
-    // XXX This is where the old ROI timing end 
-    end = ktiming_getmark();
-    process_time = ktiming_diff_usec(&begin, &end);
+    // XXX This is where the old ROI timing end
+    //end = ktiming_getmark();
+    //process_time = ktiming_diff_usec(&begin, &end);
+    auto end = std::chrono::steady_clock::now();
+    auto time = std::chrono::duration <double, std::milli> (end-start).count();
+    std::cout << "Benchmark time: " << time << " ms" << std::endl;
+
 
     // clean up 
     free(args.buffer);
@@ -657,10 +664,10 @@ void Encode(config_t * _conf) {
                         - dedup_time - comp_time - write_time)*1.0e-9);
     })
 
-    if(preload_time) {
-        printf("Preloading time = %.4f seconds\n", preload_time * 1.0e-9);
-    }
-    printf("Processing time = %.4f seconds\n", process_time * 1.0e-9);
+    // if(preload_time) {
+    //     printf("Preloading time = %.4f seconds\n", preload_time * 1.0e-9);
+    // }
+    // printf("Processing time = %.4f seconds\n", process_time * 1.0e-9);
 
 #ifdef ENABLE_STATISTICS
     fprintf(stderr, "Printing out stats.\n");
