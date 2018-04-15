@@ -415,7 +415,7 @@ int main(int argc, char *argv[]) {
   int help = 0;
   int check = 0;
 
-  get_options(argc, argv, specifiers, opt_types, &n, &check, &help, &bSize);
+  get_options(argc, argv, specifiers, opt_types, &n, &check, &help, &bSize, &rSize);
   ensure_serial_execution();
 
   if(help) {
