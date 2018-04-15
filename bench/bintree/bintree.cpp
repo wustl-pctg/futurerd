@@ -13,6 +13,9 @@ using node = bintree::node;
 using fut_t = bintree::fut_t;
 using futpair_t = bintree::futpair_t;
 
+// Helper macros for dealing with pointers that may or may not be
+// future pointers.
+#ifdef NONBLOCKING_FUTURES
 #define IS_FUTPTR(f)                                            \
   (((void*) (((uintptr_t)(f)) & ((uintptr_t)0x1))) != nullptr)
 
@@ -22,7 +25,7 @@ using futpair_t = bintree::futpair_t;
 
 // mark the underlying future pointer
 // SET_FUTPTR expects loc to be an address to future pointer, so future **
-#define SET_FUTPTR(loc,f)                                               \
+#define SET_FUTPTR(loc,f)                                   \
   (*(loc) = ((node*)(((uintptr_t)(f)) | ((uintptr_t)0x1))))
 
 // set loc to point to the real value gotten from the future pointer
@@ -37,6 +40,13 @@ using futpair_t = bintree::futpair_t;
 // We don't actually support put/get style, but this makes things clearer.
 static node* immediate(node *n) { return n; }
 #define put(fut,res) reasync_helper<node*,node*>((fut), immediate, (res))
+
+#else
+#define IS_FUTPTR(f) false
+#define GET_FUTPTR(f) nullptr
+#define SET_FUTPTR(loc,f) *(loc) = nullptr
+#define REPLACE(loc)
+#endif
 
 void bintree::merge(bintree *that) {
   this->m_size += that->m_size;
@@ -82,10 +92,8 @@ void bintree::get_key_counts(node* n, int *counts, key_t max_key) {
 
 void bintree::replace_all(node *n) {
   if(!n) return;
-  //assert(!IS_FUTPTR(n->left));
-  //assert(!IS_FUTPTR(n->right));
-   if(IS_FUTPTR(n->left)) { REPLACE(&n->left); }
-   if(IS_FUTPTR(n->right)) { REPLACE(&n->right); }
+  if(IS_FUTPTR(n->left)) { REPLACE(&n->left); }
+  if(IS_FUTPTR(n->right)) { REPLACE(&n->right); }
   replace_all(n->left);
   replace_all(n->right);
 }
@@ -115,12 +123,37 @@ void bintree::print_keys(node *n) {
   // print_keys(n->right);
 }
 
-#define async_split(fut, args...) \
+// Sequential split, for fork-join merge and base case for pipelined
+// split.  Without NONBLOCKING_FUTURES defined, the uppercase macros
+// won't do anything.
+std::pair<node*,node*> bintree::split(node* n, key_t s) {
+  if (!n) return {nullptr, nullptr};
+  assert(!IS_FUTPTR(n));
+  node *left, *right;
+  if (s < n->key) { // go left
+    right = n;
+    REPLACE(&n->left);
+    auto next = split(n->left, s);
+    left = next.first;
+    n->left = next.second;
+  } else { // go right
+    left = n;
+    REPLACE(&n->right);
+    auto next = split(n->right, s);
+    n->right = next.first;
+    right = next.second;
+  }
+  return {left, right};
+}
+
+// Pipelined splitting
+#ifdef NONBLOCKING_FUTURES
+#define async_split(fut, args...)                                     \
   reasync_helper<node*,node*,key_t,fut_t*,fut_t*>((fut), split, args)
 
-node* bintree::split(node* n, key_t s,
-                     fut_t* res_left, fut_t* res_right,
-                     int depth) {
+static node* split(node* n, key_t s,
+                   fut_t* res_left, fut_t* res_right,
+                   int depth) {
   assert(!IS_FUTPTR(n));
   assert(n);
 
@@ -132,8 +165,8 @@ node* bintree::split(node* n, key_t s,
       put(res_left, nullptr);
     } else { // lookahead
 
-      if (depth >= DEPTH_LIMIT) {
-        auto res = seqsplit(next, s);
+      if (depth >= bintree::DEPTH_LIMIT) {
+        auto res = bintree::split(next, s);
         put(res_left, res.first);
         n->left = res.second;
         return n;
@@ -156,8 +189,8 @@ node* bintree::split(node* n, key_t s,
       put(res_right, nullptr);
     } else { // lookahead
 
-      if (depth >= DEPTH_LIMIT) {
-        auto res = seqsplit(next, s);
+      if (depth >= bintree::DEPTH_LIMIT) {
+        auto res = bintree::split(next, s);
         n->right = res.first;
         put(res_right, res.second);
         return n;
@@ -176,28 +209,8 @@ node* bintree::split(node* n, key_t s,
   return n;
 }
 
-std::pair<node*,node*> bintree::seqsplit(node* n, key_t s) {
-  if (!n) return {nullptr, nullptr};
-  assert(!IS_FUTPTR(n));
-  node *left, *right;
-  if (s < n->key) { // go left
-    right = n;
-    REPLACE(&n->left);
-    auto next = seqsplit(n->left, s);
-    left = next.first;
-    n->left = next.second;
-  } else { // go right
-    left = n;
-    REPLACE(&n->right);
-    auto next = seqsplit(n->right, s);
-    n->right = next.first;
-    right = next.second;
-  }
-
-  return {left, right};
-}
-
-futpair_t bintree::split2(node* n, key_t s) {
+// Helper to "launch" two futures for splitting
+static futpair_t split2(node* n, key_t s) {
   auto left = (fut_t*) malloc(sizeof(fut_t));
   auto right = (fut_t*) malloc(sizeof(fut_t));
 
@@ -209,42 +222,46 @@ futpair_t bintree::split2(node* n, key_t s) {
 
   return {left, right};
 }
+#endif
 
-
-node* bintree::merge(node* lr, fut_t* rr, int depth) {
-  auto res = merge(lr, rr->get(), depth);
+// Merging
+#ifdef NONBLOCKING_FUTURES
+// If I don't give this a unique name (not "merge"), for some reason
+// the compiler will not consider it as a possible candidate for the
+// spawns below, even though it has a different signature...
+static node* merge_helper(node* lr, fut_t* rr, int depth) {
+  auto res = bintree::merge(lr, rr->get(), depth);
   free(rr);
   return res;
 }
-
+#endif
 
 node* bintree::merge(node* lr, node* rr, int depth) {
-  // printf("Merge at %i and %i: ", lr->key, rr->key);
   if (!lr) return rr;
   if (!rr) return lr;
 
   assert(!IS_FUTPTR(rr));
 
+  // TODO: fast sequential merge?
   if (depth >= DEPTH_LIMIT) {
-    auto res = seqsplit(rr, lr->key);
+    auto res = split(rr, lr->key);
     lr->left  = merge(lr->left, res.first, depth+1);
     lr->right = merge(lr->right, res.second, depth+1);
     return lr;
   }
 
+#ifdef STRUCTURED_FUTURES
+#define split2 split
+#define merge_helper merge
+#endif
+
   auto res = split2(rr, lr->key);
   auto left = res.first;
   auto right = res.second;
 
-  // printf("After split at %i:\n", lr->key);
-  // print_keys(left->get()); printf("\n");
-  // print_keys(right->get()); printf("\n");
+  lr->left  = spawn merge_helper(lr->left, left, depth+1);
+  lr->right =       merge_helper(lr->right, right, depth+1);
+  sync;
 
-  // Is it okay to just spawn here?
-    lr->left  = spawn merge(lr->left, left, depth+1);
-    lr->right =       merge(lr->right, right, depth+1);
-    sync;
-
-  //printf("End split at %i\n", lr->key);
   return lr;
 }

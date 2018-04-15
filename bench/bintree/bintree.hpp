@@ -52,6 +52,8 @@ public:
     fprintf(stderr, "\n\n");
   }
 
+  static std::pair<node*,node*> split(node* n, key_t s);
+  static node* merge(node* lr, node* rr, int depth);
 
 private:
   node* m_root = nullptr;
@@ -63,16 +65,14 @@ private:
   // helper.
   std::size_t m_size = 0;
 
-  static std::pair<node*,node*> seqsplit(node* n, key_t s);
-  static node* split(node* n, key_t s, fut_t* res_left, fut_t* res_right, int depth);
-  futpair_t split2(node* n, key_t s);
-  node* merge(node* lr, cilk::future<node*>* rr, int depth);
-  node* merge(node* lr, node* rr, int depth);
+
+  //static node* split(node* n, key_t s, fut_t* res_left, fut_t* res_right, int depth);
+  //futpair_t split2(node* n, key_t s);
+  //node* merge(node* lr, cilk::future<node*>* rr, int depth);
 
   static std::size_t validate(node* n);
   static void get_key_counts(node* n, int *counts, key_t max_key);
-  static void replace_all(node *n);
   static void print_keys(node* n);
-
+  static void replace_all(node *n);
 
 }; // class bintree
