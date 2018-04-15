@@ -1,11 +1,10 @@
-ifeq ($(ftype),)
-	ftype=all
+ifeq ($(rdalg),)
+  rdalg=both
 endif
 include ../common.mk
 
 # Need this flag or the race detector won't do anything
-CFLAGS += -DRACE_DETECT -DSTATS=$(STATS)
-CXXFLAGS += -DRACE_DETECT -fno-exceptions -fno-rtti -DSTATS=$(STATS)
+TOOLFLAGS += -DRACE_DETECT -DSTATS=$(STATS)
 
 # Basic tool functionality
 SRC := driver.cpp rd.cpp
@@ -23,27 +22,34 @@ SRC += debug.cpp spbag.cpp
 
 OBJ := $(addprefix $(OBJ_DIR)/, $(SRC:.cpp=.o))
 LIB_DIR = $(BUILD_DIR)/lib
-TARGET = $(LIB_DIR)/librd-$(ftype).a
+TARGET = $(LIB_DIR)/librd-$(rdalg).a
 
-ifeq ($(ftype),all)
-	.DEFAULT_GOAL := all
+ifeq ($(rdalg),both)
+	.DEFAULT_GOAL := both
 else
 	.DEFAULT_GOAL := $(TARGET)
+  ifeq ($(rdalg),structured)
+    TOOLFLAGS += -DSTRUCTURED_FUTURES
+  else ifeq ($(rdalg),nonblock)
+    TOOLFLAGS += -DNONBLOCKING_FUTURES
+  else
+    $(error "Invalid RD algorithm")
+  endif
 endif
 
-.PHONY: all
+CFLAGS += $(TOOLFLAGS)
+CXXFLAGS += $(TOOLFLAGS) -fno-exceptions -fno-rtti
 
-all:
-	$(MAKE) clean
-	$(MAKE) mode=$(mode) ftype=structured
-	$(MAKE) clean
-	$(MAKE) mode=$(mode) ftype=nonblock
+.PHONY: both
 
+both:
+	$(MAKE) clean
+	$(MAKE) mode=$(mode) rdalg=structured
+	$(MAKE) clean
+	$(MAKE) mode=$(mode) rdalg=nonblock
 
 # Mostly for cilk/internal includes
 INC += -I$(PROJECT_HOME)/cilkrts/include
-
-
 
 $(TARGET): $(OBJ) $(LIB_DIR) $(SRC)
 
