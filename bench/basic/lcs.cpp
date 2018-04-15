@@ -13,7 +13,7 @@
 #include "rd.h"
 #endif
 
-#include "../util/getoptions.hpp" 
+#include "../util/getoptions.hpp"
 #include "../util/util.hpp"
 
 #define SIZE_OF_ALPHABETS 4
@@ -26,7 +26,7 @@
 static int base_case_log;
 #define MIN_BASE_CASE 32
 #define NUM_BLOCKS(n) (n >> base_case_log)
-#define BLOCK_ALIGN(n) (((n + (1 << base_case_log)-1) >> base_case_log) << base_case_log)  
+#define BLOCK_ALIGN(n) (((n + (1 << base_case_log)-1) >> base_case_log) << base_case_log)
 #define BLOCK_IND_TO_IND(i) (i << base_case_log)
 
 static inline int nearpow2(int x) { return 1 << (32 - __builtin_clz (x - 1)); }
@@ -43,7 +43,7 @@ static int wave_lcs_with_futures(int *stor, char *a, char *b, int n) {
   for(int j = 1; j < n; j++) { // horizontal strip when i == 0
     stor[j] = 0;
   }
-  
+
   for(int i = 1; i < n; i++) {
     for(int j = 1; j < n; j++) {
       if(a[i-1] == b[j-1]) {
@@ -60,14 +60,14 @@ static int wave_lcs_with_futures(int *stor, char *a, char *b, int n) {
 #endif
 
 /**
- * stor : the storage for solutions to subproblems, where stor[i,j] stores the 
+ * stor : the storage for solutions to subproblems, where stor[i,j] stores the
  *        longest common subsequence of a[1,i], and b[1,j] (assume string index is
  *        1-based), so stor[0,*] = 0 because we are not considering a at all and
  *        stor[*,0] = 0 because we are not considering b at all.
  * a, b : input strings of size n-1
  * n    : length of input strings + 1
  **/
-static int 
+static int
 simple_seq_solve(int* stor, int *where, char *a, char *b, char *res, int n) {
 
   // solutions to LCS when not considering input b
@@ -87,7 +87,7 @@ simple_seq_solve(int* stor, int *where, char *a, char *b, char *res, int n) {
         stor[i*n + j] = max(stor[(i-1)*n + j], stor[i*n + j-1]);
         if(stor[(i-1)*n + j] > stor[i*n + j-1]) {
           where[i*n+j] = UP;
-        } else { 
+        } else {
           where[i*n+j] = LEFT;
         }
       }
@@ -101,16 +101,16 @@ simple_seq_solve(int* stor, int *where, char *a, char *b, char *res, int n) {
 
   while(k >= 0) {
     switch(where[i*n + j]) {
-    case DIAGONAL: 
+    case DIAGONAL:
       assert(a[i-1] == b[j-1]);
       res[k--] = a[i-1];
-      i--;    
+      i--;
       j--;
       break;
-    case LEFT: 
+    case LEFT:
       j--;
       break;
-    case UP: 
+    case UP:
       i--;
       break;
     }
@@ -137,7 +137,7 @@ static int process_lcs_tile(int *stor, char *a, char *b, int n, int iB, int jB) 
         if(a[i_ind-1] == b[j_ind-1]) {
           stor[i_ind*n + j_ind] = stor[(i_ind-1)*n + j_ind-1] + 1;
         } else {
-          stor[i_ind*n + j_ind] = max(stor[(i_ind-1)*n + j_ind], 
+          stor[i_ind*n + j_ind] = max(stor[(i_ind-1)*n + j_ind],
                                       stor[i_ind*n + j_ind-1]);
         }
       }
@@ -155,7 +155,7 @@ static int process_lcs_tile(int *stor, char *a, char *b, int n, int iB, int jB) 
    process_lcs_tile(stor, a, b, n, iB, jB);
    }
    }
-    
+
    return stor[n*(n-1) + n-1];
    }
 */
@@ -169,13 +169,13 @@ int wave_lcs_with_futures(int *stor, char *a, char *b, int n) {
   auto farray = (cilk::future<int>*)
     malloc(sizeof(cilk::future<int>) * nBlocks * nBlocks);
 
-  // walk the upper half of triangle, including the diagonal (we assume square NxN LCS) 
+  // walk the upper half of triangle, including the diagonal (we assume square NxN LCS)
   for(int wave_front = 0; wave_front < nBlocks; wave_front++) {
     for(int jB = 0; jB <= wave_front; jB++) {
       int iB = wave_front - jB;
-      
+
       if(iB > 0) { farray[(iB-1)*nBlocks + jB].get(); } // up dependency
-      
+
       // since we are walking the wavefront serially, no need to get
       // left dependency --- already gotten by previous square.
 
@@ -183,18 +183,18 @@ int wave_lcs_with_futures(int *stor, char *a, char *b, int n) {
         (&farray[iB*nBlocks+jB], process_lcs_tile, stor, a, b, n, iB, jB);
 
       // process_lcs_tile(stor, a, b, n, iB, jB);
-      
+
     }
   }
 
-  // walk the lower half of triangle 
+  // walk the lower half of triangle
   for(int wave_front = 1; wave_front < nBlocks; wave_front++) {
     int iBase = nBlocks + wave_front - 1;
     for(int jB = wave_front; jB < nBlocks; jB++) {
       int iB = iBase - jB;
-      // need to get both up and left dependencies for the last row, 
+      // need to get both up and left dependencies for the last row,
       // but otherwise just the up dependency.
-      
+
       if(iB == (nBlocks - 1) && jB > 0) // left dependency
         farray[iB*nBlocks + jB - 1].get();
       if(iB > 0) // up dependency
@@ -217,7 +217,7 @@ int wave_lcs_with_futures(int *stor, char *a, char *b, int n) {
 #endif
 
 #ifdef NONBLOCKING_FUTURES
-static int process_lcs_tile_with_get(cilk::future<int> *farray, int *stor, 
+static int process_lcs_tile_with_get(cilk::future<int> *farray, int *stor,
                                      char *a, char *b, int n, int iB, int jB) {
 
   int nBlocks = NUM_BLOCKS(n);
@@ -234,12 +234,12 @@ int wave_lcs_with_futures(int *stor, char *a, char *b, int n) {
 
   int nBlocks = NUM_BLOCKS(n);
   int blocks = nBlocks * nBlocks;
-        
-  // create an array of future handles 
+
+  // create an array of future handles
   auto farray = (cilk::future<int>*)
     malloc(sizeof(cilk::future<int>) * blocks);
 
-    
+
   // now we spawn off the function that will call get
   cilk_for(int i=0; i < blocks; i++) {
     int iB = i / nBlocks; // row block index
@@ -289,7 +289,7 @@ const char* specifiers[] = {"-n", "-c", "-h", "-b"};
 int opt_types[] = {INTARG, BOOLARG, BOOLARG, INTARG};
 
 int main(int argc, char *argv[]) {
-#if (!RACE_DETECT) && (!SERIAL)
+#if REACH_MAINT && (!RACE_DETECT)
   futurerd_disable_shadowing();
 #endif
 
@@ -319,7 +319,7 @@ int main(int argc, char *argv[]) {
   // Nearest power of 2
   bSize = nearpow2(bSize);
   base_case_log = ilog2(bSize);
-  
+
   n = BLOCK_ALIGN(n); // make sure it's divisible by base case
   assert(n % bSize == 0);
   printf("Compute LCS with %d x %d table.\n", n, n);
@@ -350,7 +350,7 @@ int main(int argc, char *argv[]) {
   result = wave_lcs_with_futures(stor1, a1, b1, n);
   auto end = std::chrono::steady_clock::now();
   if(check) { do_check(stor1, a1, b1, n, result); }
-    
+
   printf("Result: %d\n", result);
   auto time = std::chrono::duration <double, std::milli> (end-start).count();
   printf("Benchmark time: %f ms\n", time);
@@ -358,6 +358,6 @@ int main(int argc, char *argv[]) {
   free(a1);
   free(b1);
   free(stor1);
-    
+
   return 0;
 }

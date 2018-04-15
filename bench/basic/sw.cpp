@@ -213,7 +213,7 @@ const char* specifiers[] = {"-n", "-c", "-h", "-b"};
 int opt_types[] = {INTARG, BOOLARG, BOOLARG, INTARG};
 
 int main(int argc, char *argv[]) {
-#if (!RACE_DETECT) && (!SERIAL)
+#if REACH_MAINT && (!RACE_DETECT)
     futurerd_disable_shadowing();
 #endif
 
