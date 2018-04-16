@@ -12,7 +12,10 @@ BUILDDIR = ../build/
 BASIC_FLAGS += -fno-strict-aliasing -DPARALLEL -D_XOPEN_SOURCE=600 $(INCLUDES)
 LIB += -lm -lrt
 
-OBJ = dedup decoder
+# dedup gets added as a CILK_OBJECT below. It doesn't use any
+# parallelism, but need to for calling future_disable_shadowing
+# correctly.
+OBJ = decoder #dedup
 UTIL_OBJ = hashtable util rabin sha ktiming
 
 ifeq ($(btype),inst)
@@ -34,6 +37,7 @@ BASIC_FLAGS += -DENABLE_GZIP_COMPRESSION
 LIB += -ldl -lz
 
 CILK_OBJECTS = $(OBJDIR)/encoder-cilk-$(btype).o
+CILK_OBJECTS += $(OBJDIR)/main-$(btype).o
 .SECONDARY: $(CILK_OBJECTS)
 
 # Uncomment the following to enable bzip2 compression
@@ -77,6 +81,9 @@ $(UTIL_OBJDIR)/%-inst.o: util/%.cpp
 	$(CXX) -c $(CXXFLAGS) $< -o $@
 
 $(OBJDIR)/encoder-cilk-%.o: encoder-cilk.cpp
+	$(CXX) $(CXXFLAGS) -DUSE_CILK_FUTURE=1 -c -o $@ $<
+
+$(OBJDIR)/main-%.o: main.cpp
 	$(CXX) $(CXXFLAGS) -DUSE_CILK_FUTURE=1 -c -o $@ $<
 
 dedup-serial: $(OBJDIR)/encoder-serial.o $(OBJECTS)

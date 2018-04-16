@@ -9,6 +9,8 @@
 
 #include "util/util.h"
 
+#include "rd.h"
+
 #ifdef ENABLE_DMALLOC
 #include <dmalloc.h>
 #endif //ENABLE_DMALLOC
