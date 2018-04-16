@@ -12,10 +12,6 @@
 #ifdef ENABLE_DMALLOC
 #include <dmalloc.h>
 #endif //ENABLE_DMALLOC
-
-
-
-
 /*--------------------------------------------------------------------------*/
 static void
 usage(char* prog) {
@@ -32,6 +28,9 @@ usage(char* prog) {
 
 /*--------------------------------------------------------------------------*/
 int main(int argc, char** argv) {
+#if (!RACE_DETECT) && REACH_MAINT
+  futurerd_disable_shadowing();
+#endif
 
     config_t conf;
     int32 compress = TRUE;
