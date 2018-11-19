@@ -2,3 +2,6 @@
 cilkrts_src
 build
 llvm-cilk
+*.log
+*.csv
+*.out
