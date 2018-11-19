@@ -3,12 +3,12 @@
 # Requires GNU datamash 1.3+
 set -e
 
-default_progs=(lcs sw matmul_z hw dedup) #bt
+default_progs=(lcs sw matmul_z hw dedup)
 PROGS=( "${PROGS[@]:-"${default_progs[@]}"}" )
 default_btypes=(base reach inst rd)
 BTYPES=( "${BTYPES[@]:-"${default_btypes[@]}"}" )
 
-ITER=3
+ITER=5
 TIMELOG=$(pwd)/times.csv
 OUTPUTLOG=$(pwd)/out.log
 
@@ -17,25 +17,26 @@ OUTPUTLOG=$(pwd)/out.log
 TIME="/usr/bin/time -f %E"
 
 declare -A ARGS
-# TREE_SIZE=$((8192 * 1024))
-# ARGS=([lcs]="-n $((1024 * 16))"
-#       [sw]="-n 2048"
-#       [matmul_z]="-n 2048"
-#       [hw]="../data/test.avi 10 1"
-#       [bt]="../data/simlarge/sequenceB_4 4 4 4000 5 4 1 1"
-#       [dedup]="-c -i ../data/simlarge/media.dat -o ../out"
-#       [merge]="-s1 $TREE_SIZE -s2 $(( $TREE_SIZE / 2 )) -kmax $(( $TREE_SIZE * 4 ))"
-#      )
-
-TREE_SIZE=$((1024 * 64))
-ARGS=([lcs]="-n 32"
-      [sw]="-n 32"
-      [matmul_z]="-n 256"
-      [hw]="../data/test.avi 1 1"
-      [bt]="../data/simdev/sequenceB_1 4 1 100 3 4 1 1" # See run.sh in bodytrack
-      [dedup]="-c -i ../data/simsmall/media.dat -o ../out"
+TREE_SIZE=$((8192 * 1024))
+ARGS=([lcs]="-n $((1024 * 16))"
+      [sw]="-n 2048"
+      [matmul_z]="-n 2048"
+      [hw]="../data/test.avi 10 1"
+      [bt]="../data/simlarge/sequenceB_4 4 4 4000 5 4 1 1"
+      [dedup]="-c -i ../data/simlarge/media.dat -o ../out"
       [merge]="-s1 $TREE_SIZE -s2 $(( $TREE_SIZE / 2 )) -kmax $(( $TREE_SIZE * 4 ))"
      )
+
+# Small sizes for quick testing
+# TREE_SIZE=$((1024 * 64))
+# ARGS=([lcs]="-n 32"
+#       [sw]="-n 32"
+#       [matmul_z]="-n 256"
+#       [hw]="../data/test.avi 1 1"
+#       [bt]="../data/simdev/sequenceB_1 4 1 100 3 4 1 1" # See run.sh in bodytrack
+#       [dedup]="-c -i ../data/simsmall/media.dat -o ../out"
+#       [merge]="-s1 $TREE_SIZE -s2 $(( $TREE_SIZE / 2 )) -kmax $(( $TREE_SIZE * 4 ))"
+#      )
 
 declare -A DIRS
 DIRS=([lcs]="basic/" [sw]="basic/" [matmul_z]="basic/"

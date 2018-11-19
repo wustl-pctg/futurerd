@@ -6,7 +6,7 @@
 
 N=10
 if [ "$1" != "" ]; then N=$1; fi
-time ./hw-base ../data/test.avi $N 1
-time ./hw-reach ../data/test.avi $N 1
-time ./hw-inst ../data/test.avi $N 1
-time ./hw-rd ../data/test.avi $N 1
+./hw-base ../data/test.avi $N 1
+./hw-reach ../data/test.avi $N 1
+./hw-inst ../data/test.avi $N 1
+./hw-rd ../data/test.avi $N 1

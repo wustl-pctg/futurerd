@@ -7,7 +7,7 @@ datadir='./data'
 btypes=(base reach inst rd)
 iter=1
 log=times.csv
-dsize=simsmall
+dsize=$1
 if [ $# -ge 1 ]; then dsize=$1; fi
 outputBMP=1
 model=4
@@ -51,7 +51,7 @@ for btype in ${btypes[@]}; do
     printf "Running bt-$btype $dsize $iter times\n"
 
     for i in $(seq 1 $iter); do
-        cmd="/usr/bin/time -o ${log} $bindir/bt-$btype $args 2>&1"
+        cmd="/usr/bin/time -f %E -o ${log} $bindir/bt-$btype $args 2>&1"
         # printf "$cmd\n"
         tmp=$(eval $cmd)
 

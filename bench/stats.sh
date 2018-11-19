@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+# Run benchmarks and collect some extra stats
+
 # T=$(date -d "today" +"%Y%m%d%H%M")
 # echo $T
 # sleep 5
@@ -21,6 +23,7 @@ ARGS=([lcs]="-n $((1024 * 16))"
       [merge]="-s1 $TREE_SIZE -s2 $(( $TREE_SIZE / 2 )) -kmax $(( $TREE_SIZE * 4 ))"
      )
 
+# Small sizes for quick testing
 # TREE_SIZE=$((1024 * 64))
 # ARGS=([lcs]="-n 32"
 #       [sw]="-n 32"
@@ -40,7 +43,7 @@ DIRS=([lcs]="basic/" [sw]="basic/" [matmul_z]="basic/"
       [merge]="bintree/"
      )
 
-PROGS=(merge)
+PROGS=(merge lcs sw matmul_z hw dedup) # bt
 
 function getstats() {
     local timestamp=$(date -d "today" +"%Y%m%d%H%M")
@@ -74,4 +77,6 @@ all release structured
 getstats $(pwd)/stats-structured.log
 
 all release nonblock
+system release
+bintree release nonblock nonblock
 getstats $(pwd)/stats-nonblock.log
