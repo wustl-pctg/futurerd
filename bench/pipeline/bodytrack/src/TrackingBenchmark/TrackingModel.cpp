@@ -110,7 +110,7 @@ float TrackingModel::LogLikelihood(const vector<float> &v, bool &valid, const in
     pose.Set(v); //set pose angles and translation
     valid = false;
     //test for a valid pose (reject impossible body angles)
-    if(!pose.Valid(mPoses[0].Params())) 
+    if(!pose.Valid(mPoses[0].Params()))
         return -1e10;
 
     //compute 3D model geometry from pose (generate conic cylinders and their transforms)

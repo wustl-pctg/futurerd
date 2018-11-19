@@ -384,8 +384,12 @@ static int processFrame(int frameNum, cilk::future<int> *prevFrameStageOne,
              &stageTwoFutures[frameNum-1], stageTwoFutures, model, pf,
              outputFileAvg, OutputBMP, iter_mFGMaps, iter_mEdgeMaps);
 
-        delete iter_mFGMaps;
-        delete iter_mEdgeMaps;
+        // Not necessary, since the destructors will get called when
+        // the new member fields get set in the second stage. Also
+        // this is a race because this delete is in parallel with
+        // actually using them.
+        //delete iter_mEdgeMaps;
+        //delete iter_mFGMaps;
     }
 
     return 1;
@@ -413,7 +417,7 @@ int mainCilkFuture(string path, int cameras, int frames, int particles,
 
     model.SetNumThreads(particles);
     // load data for first frame
-    model.GetObservation(0); 
+    model.GetObservation(0);
 
     //particle filter (with Cilk) instantiated with body tracking model type
     ParticleFilterCilk<TrackingModelCilk> pf;
@@ -429,32 +433,35 @@ int mainCilkFuture(string path, int cameras, int frames, int particles,
     // this is where timing should start
     auto start = std::chrono::steady_clock::now();
 
-    cilk::future<int> *stageOneFutures =
+    auto stageOneFutures =
         (cilk::future<int>*) malloc(sizeof(cilk::future<int>) * frames);
-    cilk::future<int> *stageTwoFutures =
+    auto stageTwoFutures =
         (cilk::future<int>*) malloc(sizeof(cilk::future<int>) * frames);
 
     // Create the pipeline - one stage for image processing, one for particle filter update
     for(int i = 0; i < frames; i++) {//process each set of frames
         if(i == 0) {
-            // reuse_future(int, &stageOneFutures[i], processFrame,
-            //              i, nullptr, stageTwoFutures, model, pf, outputFileAvg, OutputBMP);
-            reasync_helper<int, int, cilk::future<int> *, cilk::future<int> *,
-                        TrackingModelCilk &, ParticleFilterCilk<TrackingModelCilk> &,
-                        ofstream &, bool>
-                (&stageOneFutures[i], processFrame, i, nullptr,
-                 stageTwoFutures, model, pf, outputFileAvg, OutputBMP);
+          reasync_helper<int, int, cilk::future<int> *, cilk::future<int> *,
+                         TrackingModelCilk &, ParticleFilterCilk<TrackingModelCilk> &,
+                         ofstream &, bool>
+            (&stageOneFutures[i], processFrame, i, nullptr,
+             stageTwoFutures, model, pf, outputFileAvg, OutputBMP);
         } else {
-            // reuse_future(int, &stageOneFutures[i], processFrame,
-            //              i, &stageOneFutures[i-1], stageTwoFutures,
-            //              model, pf, outputFileAvg, OutputBMP);
-            reasync_helper<int, int, cilk::future<int> *, cilk::future<int> *,
-                        TrackingModelCilk &, ParticleFilterCilk<TrackingModelCilk> &,
-                        ofstream &, bool>
-                (&stageOneFutures[i], processFrame, i, &stageOneFutures[i-1],
-                 stageTwoFutures, model, pf, outputFileAvg, OutputBMP);
+          reasync_helper<int, int, cilk::future<int> *, cilk::future<int> *,
+                         TrackingModelCilk &, ParticleFilterCilk<TrackingModelCilk> &,
+                         ofstream &, bool>
+            (&stageOneFutures[i], processFrame, i, &stageOneFutures[i-1],
+             stageTwoFutures, model, pf, outputFileAvg, OutputBMP);
         }
     }
+
+    // With structured futures, you have no guarantee that
+    // stageTwoFutures[frames-1] has launched yet, so you need to wait
+    // for the last stage one future first.
+    // But actually, if running sequentially this particular case is okay.
+#ifdef STRUCTURED_FUTURES
+    stageOneFutures[frames-1].get();
+#endif
     stageTwoFutures[frames-1].get(); // wait for last frame's stage two to complete
 
     free(stageOneFutures);

@@ -139,9 +139,9 @@ bool BodyParameters::InitBodyParameters(const string fname)
 {	
 	ifstream f(fname.c_str());
 	if(!f.is_open())
-	{	cout << "Unable to open Body Parameter file : " << fname << endl;
-		return false;
-	}
+    {	cout << "Unable to open Body Parameter file : " << fname << endl;
+      return false;
+    }
 	for(int i = 0; i < N_PARTS; i++)
 		for(int j = 0; j < 4; j++)
 			f >> limbs[i][j];
@@ -183,12 +183,14 @@ bool BodyGeometry::IntersectingCylinders(KTCylinder &cylA, KTCylinder &cylB)
 	float delta_r = cylA.top - cylA.bottom;
 	double val = delta_r/cylA.length;
 	float scaling = (float)sqrt(1.00 + (val*val));
-	for(int i=0;i<=numPA;i++)
-	{	alpha = ((float) i)*deltaPA;
-		mCentersA[i].Set(oA[0].x + (alpha * d12.x) , oA[0].y + (alpha * d12.y) , oA[0].z + (alpha * d12.z) ); // = oA[0] + (alpha * d12);
-		mRadiiA[i] = (cylA.bottom + alpha * delta_r)/scaling;
-	}
-
+	for(int i=0;i<=numPA;i++) {
+    alpha = ((float) i)*deltaPA;
+    mCentersA[i].Set(oA[0].x + (alpha * d12.x) ,
+                     oA[0].y + (alpha * d12.y) ,
+                     oA[0].z + (alpha * d12.z) ); // = oA[0] + (alpha * d12);
+    mRadiiA[i] = (cylA.bottom + alpha * delta_r)/scaling;
+  }
+  
 	//approximate second conic cylinder as a series of spheres
 	float deltaPB = 1.00f / (float) numPB;
 	d12 = oB[1] - oB[0];
@@ -197,27 +199,31 @@ bool BodyGeometry::IntersectingCylinders(KTCylinder &cylA, KTCylinder &cylB)
 	delta_r = cylB.top - cylB.bottom;
 	val = delta_r/cylB.length;
 	scaling = (float)sqrt(1.00f + (val*val));
-	for(int i=0;i<=numPB;i++)
-	{	alpha = ((float) i)*deltaPB;
-		mCentersB[i].Set(oB[0].x + (alpha * d12.x) , oB[0].y + (alpha * d12.y) , oB[0].z + (alpha * d12.z) ); // = oB[0] + alpha * d12;
-		mRadiiB[i] = (cylB.bottom + alpha * delta_r)/scaling;
-	}
+	for(int i=0;i<=numPB;i++) {
+    alpha = ((float) i)*deltaPB;
+    mCentersB[i].Set(oB[0].x + (alpha * d12.x) ,
+                     oB[0].y + (alpha * d12.y) ,
+                     oB[0].z + (alpha * d12.z) ); // = oB[0] + alpha * d12;
+      mRadiiB[i] = (cylB.bottom + alpha * delta_r)/scaling;
+  }
 
 	//check if any spheres intersect from one cylinder to the other
 	Vector3f difC;
 	float rAB;
 	float nrmsq;
 	for(int i=0;i<=numPA;i++)
-	{
-		for(int j=0;j<=numPB;j++)
-		{
-			difC.Set(mCentersA[i].x - mCentersB[j].x , mCentersA[i].y - mCentersB[j].y , mCentersA[i].z - mCentersB[j].z ); //  = mCentersA[i] - mCentersB[j]
-			nrmsq = (difC.x * difC.x) + (difC.y * difC.y) + (difC.z * difC.z);
-			rAB = mRadiiA[i] + mRadiiB[j];
-			if (rAB*rAB> nrmsq)
-				return true;
-		}
-	}
+    {
+      for(int j=0;j<=numPB;j++)
+        {
+          difC.Set(mCentersA[i].x - mCentersB[j].x ,
+                   mCentersA[i].y - mCentersB[j].y ,
+                   mCentersA[i].z - mCentersB[j].z ); //  = mCentersA[i] - mCentersB[j]
+          nrmsq = (difC.x * difC.x) + (difC.y * difC.y) + (difC.z * difC.z);
+          rAB = mRadiiA[i] + mRadiiB[j];
+          if (rAB*rAB> nrmsq)
+            return true;
+        }
+    }
 	return false;
 };
 

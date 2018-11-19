@@ -67,15 +67,29 @@ void ParticleFilterCilk<T>::CalcWeights(std::vector<Vectorf > &particles)
 
     int np = (int)particles.size();
 
-    //OpenMP parallelized loop to compute log-likelihoods
-    #pragma cilk grainsize = 32
-    cilk_for(int j = 0; j < np; j++) 
+    // You can't really use a parallel for loop here and do race
+    // detection. In LogLikelihood we access some shared data. You are
+    // supposed to pass in the thread num/id as the last parameters,
+    // which makes sure that different threads don't use the same
+    // data. But conceptually each iteration of the for loop is
+    // logically parallel with all the others, so we will detect a
+    // race. Luckily this is just initialiation, anyway.
+    // NB: Actually this is fine as long as you allocate space for
+    // nParticles number of "threads".
+    //#pragma cilk grainsize = 1
+    /*cilk_*/for(int j = 0; j < np; j++)
     {
         bool vflag;
-        int local_j = j;
-        //compute log-likelihood weights for each particle
+        int local_j = j; // see below
+        // //compute log-likelihood weights for each particle
         mWeights[local_j] = mModel->LogLikelihood(particles[j], vflag, local_j);
+        //mWeights[j] = mModel->LogLikelihood(particles[j], vflag, 0);
+
+        // Our version of clang thinks we are modifying j for some
+        // reason...that's the reason for local_j
+        //valid[j] = (vflag ? 1 : 0);
         valid[local_j] = vflag ? 1 : 0;
+
     }
 
     uint i = 0;
@@ -135,7 +149,7 @@ void ParticleFilterCilk<T>::GenerateNewParticles(int k)
     }
 
     //distribute new particles randomly according to model stdDevs
-    #pragma cilk grainsize = 32
+    //#pragma cilk grainsize = 32
     cilk_for(int i = 0; i < mNParticles; i++)
     {	
         //add new particle for each entry in each bin distributed randomly 
