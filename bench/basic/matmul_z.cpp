@@ -376,8 +376,9 @@ int matmul(DATA *A, DATA *B, DATA *C, int n, int iB, int kB, int jB) {
 // "unstructured"
 static void do_matmul(DATA *A, DATA *B, DATA *C, int n) {
 
-  printf("Performing unstructured matmul with z-layout, %d x %d with base case %d x %d.\n",
-         n, n, REC_BASE_CASE, REC_BASE_CASE);
+  printf("Performing unstructured matmul with z-layout\n");
+  printf("%d x %d with iterative base case %d x %d, recursive base case %d x %d\n",
+         n, n, ITER_BASE_CASE, ITER_BASE_CASE, REC_BASE_CASE, REC_BASE_CASE);
 
   // initialize the static global vars
   g_nBlocks = n >> REC_POWER; // number of blocks per dimension

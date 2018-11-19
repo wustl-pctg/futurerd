@@ -15,20 +15,20 @@ typedef struct pair_t {
 static pair_t produce(unsigned long n) {
     pair_t res = { n, NULL };
 
-    if(n > 0) { 
+    if(n > 0) {
         cilk::future<pair_t> *fut;
         // create_future_handle(pair_t, fut);
         // spawn_proc_with_future_handle(fut, produce, n-1);
         create_future(pair_t, fut, produce, n-1);
-        res.fut = fut; 
-    } 
+        res.fut = fut;
+    }
 
     return res;
-} 
+}
 
 static unsigned long consume(unsigned long curr_sum, pair_t data) {
-    
-    unsigned long res = curr_sum; 
+
+    unsigned long res = curr_sum;
 
     if(data.fut != NULL) {
         curr_sum += data.n;
@@ -37,7 +37,7 @@ static unsigned long consume(unsigned long curr_sum, pair_t data) {
     }
 
     return res;
-} 
+}
 
 int main(int argc, char *argv[]) {
 
@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
     pair_t data = produce(n);
     unsigned long sum = consume(0, data);
     unsigned long check_sum = n * (n + 1) / 2;
-    
+
     if(check_sum == sum) {
         printf("Check passed.\n");
     } else {
@@ -66,4 +66,3 @@ int main(int argc, char *argv[]) {
 
     return 0;
 }
-
