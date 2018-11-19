@@ -6,6 +6,8 @@ COMPDIR=$BASE/llvm-cilk/bin
 # Setup compiler (LLVM)
 #./build-llvm-linux.sh
 
+#git clone https://github.com/wsmoses/Tapir-Meta tapir
+
 # Setup runtime system
 mkdir -p build
 

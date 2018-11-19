@@ -41,10 +41,10 @@ $(ALLTARGETS): $$@.o $(GETOPT) | $(RDLIB)
 
 ifeq ($(btype),all)
 clean:
-	rm -rf core.* $(ALLTARGETS) $(ALLTARGETS:=.o)
+	rm -rf core.* ../util/*.o $(ALLTARGETS) $(ALLTARGETS:=.o)
 else
 clean:
-	rm -f core.* $(TARGETS) $(TARGETS:=.o)
+	rm -f core.* ../util/*.o $(TARGETS) $(TARGETS:=.o)
 endif
 
 reallyclean:

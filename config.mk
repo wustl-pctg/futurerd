@@ -3,7 +3,12 @@ BUILD_DIR = $(PROJECT_HOME)/build
 COMPILER_HOME = $(PROJECT_HOME)/llvm-cilk
 RUNTIME_HOME = $(PROJECT_HOME)/runtime
 RUNTIME_LIB = $(PROJECT_HOME)/build/lib/libcilkrts.a
-# RUNTIME_LIB = $(RUNTIME_HOME)/build/libcilkrts.a
 
-TOOL_DEBUG = 1
-LTO = 0
+TOOL_DEBUG = 0
+LTO ?= 1
+STATS ?= 0
+
+# Default future type to use
+ftype ?= structured
+# Default race detection algorithm
+rdalg ?= structured
