@@ -11,7 +11,7 @@ OPT_FLAGS = -O3
 DBG_FLAGS = -O0 -ggdb3
 PROF_FLAGS = -O1 #-pg if you want to use gprof
 INC = -I$(RUNTIME_HOME)/include
-FLAGS = -Wall -Wfatal-errors -ggdb3 $(INC)
+FLAGS = -Wall -Wfatal-errors -g $(INC)
 ARFLAGS = rcs
 
 TOOL_DEBUG ?= 0
