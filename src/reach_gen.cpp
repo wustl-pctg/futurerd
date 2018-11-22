@@ -2,6 +2,7 @@
 #include <cassert>
 #include <cstdlib>
 #include <cstdio>
+#include <malloc.h>
 
 using namespace reach;
 using node = general::node;
@@ -41,13 +42,28 @@ general::~general() {
     if (n < minnb) minnb = n;
     nb += n;
   }
-  fprintf(stderr, ">>>%zu blocks = %zu bytes for Rmat\n",
-          nb, nb * bitvector::BITS_PER_BLOCK);
+  double bytes_used = ((double)nb) * sizeof(bitvector::block_t);
+  char* units;
+  if (bytes_used < 1024) units = "B";
+  else if (bytes_used < 1024*1024) {
+    units = "KB";
+    bytes_used /= 1024.0;
+  } else if (bytes_used < 1024*1024*1024) {
+    units = "MB";
+    bytes_used /= (1024.0*1024.0);
+  } else {
+    units = "GB";
+    bytes_used /= (1024.0*1024.0*1024.0);
+  }
+
+  fprintf(stderr, ">>>%zu blocks = %lf %s for Rmat\n",
+          nb, bytes_used, units);
   fprintf(stderr, ">>>min=%zu, max=%zu, avg=%lf, row=%zu\n",
           minnb, maxnb,
           ((double)nb)/((double)data.size()),
           data.size());
   fprintf(stderr, "-------------------------\n");
+  malloc_stats();
 
 #endif
 }

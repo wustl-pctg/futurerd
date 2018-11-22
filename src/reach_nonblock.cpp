@@ -49,6 +49,7 @@ void nonblock::attachify(node* n) {
   if (su->attached()) return;
 
   // su is unattached
+  assert(su->id == 0);
   su->id = m_R.add_node(); // make attached with node in R
   assert(su->att_pred);
   assert(su->att_pred->find()->id <= su->id);
@@ -113,8 +114,7 @@ void nonblock::at_future_create(sframe_data *f) {
   attachify(u);
 
   // Create a new attached set
-  node *v = new node(); // left (executed next, since we use eager execution)
-  v->id = m_R.add_node();
+  node *v = new node(m_R.add_node()); // left (executed next, since we use eager execution)
   //printf("Create: %lu --> %lu\n", u->find()->id, v->id);
   m_R.add_edge(u->find()->id, v->id);
   assert(v->find() == v);
@@ -192,6 +192,7 @@ node* nonblock::perform_join(sframe_data *f) {
       }
     }
   } else { // multiple attached join parent
+    assert(j->id == 0);
     j->id = m_R.add_node(); // make j into its own attached set
     j->att_pred = j->att_succ = j;
   }
@@ -306,9 +307,8 @@ void nonblock::at_spawn_continuation(sframe_data *f, sframe_data *p) {
 void nonblock::at_future_continuation(sframe_data *f, sframe_data *p) {
   // Use p because the pop hasn't happened yet
   assert(f->future_fork);
-  node *w = new node(); // right
+  node *w = new node(m_R.add_node()); // right
   assert(w->find() == w);
-  w->id = m_R.add_node();
 
   w->att_pred = w->att_succ = w; // self
   m_R.add_edge(f->future_fork->find()->id, w->id);

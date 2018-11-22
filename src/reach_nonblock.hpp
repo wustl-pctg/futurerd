@@ -20,7 +20,7 @@ public:
     bool attached() { return id > 0; }
     node* find() { return static_cast<node*>(utils::uf::find(this)); }
     node(reach::general::node _id = 0) : id(_id) {}
-    // always merge that into this. 
+    // always merge that into this.
     void merge(node *n) { utils::uf::merge(this, n); }
   }; // struct node
 
@@ -78,7 +78,7 @@ public:
   void at_future_finish(sframe_data *f, sframe_data *p, sfut_data* fut);
 
   void begin_strand(sframe_data *f, sframe_data *p);
-  bool precedes_now(sframe_data *f, smem_data *last_access); 
+  bool precedes_now(sframe_data *f, smem_data *last_access);
 
 private:
   // make the set containing u attached if not already
@@ -93,14 +93,14 @@ private:
   node* perform_join(sframe_data *f);
   void handle_binary_fork_at_sync(node *f, // fork node
                                   node *lfc, node *rfc,  // left, right fork children
-                                  node *ljp, node *rjp); // left, (fake) right join parent 
+                                  node *ljp, node *rjp); // left, (fake) right join parent
 
-  static inline void 
+  static inline void
   copy_fork_stack_data(fork_node_data *dst, fork_node_data *src) {
-    dst->fork = src->fork;  
-    dst->lfc = src->lfc;  
-    dst->rfc = src->rfc;  
-    dst->ljp = src->ljp;  
+    dst->fork = src->fork;
+    dst->lfc = src->lfc;
+    dst->rfc = src->rfc;
+    dst->ljp = src->ljp;
   }
 
 }; // class nonblock
