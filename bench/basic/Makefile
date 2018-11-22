@@ -39,6 +39,16 @@ $(BENCH): $$@-$(btype)
 $(ALLTARGETS): $$@.o $(GETOPT) | $(RDLIB)
 	$(CXX) $^ $(LDFLAGS) -o $@
 
+# There seems to be a very strange error when using both LTO and -O1
+# optimizations. It causes a segfault during get_options, but I cannot
+# find anything that is really a problem. Interesting, if you include
+# getoptions.cpp instead of getoptions.hpp, the problem goes away, so
+# the process of linking is somehow involved (bug in gold?). Anyway,
+# the code is not on the critical path, so just don't use
+# optimizations for this file.
+../util/getoptions.o: ../util/getoptions.cpp
+	$(CXX) -O0 $(CLAGS) -O0 -o $@ -c $<
+
 ifeq ($(btype),all)
 clean:
 	rm -rf core.* ../util/*.o $(ALLTARGETS) $(ALLTARGETS:=.o)

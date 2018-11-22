@@ -1,13 +1,13 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdarg.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstdio>
+#include <cstdarg>
+#include <cstring>
 #include "getoptions.hpp"
 
 /* Used by example programs to evaluate command line options */
 
-void get_options(int argc, char *argv[], const char *specs[], int *types,...)
-{
+void __attribute__((noinline))
+get_options(int argc, char *argv[], const char *specs[], int *types,...) {
   va_list ap;
   int type, i;
   int *intval;
@@ -16,7 +16,6 @@ void get_options(int argc, char *argv[], const char *specs[], int *types,...)
   char * stringval;
 
   va_start(ap, types);
-
   while (((type = *types++) != 0) && (specs != 0)) {
 	  switch (type) {
     case INTARG:
