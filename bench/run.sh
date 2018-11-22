@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-PROGS=(merge lcs sw matmul_z hw dedup)
+PROGS=(lcs sw matmul_z hw dedup merge)
 source remake.sh
 system release
 
@@ -15,7 +15,6 @@ bintree release nonblock structured
 source ./time.sh
 mv times.csv times.ns.csv
 
-# PROGS=(merge)
 allbench release nonblock nonblock
 bintree release nonblock nonblock
 source ./time.sh

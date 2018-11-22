@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+# testing/timing base case info
 
 PROGS=(matmul_z)
 BTYPES=(base reach)
