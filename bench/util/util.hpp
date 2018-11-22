@@ -1,9 +1,9 @@
 #ifndef __UTIL_HPP__
 #define __UTIL_HPP__
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstdio>
+#include <cstring>
 
 // Ensure that we run serially
 static void ensure_serial_execution(void) {
