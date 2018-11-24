@@ -19,7 +19,7 @@ git clone -b futurerd https://gitlab.com/wustl-pctg/cilkplus-rts runtime
 
 cd bench/pipeline/dedup/inputs
 wget http://parsec.cs.princeton.edu/download/3.0/parsec-3.0-input-native.tar.gz
-http://parsec.cs.princeton.edu/download/3.0/parsec-3.0-input-sim.tar.gz
+wget http://parsec.cs.princeton.edu/download/3.0/parsec-3.0-input-sim.tar.gz
 tar vxzf parsec-3.0-input-native.tar.gz
 tar vxzf parsec-3.0-input-sim.tar.gz
 mv parsec-3.0/pkgs/kernels/dedup/inputs/*.tar .
