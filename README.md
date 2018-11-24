@@ -6,16 +6,20 @@ this project, not the class of future objects provided with C++11.
 
 
 We can detect races for futures used in two different ways:
-	* "Structured" futures can only be touched (get()) once, and this
+
+* "Structured" futures can only be touched (get()) once, and this
       must occur sequentially after the future was created.
-	* "Non-blocking" futures (my own name, which isn't really
-      descriptive enough). What I mean is that when you execute the
-      program sequentially and execute futures eagerly, you'll never
-      need to stall on a call to get().
+* Futures that are "forward-pointing": the creator strand of each
+  future executes before every getter strand of that future in the
+  depth-first eager execution. This restriction is only because any
+  program that does not use forward-pointing futures could
+  deadlock. Note: I previously used the name "nonblocking" (a poor
+  choice) for these futures; you may see this name throughout the code
+  until it is cleaned up.
 
 Currently, this system only detects futures while running
 sequentially. We have plans to parallelize our race detection
-algorithm.
+algorithms.
 
 ## License
 
