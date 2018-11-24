@@ -17,6 +17,13 @@ Currently, this system only detects futures while running
 sequentially. We have plans to parallelize our race detection
 algorithm.
 
+## License
+
+Unless otherwise specified, the code in this repository is distributed
+under the MIT license. All code from external projects -- the Cilk
+Plus runtime, some benchmarks, and the LLVM compiler infrastructure --
+is separately licensed.
+
 ## Using
 
 ### Compiling the tool
