@@ -32,22 +32,26 @@ is separately licensed.
 
 ### Compiling the tool
 
-1. First we need to build the compiler. If using link-time
-   optimization (recommended to replicate results), set
-   `BINUTILS_PLUGIN_DIR` in `build-llvm-linux.sh` to the directory
-   where `plugin-api.h` is located. After this (or if you're not using
-   LTO), run `build-llvm-linux.sh`.
+1. First use the `setup.sh` script to build the compiler and download
+   the `dedup` datasets. If using link-time optimization (recommended
+   to replicate results), set `BINUTILS_PLUGIN_DIR` in
+   `build-llvm-linux.sh` to the directory where `plugin-api.h` is
+   located. After this (or if you're not using LTO), run
+   `build-llvm-linux.sh`. Also make sure that the system linker (`ld`)
+   points to GNU `gold`.
 
-2. Build/obtain the runtime library (TODO)
+2. If replicating results, run `bench/run.sh`, which will compile all
+   the remaining pieces and run all benchmarks. Otherwise you can run
+   `make mode=release rdalg=ALG` in the `src` directory, where `ALG`
+   can be either `structured` (for MultiBags) or `nonblock` (for
+   MultiBags+).
 
-3. Build the library: just `make` in the top level directory
+### Compiling your own programs
 
-### Compiling programs
-
-Compile your program(s) with `-fcilktool -fsanitize=thread` and link
-with the library. Now races will be detected, assuming you're not
-using locks or any form of synchronization other than spawn/sync and
-futures.
+Compile your programs with our compiler, using the `-fcilktool
+-fsanitize=thread` flags, and link with the library. Now races will be
+detected, assuming you're not using locks or any form of
+synchronization other than spawn/sync and futures.
 
 ### API Options
 
