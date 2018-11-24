@@ -1,5 +1,5 @@
 #!/bin/bash
-echo "Unpacking small data set ... "
+echo "Unpacking data sets ... "
 for dataset in simdev simsmall simmedium simlarge native
 do
     mkdir -p ../data/$dataset

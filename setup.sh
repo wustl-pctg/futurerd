@@ -4,7 +4,7 @@ BASE=$(pwd)
 COMPDIR=$BASE/llvm-cilk/bin
 
 # Setup compiler (LLVM)
-#./build-llvm-linux.sh
+./build-llvm-linux.sh
 
 #git clone https://github.com/wsmoses/Tapir-Meta tapir
 
@@ -12,11 +12,16 @@ COMPDIR=$BASE/llvm-cilk/bin
 mkdir -p build
 
 git clone -b futurerd https://gitlab.com/wustl-pctg/cilkplus-rts runtime
-cd runtime
-autoreconf -i
-# FLAGS="-g -O0 -fcilk-no-inline -fcilktool"
-# ./configure --prefix=$BASE/build CC=$COMPDIR/clang CXX=$COMPDIR/clang++ CFLAGS=$FLAGS CXXFLAGS=$FLAGS
-# make -j
-# make install
-./remake.sh
+# cd runtime
+# autoreconf -i
+# ./remake.sh opt pre
+# cd -
+
+cd bench/pipeline/dedup/inputs
+wget http://parsec.cs.princeton.edu/download/3.0/parsec-3.0-input-native.tar.gz
+http://parsec.cs.princeton.edu/download/3.0/parsec-3.0-input-sim.tar.gz
+tar vxzf parsec-3.0-input-native.tar.gz
+tar vxzf parsec-3.0-input-sim.tar.gz
+mv parsec-3.0/pkgs/kernels/dedup/inputs/*.tar .
+./unpack.sh
 cd -

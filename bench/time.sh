@@ -41,7 +41,7 @@ declare -A SMALL_ARGS=(
     [merge]="-s1 $SMALL_TREE_SIZE -s2 $(( $SMALL_TREE_SIZE / 2 )) -kmax $(( $SMALL_TREE_SIZE * 4 ))" 
 )
 
-declare -n ARGS=SMALL_ARGS
+declare -n ARGS=BIG_ARGS
 
 declare -A DIRS
 DIRS=([lcs]="basic/" [sw]="basic/" [matmul_z]="basic/"
