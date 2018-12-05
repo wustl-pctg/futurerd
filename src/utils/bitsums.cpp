@@ -17,6 +17,7 @@
 #include "bitsums.hpp"
 
 #include <algorithm> // min
+#include <cstdio>
 
 void bitsums::resize(size_t new_cap) {
   if (new_cap <= cap) return;
