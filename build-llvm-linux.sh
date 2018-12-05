@@ -5,8 +5,9 @@
 ###### By default we assume you're using 'llvm-cilk' folder created in the current directory as a base folder of your source installation
 ###### If you use some specific location then pass it as argument to this script
 
-if [ "$1" = "" ]
-then
+#export CPLUS_INCLUDE_PATH=/usr/include:/usr/include/c++/5
+
+if [ "$1" = "" ]; then
   LLVM_NAME=llvm-cilk
 else
   LLVM_NAME=$1
@@ -23,8 +24,9 @@ CLANG_GIT_REPO="https://gitlab.com/wustl-pctg-pub/clang-cilk.git"
 CLANG_BRANCH=""
 # We will use the master branch instead of Cilk Plus branch; we want to
 # install our own runtime instead of using theirs
-COMPILERRT_GIT_REPO="https://github.com/cilkplus/compiler-rt"
-COMPILERRT_BRANCH=""
+#COMPILERRT_GIT_REPO="https://github.com/cilkplus/compiler-rt"
+COMPILERRT_GIT_REPO="https://gitlab.com/wustl-pctg-pub/compiler-rt"
+COMPILERRT_BRANCH="futurerd"
 
 echo Building $LLVM_HOME...
 
@@ -59,9 +61,9 @@ else
     git clone $COMPILERRT_GIT_REPO $LLVM_HOME/projects/compiler-rt
 fi
 
-cd $LLVM_HOME/projects/compiler-rt
-git checkout b696762
-cd -
+# cd $LLVM_HOME/projects/compiler-rt
+# git checkout b696762
+# cd -
 
 BUILD_HOME=$LLVM_HOME/build
 if [ ! -d $BUILD_HOME ]; then
