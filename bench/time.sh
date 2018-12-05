@@ -41,7 +41,7 @@ declare -A SMALL_ARGS=(
     [merge]="-s1 $SMALL_TREE_SIZE -s2 $(( $SMALL_TREE_SIZE / 2 )) -kmax $(( $SMALL_TREE_SIZE * 4 ))" 
 )
 
-declare -n ARGS=BIG_ARGS
+declare -n ARGS=SMALL_ARGS
 
 declare -A DIRS
 DIRS=([lcs]="basic/" [sw]="basic/" [matmul_z]="basic/"
@@ -83,7 +83,9 @@ for bench in ${PROGS[@]}; do
             results+=$(eval "echo \"$tmp\" | $gather")
             results+="\n"
         done
-        stats=$(printf "$results" | datamash -R 2 mean 1 sstdev 1)
+				# datamash -R option requires version 1.3, Ubuntu pkg is 1.2 currently.
+        #stats=$(printf "$results" | datamash -R 2 mean 1 sstdev 1)
+				stats=$(printf "$results" | datamash mean 1 sstdev 1)
         avg=$(echo "$stats" | cut -f 1)
         stdev=$(echo "$stats" | cut -f 2)
         outstr="${bench}${SEP}${ARGS[$bench]}${SEP}"
