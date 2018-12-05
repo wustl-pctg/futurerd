@@ -32,6 +32,9 @@ is separately licensed.
 
 ### Compiling the tool
 
+0. Dependencies: Make sure that `zlib1g`, `zlib1g-dev`, and `datamash`
+   packages are installed.
+
 1. First use the `setup.sh` script to build the compiler and download
    the `dedup` datasets. If using link-time optimization (recommended
    to replicate results), set `BINUTILS_PLUGIN_DIR` in
