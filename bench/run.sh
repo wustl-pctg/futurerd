@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+export CPLUS_INCLUDE_PATH=/usr/include:/usr/include/c++/5 
 
 PROGS=(lcs sw matmul_z hw dedup merge)
 source remake.sh

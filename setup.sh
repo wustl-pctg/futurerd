@@ -5,6 +5,8 @@ COMPDIR=$BASE/llvm-cilk/bin
 
 mkdir -p build
 
+export CPLUS_INCLUDE_PATH=/usr/include:/usr/include/c++/5 
+
 # Setup compiler (LLVM)
 ./build-llvm-linux.sh
 
@@ -12,7 +14,7 @@ mkdir -p build
 git clone -b futurerd https://gitlab.com/wustl-pctg/cilkplus-rts runtime
 cd runtime
 autoreconf -i
-# ./remake.sh optlto
+# ./remake.sh opt lto
 cd -
 
 cd bench/pipeline/dedup/inputs
