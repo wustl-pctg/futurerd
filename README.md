@@ -32,10 +32,11 @@ is separately licensed.
 
 ### Compiling the tool
 
-0. Dependencies: Make sure that `zlib1g`, `zlib1g-dev`, and `datamash`
-   packages are installed. Also, g++-5 must be installed. It doesn't
-   need to be set as the default, but our (very old) branch of clang
-   requires that package's version of the C++ headers.
+0. Dependencies: Make sure that `zlib1g`, `zlib1g-dev`, `openssl`, and
+   `datamash` packages are installed. Also, g++-5 must be
+   installed. It doesn't need to be set as the default, but our (very
+   old) branch of clang requires that package's version of the C++
+   headers.
 
 1. First use the `setup.sh` script to build the compiler and download
    the `dedup` datasets. If using link-time optimization (recommended

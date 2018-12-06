@@ -8,7 +8,9 @@
 #ifndef _SHA_H_
 #define _SHA_H_
 
-#include "../../openssl/sha.h"
+// How was this working before?
+//#include "../../openssl/sha.h"
+#include "../openssl/sha.h"
 
 /* SHA1 length is 20 bytes(160 bites) */
 #define SHA1_LEN  20
