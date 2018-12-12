@@ -13,7 +13,8 @@ else
   LLVM_NAME=$1
 fi
 
-: ${BINUTILS_PLUGIN_DIR:="/usr/local/include"}
+# Normally /usr/local/include, but with docker it is /usr/include
+: ${BINUTILS_PLUGIN_DIR:="/usr/include"}
 
 LLVM_HOME=`pwd`/"$LLVM_NAME"/src
 LLVM_TOP=`pwd`/"$LLVM_NAME"
@@ -61,9 +62,10 @@ else
     git clone $COMPILERRT_GIT_REPO $LLVM_HOME/projects/compiler-rt
 fi
 
-# cd $LLVM_HOME/projects/compiler-rt
-# git checkout b696762
-# cd -
+# Do this if only g++-5 (and NOT 6+) is installed
+cd $LLVM_HOME/projects/compiler-rt
+git checkout b696762
+cd -
 
 BUILD_HOME=$LLVM_HOME/build
 if [ ! -d $BUILD_HOME ]; then

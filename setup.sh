@@ -1,20 +1,21 @@
 #!/bin/sh
 # Script to setup everything, for reproducible results.
+set -e
 BASE=$(pwd)
 COMPDIR=$BASE/llvm-cilk/bin
 
 mkdir -p build
 
-export CPLUS_INCLUDE_PATH=/usr/include:/usr/include/c++/5 
+# If you have g++-6+ installed, must use this:
+#export CPLUS_INCLUDE_PATH=/usr/include:/usr/include/c++/5 
 
-# Setup compiler (LLVM)
+## Setup compiler (LLVM)
 ./build-llvm-linux.sh
 
 # Setup runtime system
 git clone -b futurerd https://gitlab.com/wustl-pctg/cilkplus-rts runtime
 cd runtime
 autoreconf -i
-# ./remake.sh opt lto
 cd -
 
 cd bench/pipeline/dedup/inputs
