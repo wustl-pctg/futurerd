@@ -30,6 +30,23 @@ is separately licensed.
 
 ## Using
 
+### Artifact Evaluation
+
+1. Run the `build-docker.sh` script.
+2. Run the `start-docker.sh` script.
+3. In the container, run the `setup.sh` script.
+4. If your machine has 48GB+ RAM, skip this step. Otherwise, you will
+   not be able to run `dedup`. You can remove it from the `PROGS=...`
+   line in `run.sh` or you may change the benchmark size in
+   `time.sh`. In the definition of `BIG_ARGS` look for the `dedup`
+   line and change `simlarge` to `simmedium`. Note that the
+   scalability and overhead may differ when running on a smaller size.
+5. `cd bench` and `run.sh`
+6. See results in `times.ss.csv` (structured future benchmarks with
+   MultiBags RD algorithm), `times.ns.csv` (structured future
+   benchmarks with MultiBags+ RD algorithm), and `times.nn.csv`
+   (unstructured future benchmarks with MultiBags+ RD algoritm).
+
 ### Compiling the tool
 
 0. Dependencies: Make sure that `zlib1g`, `zlib1g-dev`, `openssl`, and
