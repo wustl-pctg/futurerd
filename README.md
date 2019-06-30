@@ -76,6 +76,19 @@ Compile your programs with our compiler, using the `-fcilktool
 detected, assuming you're not using locks or any form of
 synchronization other than spawn/sync and futures.
 
+## Cititation
+Please use the following citiation when using this software in your work:
+
+Robert Utterback, Kunal Agrawal, Jeremy T. Fineman, and I-Ting Angelina Lee, "Efficient Race Detection with Futures", 
+Proceedings of the 24th Symposium on Principles and Practice of Parallel Programming (PPoPP), 2019.
+Available: https://dl.acm.org/citation.cfm?doid=3293883.3295732.
+
+## Acknowledgment
+This research was supported in part by National Science Foundation under grants number CCF-1150036, CCF-1527692, CCF-1733873, and XPS-1439062.
+
+Any opinions, findings, and conclusions or recommendations expressed in this material are those of the author(s) 
+and do not necessarily reflect the views of the National Science Foundation.
+
 ### API Options
 
 (TODO)
